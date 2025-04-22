@@ -1,0 +1,144 @@
+<script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
+
+  function extractTextFromHTML(element: HTMLDivElement): string {
+    const tempElement = document.createElement("div");
+    tempElement.innerHTML = element.innerHTML;
+    const brElements = tempElement.querySelectorAll("br");
+    brElements.forEach((br) => {
+      br.replaceWith("\n");
+    });
+    return tempElement.textContent || "";
+  }
+
+  // https://phuoc.ng/collection/html-dom/get-or-set-the-cursor-position-in-a-content-editable-element/
+  function getCursorPosition(element: HTMLDivElement): number | null {
+    const selection = window.getSelection();
+    if (!selection) {
+      return null;
+    }
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      return preCaretRange.toString().length;
+    }
+    return null;
+  }
+
+  const createRange = (node: Node, targetPosition: number) => {
+    let range = document.createRange();
+    range.selectNode(node);
+    range.setStart(node, 0);
+
+    let pos = 0;
+    const stack = [node];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current) {
+        continue;
+      }
+
+      if (current.nodeType === Node.TEXT_NODE) {
+        const len = current.textContent?.length ?? 0;
+        if (pos + len >= targetPosition) {
+          range.setEnd(current, targetPosition - pos);
+          return range;
+        }
+        pos += len;
+      } else if (current.childNodes && current.childNodes.length > 0) {
+        for (let i = current.childNodes.length - 1; i >= 0; i--) {
+          stack.push(current.childNodes[i]);
+        }
+      }
+    }
+
+    // The target position is greater than the
+    // length of the contenteditable element.
+    range.setEnd(node, node.childNodes.length);
+    return range;
+  };
+
+  function setCursorPosition(element: HTMLDivElement, position: number) {
+    const range = createRange(element, position);
+    range.collapse();
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  async function handleInput(event: Event) {
+    const el = event.target as HTMLDivElement;
+    const message = extractTextFromHTML(el);
+    const cursorPos = getCursorPosition(el);
+    console.debug(message);
+
+    const highlighted: string = await invoke("syntax_highlight", {
+      message,
+    });
+    console.debug(highlighted);
+    el.innerHTML = highlighted;
+    if (cursorPos !== null) {
+      setCursorPosition(el, cursorPos);
+    }
+  }
+</script>
+
+<div
+  class="message-editor"
+  contenteditable="plaintext-only"
+  on:input={handleInput}
+  aria-label="HL7 Message Editor"
+  role="textbox"
+  tabindex="0"
+  aria-multiline="true"
+  aria-autocomplete="none"
+></div>
+
+<style>
+  .message-editor {
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    background-color: var(--col-surface);
+    border: 1px solid var(--col-highlightHigh);
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+      "Roboto Mono", "Oxygen Mono", "Ubuntu Mono", "Source Code Pro",
+      "Fira Mono", "Droid Sans Mono", "Consolas", "Courier New", monospace;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: auto;
+
+    :global(.msh) {
+      color: var(--col-pine);
+    }
+    :global(.seps > *) {
+      color: var(--col-muted) !important;
+    }
+    :global(.seg) {
+      color: var(--col-foam);
+    }
+    :global(.sepf),
+    :global(.sepr),
+    :global(.sepc),
+    :global(.sepsc) {
+      color: var(--col-subtle);
+    }
+    :global(.f),
+    :global(.r),
+    :global(.c),
+    :global(.sc) {
+      color: var(--col-text);
+    }
+    :global(.err) {
+      color: var(--col-love) !important;
+    }
+  }
+</style>

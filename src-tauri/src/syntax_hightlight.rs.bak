@@ -1,0 +1,187 @@
+use std::borrow::Cow;
+
+use hl7_parser::{
+    message::{Component, Field, Repeat, Separators, Subcomponent},
+    parser::ParseError,
+};
+
+trait SyntaxHighlighter {
+    fn highlight(&self, seps: &Separators) -> String;
+}
+
+// https://docs.rs/quick-xml/0.37.4/src/quick_xml/escape.rs.html#152-201
+fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let raw = raw.into();
+    let bytes = raw.as_bytes();
+    let mut escaped = None;
+    let mut iter = bytes.iter();
+    let mut pos = 0;
+    while let Some(i) = iter.position(|&b| match b {
+        b'<' | b'>' | b'&' | b'\'' | b'\"' | b'\t' | b'\r' | b'\n' | b' ' => true,
+        _ => false,
+    }) {
+        if escaped.is_none() {
+            escaped = Some(Vec::with_capacity(raw.len()));
+        }
+        let escaped = escaped.as_mut().expect("initialized");
+        let new_pos = pos + i;
+        escaped.extend_from_slice(&bytes[pos..new_pos]);
+        match bytes[new_pos] {
+            b'<' => escaped.extend_from_slice(b"&lt;"),
+            b'>' => escaped.extend_from_slice(b"&gt;"),
+            b'\'' => escaped.extend_from_slice(b"&apos;"),
+            b'&' => escaped.extend_from_slice(b"&amp;"),
+            b'"' => escaped.extend_from_slice(b"&quot;"),
+
+            // This set of escapes handles characters that should be escaped
+            // in elements of xs:lists, because those characters works as
+            // delimiters of list elements
+            b'\t' => escaped.extend_from_slice(b"&#9;"),
+            b'\n' => escaped.extend_from_slice(b"&#10;"),
+            b'\r' => escaped.extend_from_slice(b"&#13;"),
+            b' ' => escaped.extend_from_slice(b"&#32;"),
+            _ => unreachable!(
+                "Only '<', '>','\', '&', '\"', '\\t', '\\r', '\\n', and ' ' are escaped"
+            ),
+        }
+        pos = new_pos + 1;
+    }
+
+    if let Some(mut escaped) = escaped {
+        if let Some(raw) = bytes.get(pos..) {
+            escaped.extend_from_slice(raw);
+        }
+        // SAFETY: we operate on UTF-8 input and search for an one byte chars only,
+        // so all slices that was put to the `escaped` is a valid UTF-8 encoded strings
+        // TODO: Can be replaced with `unsafe { String::from_utf8_unchecked() }`
+        // if unsafe code will be allowed
+        Cow::Owned(String::from_utf8(escaped).unwrap())
+    } else {
+        raw
+    }
+}
+
+impl SyntaxHighlighter for Subcomponent<'_> {
+    fn highlight(&self, _seps: &Separators) -> String {
+        format!(
+            r#"<span class="sc">{sc}</span>"#,
+            sc = html_escape(self.raw_value())
+        )
+    }
+}
+
+impl SyntaxHighlighter for Component<'_> {
+    fn highlight(&self, seps: &Separators) -> String {
+        let mut highlighted = String::new();
+        highlighted.push_str(r#"<span class="c">"#);
+
+        if self.has_subcomponents() {
+            let subcomponent_separator = format!(
+                r#"<span class="sepsc">{subcomponent_separator}</span>"#,
+                subcomponent_separator = seps.subcomponent
+            );
+
+            let subcomponents = self
+                .subcomponents()
+                .map(|c| c.highlight(seps))
+                .collect::<Vec<_>>();
+            highlighted.push_str(&subcomponents.join(&subcomponent_separator));
+        } else {
+            highlighted.push_str(html_escape(self.raw_value()).as_ref());
+        }
+
+        highlighted.push_str("</span>");
+        highlighted
+    }
+}
+
+impl SyntaxHighlighter for Repeat<'_> {
+    fn highlight(&self, seps: &Separators) -> String {
+        let mut highlighted = String::new();
+        highlighted.push_str(r#"<span class="r">"#);
+
+        if self.has_components() {
+            let component_separator = format!(
+                r#"<span class="sepc">{component_separator}</span>"#,
+                component_separator = seps.component
+            );
+
+            let components = self
+                .components()
+                .map(|c| c.highlight(seps))
+                .collect::<Vec<_>>();
+            highlighted.push_str(&components.join(&component_separator));
+        } else {
+            highlighted.push_str(html_escape(self.raw_value()).as_ref());
+        }
+
+        highlighted.push_str("</span>");
+        highlighted
+    }
+}
+
+impl SyntaxHighlighter for Field<'_> {
+    fn highlight(&self, seps: &Separators) -> String {
+        let mut highlighted = String::new();
+        highlighted.push_str(r#"<span class="f">"#);
+
+        if self.has_repeats() {
+            let repeat_separator = format!(
+                r#"<span class="sepr">{repeat_separator}</span>"#,
+                repeat_separator = seps.repetition
+            );
+
+            let repeats = self
+                .repeats()
+                .map(|r| r.highlight(seps))
+                .collect::<Vec<_>>();
+            highlighted.push_str(&repeats.join(&repeat_separator));
+        } else {
+            highlighted.push_str(html_escape(self.raw_value()).as_ref());
+        }
+
+        highlighted.push_str("</span>");
+        highlighted
+    }
+}
+
+impl SyntaxHighlighter for hl7_parser::message::Segment<'_> {
+    fn highlight(&self, seps: &Separators) -> String {
+        let mut highlighted = String::new();
+        highlighted.push_str(r#"<span class="segment">"#);
+        highlighted.push_str(&format!(
+            r#"<span class="{class}">{name}</span>"#,
+            class = if self.name == "MSH" { "msh" } else { "seg" },
+            name = self.name
+        ));
+
+        let field_separator = format!(
+            r#"<span class="sepf">{field_separator}</span>"#,
+            field_separator = seps.field
+        );
+
+        let fields = self.fields().map(|f| f.highlight(seps)).collect::<Vec<_>>();
+
+        if self.name == "MSH" {
+            // don't use field separators for the first two fields
+            // (the first field _is_ the field separator, and there is no
+            // field separator before the second field)
+            for (i, field) in fields.into_iter().enumerate() {
+                match i {
+                    0 | 1 => {
+                        highlighted.push_str(&format!(r#"<span class="seps">{field}</span>"#));
+                    }
+                    _ => {
+                        highlighted.push_str(&field_separator);
+                        highlighted.push_str(&field);
+                    }
+                }
+            }
+        } else {
+            highlighted.push_str(&fields.join(&field_separator));
+        }
+
+        highlighted.push_str("</span>");
+        highlighted
+    }
+}

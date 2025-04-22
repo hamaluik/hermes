@@ -1,0 +1,116 @@
+/* css reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    interpolate-size: allow-keywords;
+  }
+}
+
+body {
+  line-height: 1.5;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+body>div {
+  isolation: isolate;
+}
+
+/* base styles */
+:root {
+  font-family: system-ui, sans-serif;
+  font-weight: normal;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  --col-base: #faf4ed;
+  --col-surface: #fffaf3;
+  --col-overlay: #f2e9e1;
+  --col-muted: #9893a5;
+  --col-subtle: #797593;
+  --col-text: #575279;
+  --col-love: #b4637a;
+  --col-gold: #ea9d34;
+  --col-rose: #d7827e;
+  --col-pine: #286983;
+  --col-foam: #56949f;
+  --col-iris: #907aa9;
+  --col-highlightLow: #f4ede8;
+  --col-highlightMed: #dfdad9;
+  --col-highlightHigh: #cecacd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --col-base: #191724;
+    --col-surface: #1f1d2e;
+    --col-overlay: #26233a;
+    --col-muted: #6e6a86;
+    --col-subtle: #908caa;
+    --col-text: #e0def4;
+    --col-love: #eb6f92;
+    --col-gold: #f6c177;
+    --col-rose: #ebbcba;
+    --col-pine: #31748f;
+    --col-foam: #9ccfd8;
+    --col-iris: #c4a7e7;
+    --col-highlightLow: #21202e;
+    --col-highlightMed: #403d52;
+    --col-highlightHigh: #524f67;
+  }
+}
+
+body {
+  color: var(--col-text);
+  background-color: var(--col-base);
+}
