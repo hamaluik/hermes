@@ -33,7 +33,7 @@ struct CursorLocation {
     component: Option<usize>,
     subcomponent: Option<usize>,
     description_standard: Option<String>,
-    description_wizard: Option<&'static str>,
+    description_wizard: Option<String>,
 }
 
 #[tauri::command]
@@ -76,12 +76,26 @@ fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
                 location.description_standard = Some(spec::describe_component(
                     version, segment, *field, *component,
                 ));
-                location.description_wizard = ::describe(segment, *field, Some(*component));
+                let field_desc = ::describe(segment, *field, None);
+                let component_desc = ::describe(segment, *field, Some(*component));
+                location.description_wizard = match (field_desc, component_desc) {
+                    (Some(field_desc), Some(component_desc)) => {
+                        if field_desc == component_desc {
+                            Some(field_desc.to_string())
+                        } else {
+                            Some(format!("{field_desc}\n\n{component_desc}"))
+                        }
+                    }
+                    (Some(field_desc), None) => Some(field_desc.to_string()),
+                    (None, Some(component_desc)) => Some(component_desc.to_string()),
+                    _ => None,
+                };
             }
             (Some(segment), Some(field), None) => {
                 location.description_standard =
                     Some(spec::describe_field(version, segment, *field));
-                location.description_wizard = ::describe(segment, *field, None);
+                location.description_wizard =
+                    ::describe(segment, *field, None).map(|desc| desc.to_string());
             }
             (Some(segment), None, None) => {
                 location.description_standard = Some(spec::segment_description(version, segment));
