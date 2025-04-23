@@ -1,7 +1,9 @@
-# Tauri + SvelteKit + TypeScript
+# Hermes
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+A small tool for composing, sending, and receiving HL7 messages for HL7System
+Tx for development and testing. Very much still an exploratory
+prototype.
 
-## Recommended IDE Setup
+Developed using [Tauri](https://tauri.app/) and [Svelte](https://svelte.dev/),
+with [pnpm](https://pnpm.io/) as the package manager.
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
