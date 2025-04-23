@@ -1,6 +1,6 @@
 <script lang="ts">
   import MessageEditor from "$lib/message_editor.svelte";
-  import CursorBreadcrumbs from "$lib/cursor_breadcrumbs.svelte";
+  import CursorDescription from "$lib/cursor_description.svelte";
 
   let message: string | null = $state(null);
   let cursorPos: number | null = $state(null);
@@ -16,7 +16,7 @@
       cursorPos = pos;
     }}
   />
-  <CursorBreadcrumbs {message} {cursorPos} />
+  <CursorDescription {message} {cursorPos} />
 </main>
 
 <style>

@@ -32,14 +32,11 @@ struct CursorLocation {
     repeat: Option<usize>,
     component: Option<usize>,
     subcomponent: Option<usize>,
-    description_standard: Option<String>,
-    description_wizard: Option<String>,
 }
 
 #[tauri::command]
 fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
     let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
-    let version = get_version_with_fallback(&message);
 
     message.locate_cursor(cursor).map(|loc| {
         let mut location = CursorLocation::default();
@@ -67,44 +64,50 @@ fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
             }
         }
 
-        match (
-            &location.segment,
-            location.field.as_ref(),
-            location.component.as_ref(),
-        ) {
-            (Some(segment), Some(field), Some(component)) => {
-                location.description_standard = Some(spec::describe_component(
-                    version, segment, *field, *component,
-                ));
-                let field_desc = ::describe(segment, *field, None);
-                let component_desc = ::describe(segment, *field, Some(*component));
-                location.description_wizard = match (field_desc, component_desc) {
-                    (Some(field_desc), Some(component_desc)) => {
-                        if field_desc == component_desc {
-                            Some(field_desc.to_string())
-                        } else {
-                            Some(format!("{field_desc}\n\n{component_desc}"))
-                        }
-                    }
-                    (Some(field_desc), None) => Some(field_desc.to_string()),
-                    (None, Some(component_desc)) => Some(component_desc.to_string()),
-                    _ => None,
-                };
-            }
-            (Some(segment), Some(field), None) => {
-                location.description_standard =
-                    Some(spec::describe_field(version, segment, *field));
-                location.description_wizard =
-                    ::describe(segment, *field, None).map(|desc| desc.to_string());
-            }
-            (Some(segment), None, None) => {
-                location.description_standard = Some(spec::segment_description(version, segment));
-            }
-            _ => {}
-        }
-
         location
     })
+}
+
+#[tauri::command]
+fn get_std_description(segment: &str, field: Option<usize>, component: Option<usize>) -> String {
+    let version = "2.5.1";
+    match (field, component) {
+        (Some(field), Some(component)) => {
+            spec::describe_component(version, segment, field, component)
+        }
+        (Some(field), None) => spec::describe_field(version, segment, field),
+        _ => spec::segment_description(version, segment),
+    }
+}
+
+#[tauri::command]
+fn get_wizard_description(
+    segment: &str,
+    field: Option<usize>,
+    component: Option<usize>,
+) -> Option<String> {
+    match (field, component) {
+        (Some(field), Some(component)) => {
+            let field_desc = ::describe(segment, field, None);
+            let component_desc = ::describe(segment, field, Some(component));
+            match (field_desc, component_desc) {
+                (Some(field_desc), Some(component_desc)) => {
+                    if field_desc == component_desc {
+                        Some(field_desc.to_string())
+                    } else {
+                        Some(format!("{field_desc}\n\n{component_desc}"))
+                    }
+                }
+                (Some(field_desc), None) => Some(field_desc.to_string()),
+                (None, Some(component_desc)) => Some(component_desc.to_string()),
+                _ => None,
+            }
+        }
+        (Some(field), None) => {
+            ::describe(segment, field, None).map(|desc| desc.to_string())
+        }
+        _ => None,
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -112,7 +115,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![syntax_highlight, locate_cursor])
+        .invoke_handler(tauri::generate_handler![
+            syntax_highlight,
+            locate_cursor,
+            get_std_description,
+            get_wizard_description
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

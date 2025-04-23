@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
   import { onDestroy, onMount } from "svelte";
+  import { syntaxHighlight } from "../backend";
 
   let {
     onchange,
@@ -25,9 +25,7 @@
       onchange(message);
     }
 
-    let highlighted: string = await invoke("syntax_highlight", {
-      message,
-    });
+    const highlighted = await syntaxHighlight(message);
     highlightElement.innerHTML = highlighted;
 
     handleScroll();
