@@ -1,13 +1,17 @@
 use hl7_parser::Message;
 use std::{borrow::Cow, ops::Range};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+use crate::spec::{get_version_with_fallback, is_component_a_timestamp, is_field_a_timestamp};
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum RangeType {
     MSH,
     Separators,
     SegmentName,
     Separator,
     Cell,
+    TemplatedValue,
+    Timestamp,
 }
 
 impl RangeType {
@@ -18,82 +22,121 @@ impl RangeType {
             RangeType::SegmentName => "seg",
             RangeType::Separator => "sep",
             RangeType::Cell => "cell",
+            RangeType::TemplatedValue => "temp",
+            RangeType::Timestamp => "ts",
         }
     }
 }
 
 pub fn syntax_highlight(message: &Message) -> String {
-    let mut ranges: Vec<(Range<usize>, RangeType)> = Vec::new();
+    let ranges = collect_ranges(message);
+    // ranges will already be sorted by their start position because of the
+    // structure of the message
+    let position_types = create_position_mapping(&ranges, message.raw_value().len());
+    generate_html(message, &position_types)
+}
+
+fn collect_ranges(message: &Message) -> Vec<(Range<usize>, RangeType)> {
+    let mut ranges = Vec::new();
+    let version = get_version_with_fallback(message);
 
     for segment in message.segments() {
-        {
-            let name_start = segment.range.start;
-            let name_end = segment.range.start + segment.name.len();
-            if segment.name == "MSH" {
-                ranges.push((name_start..name_end, RangeType::MSH));
-            } else {
-                ranges.push((name_start..name_end, RangeType::SegmentName));
-            }
+        let name_start = segment.range.start;
+        let name_end = segment.range.start + segment.name.len();
+
+        if segment.name == "MSH" {
+            ranges.push((name_start..name_end, RangeType::MSH));
+        } else {
+            ranges.push((name_start..name_end, RangeType::SegmentName));
         }
 
-        for (i, field) in segment.fields().enumerate() {
-            if segment.name == "MSH" && i < 2 {
+        for (field_i, field) in segment.fields().enumerate() {
+            if segment.name == "MSH" && field_i < 2 {
                 ranges.push((field.range.clone(), RangeType::Separators));
                 continue;
             }
+
             for repeat in field.repeats() {
-                for component in repeat.components() {
+                for (component_i, component) in repeat.components().enumerate() {
                     for subcomponent in component.subcomponents() {
-                        ranges.push((subcomponent.range.clone(), RangeType::Cell));
+                        let is_templated_value = subcomponent.raw_value().starts_with('{')
+                            && subcomponent.raw_value().ends_with('}');
+                        ranges.push((
+                            subcomponent.range.clone(),
+                            if is_templated_value {
+                                RangeType::TemplatedValue
+                            } else if is_component_a_timestamp(
+                                version,
+                                segment.name,
+                                field_i + 1,
+                                component_i + 1,
+                            ) {
+                                RangeType::Timestamp
+                            } else if is_field_a_timestamp(version, segment.name, field_i + 1) {
+                                RangeType::Timestamp
+                            } else {
+                                RangeType::Cell
+                            },
+                        ));
                     }
                 }
             }
         }
     }
 
-    let raw_message = message.raw_value();
-    // loop through all characters in the raw message, and evaluate what range
-    // type it belongs to. If the character is not in any range, it is a
-    // separator type. If the range type changes, end the previous span and start
-    // a new one with the appropriate css class
-    let mut highlighted = String::new();
-    let mut last_range_type = None;
-    // TODO: this is O^2
-    for (i, c) in raw_message.char_indices() {
-        let mut range_type = RangeType::Separator;
-        for (range, rtype) in &ranges {
-            if range.contains(&i) {
-                range_type = *rtype;
-                break;
-            }
-        }
+    ranges
+}
 
-        if Some(range_type) != last_range_type {
-            if last_range_type.is_some() {
-                highlighted.push_str("</span>");
-            }
-            highlighted.push_str(&format!(
-                r#"<span class="{class}">"#,
-                class = range_type.class()
-            ));
-            last_range_type = Some(range_type);
-        }
-        match c {
-            '<' | '>' | '&' | '\'' | '\"' | '\n' => {
-                highlighted.push_str(&match c {
-                    '<' => "&lt;",
-                    '>' => "&gt;",
-                    '\'' => "&apos;",
-                    '&' => "&amp;",
-                    '\"' => "&quot;",
-                    '\n' => "<br/>",
-                    _ => unreachable!(),
-                });
-            }
-            c => highlighted.push(c),
+fn create_position_mapping(
+    ranges: &[(Range<usize>, RangeType)],
+    message_len: usize,
+) -> Vec<Option<RangeType>> {
+    let mut position_types = vec![None; message_len];
+
+    for (range, range_type) in ranges {
+        for pos in range.start..range.end {
+            position_types[pos] = Some(*range_type);
         }
     }
 
+    position_types
+}
+
+fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> String {
+    let raw_message = message.raw_value();
+    let mut highlighted = String::with_capacity(raw_message.len() * 3);
+    let mut current_type = None;
+
+    for (i, c) in raw_message.char_indices() {
+        let range_type = position_types[i].unwrap_or(RangeType::Separator);
+
+        if current_type != Some(range_type) {
+            if current_type.is_some() {
+                highlighted.push_str("</span>");
+            }
+
+            highlighted.push_str(&format!(
+                r#"<span class="{class}">"#,
+                class = range_type.class(),
+            ));
+
+            current_type = Some(range_type);
+        }
+
+        match c {
+            '<' => highlighted.push_str("&lt;"),
+            '>' => highlighted.push_str("&gt;"),
+            '&' => highlighted.push_str("&amp;"),
+            '\'' => highlighted.push_str("&apos;"),
+            '\"' => highlighted.push_str("&quot;"),
+            '\n' => highlighted.push_str("<br/>"),
+            _ => highlighted.push(c),
+        }
+    }
+
+    if current_type.is_some() {
+        highlighted.push_str("</span>");
+    }
     highlighted
 }
 

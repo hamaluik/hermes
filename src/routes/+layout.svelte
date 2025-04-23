@@ -1,3 +1,11 @@
+<script>
+  let { children } = $props();
+</script>
+
+<main>
+  {@render children?.()}
+</main>
+
 <style>
   main {
     display: flex;
@@ -7,7 +15,3 @@
     padding: 1rem;
   }
 </style>
-
-<main>
-    <slot/>
-</main>

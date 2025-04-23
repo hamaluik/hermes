@@ -1,20 +1,33 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { onDestroy, onMount } from "svelte";
+
+  let {
+    onchange,
+    oncursorchange,
+  }: {
+    onchange?: (message: string) => void;
+    oncursorchange?: (cursorPos: number) => void;
+  } = $props();
 
   let editElement: HTMLElement;
   let highlightElement: HTMLElement;
 
+  let selectionListener: () => void;
+
   async function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
     let message = target.value;
+    if (message[message.length - 1] == "\n") {
+      message += " ";
+    }
+    if (onchange) {
+      onchange(message);
+    }
 
     let highlighted: string = await invoke("syntax_highlight", {
       message,
     });
-    // Handle final newlines
-    if (highlighted[highlighted.length - 1] == "\n") {
-      highlighted += " ";
-    }
     highlightElement.innerHTML = highlighted;
 
     handleScroll();
@@ -24,14 +37,39 @@
     highlightElement.scrollTop = editElement.scrollTop;
     highlightElement.scrollLeft = editElement.scrollLeft;
   }
+
+  function handleCursorChange() {
+    if (document.activeElement === editElement) {
+      const cursorPos = (editElement as HTMLTextAreaElement).selectionStart;
+      if (oncursorchange) {
+        oncursorchange(cursorPos);
+      }
+    }
+  }
+
+  onMount(() => {
+    highlightElement.scrollTop = editElement.scrollTop;
+    highlightElement.scrollLeft = editElement.scrollLeft;
+
+    selectionListener = () => {
+      if (document.activeElement === editElement) {
+        handleCursorChange();
+      }
+    };
+    document.addEventListener("selectionchange", selectionListener);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("selectionchange", selectionListener);
+  });
 </script>
 
 <div class="message-editor">
   <textarea
     placeholder="MSH|^~\&|…"
     class="editor"
-    on:input={handleInput}
-    on:scroll={handleScroll}
+    oninput={handleInput}
+    onscroll={handleScroll}
     bind:this={editElement}
   ></textarea>
   <div
@@ -55,65 +93,39 @@
 
     .editor,
     .highlighting {
-      /* Both elements need the same text and space styling so they are directly on top of each other */
       margin: 0;
       padding: 0;
       border: 0;
       width: calc(100% - 1rem);
       height: calc(100% - 1rem);
-    }
-    .editor,
-    .highlighting {
       font-size: 16px;
       font-family: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
         "Roboto Mono", "Oxygen Mono", "Ubuntu Mono", "Source Code Pro",
         "Fira Mono", "Droid Sans Mono", "Consolas", "Courier New", monospace;
       line-height: 1.5;
       tab-size: 2;
-    }
-
-    .editor,
-    .highlighting {
-      /* In the same place */
       position: absolute;
       top: 0.5rem;
       left: 0.5rem;
+      overflow: auto;
+      white-space: pre;
     }
-
-    /* Move the .editor in front of the result */
 
     .editor {
       z-index: 1;
-    }
-    .highlighting {
-      z-index: 0;
-    }
-
-    /* Make .editor almost completely transparent */
-
-    .editor {
       color: transparent;
       background: transparent;
       caret-color: var(--col-iris);
-    }
-
-    /* Can be scrolled */
-    .editor,
-    .highlighting {
-      overflow: auto;
-      white-space: pre; /* Allows .editor to scroll horizontally */
-    }
-
-    /* No resize on .editor */
-    .editor {
       resize: none;
-    }
 
-    .editor:focus {
-      outline: none;
+      &:focus {
+        outline: none;
+      }
     }
 
     .highlighting {
+      z-index: 0;
+
       :global(.msh) {
         color: var(--col-pine);
       }
@@ -128,6 +140,12 @@
       }
       :global(.cell) {
         color: var(--col-text);
+      }
+      :global(.temp) {
+        color: var(--col-gold);
+      }
+      :global(.ts) {
+        color: var(--col-iris);
       }
       :global(.err) {
         color: var(--col-love) !important;

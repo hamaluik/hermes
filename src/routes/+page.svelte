@@ -1,11 +1,22 @@
 <script lang="ts">
   import MessageEditor from "$lib/message_editor.svelte";
+  import CursorBreadcrumbs from "$lib/cursor_breadcrumbs.svelte";
+
+  let message: string | null = $state(null);
+  let cursorPos: number | null = $state(null);
 </script>
 
 <main class="container">
-  <h1>Hermes</h1>
-
-  <MessageEditor --message-editor-flex="1" />
+  <MessageEditor
+    --message-editor-flex="1"
+    onchange={(m) => {
+      message = m;
+    }}
+    oncursorchange={(pos) => {
+      cursorPos = pos;
+    }}
+  />
+  <CursorBreadcrumbs {message} {cursorPos} />
 </main>
 
 <style>
