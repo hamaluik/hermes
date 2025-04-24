@@ -21,4 +21,5 @@ hl7-parser = { version = "0.3.0", features = ["jiff", "serde"] }
 log = { version = "0.4.27", features = ["kv"] }
 tauri-plugin-log = "2"
 hl7-definitions = { git = "https://github.com/hamaluik/hl7-definitions.git", version = "0.0.2" }
+jiff = "0.2.10"
 

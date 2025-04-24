@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { syntaxHighlight } from "../backend";
+  import { syntaxHighlight } from "../backend/syntax_highlight";
 
   let {
+    message,
     onchange,
     oncursorchange,
   }: {
+    message?: string;
     onchange?: (message: string) => void;
     oncursorchange?: (cursorPos: number) => void;
   } = $props();
@@ -14,6 +16,17 @@
   let highlightElement: HTMLElement;
 
   let selectionListener: () => void;
+
+  $effect(() => {
+    if (message) {
+      console.debug("message changed");
+      (editElement as HTMLTextAreaElement).value = message;
+      console.debug("message changed, highlighting...");
+      syntaxHighlight(message).then((highlighted) => {
+        highlightElement.innerHTML = highlighted;
+      });
+    }
+  });
 
   async function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
@@ -96,7 +109,6 @@
       border: 0;
       width: calc(100% - 1rem);
       height: calc(100% - 1rem);
-      font-size: 16px;
       font-family: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
         "Roboto Mono", "Oxygen Mono", "Ubuntu Mono", "Source Code Pro",
         "Fira Mono", "Droid Sans Mono", "Consolas", "Courier New", monospace;

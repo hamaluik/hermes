@@ -1,27 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export async function syntaxHighlight(message: string): Promise<string> {
-  return invoke("syntax_highlight", { message });
-}
-
-export interface LocatedCursor {
-  segment: string | null;
-  field: number | null;
-  repeat: number | null;
-  component: number | null;
-  subcomponent: number | null;
-}
-
-export async function locateCursor(
-  message: string,
-  cursor: number,
-): Promise<LocatedCursor | null> {
-  return invoke("locate_cursor", {
-    message,
-    cursor,
-  });
-}
-
 export async function loadSpec(
   segment: string,
   field: number | null,

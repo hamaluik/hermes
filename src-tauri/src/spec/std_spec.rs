@@ -1,6 +1,6 @@
+/// This file is basically lifted from
+/// https://github.com/hamaluik/hl7-ls/blob/main/src/spec.rs
 use hl7_parser::Message;
-
-/// This file is lifted from https://github.com/hamaluik/hl7-ls/blob/main/src/spec.rs
 
 pub fn is_valid_version(version: &str) -> bool {
     hl7_definitions::VERSIONS.contains(&version)

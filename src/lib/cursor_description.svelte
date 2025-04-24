@@ -1,17 +1,13 @@
 <script lang="ts">
-  import {
-    getSpecAndDescription,
-    locateCursor,
-    type LocatedCursor,
-  } from "../backend";
-
+  import { locateCursor, type LocatedCursor } from "../backend/cursor";
+  import { getSpecAndDescription } from "../backend/description";
   let {
     message,
     cursorPos,
     oncursorlocated,
   }: {
-    message?: string | null;
-    cursorPos?: number | null;
+    message?: string;
+    cursorPos?: number;
     oncursorlocated?: (locatedCursor: LocatedCursor | null) => void;
   } = $props();
 
@@ -28,10 +24,10 @@
     }
     const { segment, field, repeat, component, subcomponent } = locatedCursor;
 
-    const fieldStr = field !== null ? `.${field}` : "";
-    const repeatStr = repeat !== null ? `[${repeat}]` : "";
-    const componentStr = component !== null ? `.${component}` : "";
-    const subcomponentStr = subcomponent !== null ? `.${subcomponent}` : "";
+    const fieldStr = field != null ? `.${field}` : "";
+    const repeatStr = repeat != null ? `[${repeat}]` : "";
+    const componentStr = component != null ? `.${component}` : "";
+    const subcomponentStr = subcomponent != null ? `.${subcomponent}` : "";
     _path = `${segment}${fieldStr}${repeatStr}${componentStr}${subcomponentStr}`;
   }
 
@@ -47,8 +43,8 @@
           if (locatedCursor?.segment) {
             return getSpecAndDescription(
               locatedCursor.segment,
-              locatedCursor.field,
-              locatedCursor.component,
+              locatedCursor.field ?? null,
+              locatedCursor.component ?? null,
             );
           } else {
             return { spec: null, description: null };
@@ -86,7 +82,7 @@
 
 <style>
   .cursor-description {
-    font-size: 0.9em;
+    font-size: small;
     color: var(--col-text);
 
     display: flex;
@@ -105,11 +101,11 @@
     color: var(--col-iris);
   }
   .spec {
-    font-size: 0.8em;
+    font-size: smaller;
     color: var(--col-subtle);
   }
   .description {
-    font-size: 0.8em;
+    font-size: small;
     color: var(--col-text);
     white-space: pre-line;
   }

@@ -114,3 +114,17 @@ body {
   color: var(--col-text);
   background-color: var(--col-base);
 }
+
+/* safari fixes */
+input::-webkit-datetime-edit,
+input::-webkit-datetime-edit-year-field,
+input::-webkit-datetime-edit-month-field,
+input::-webkit-datetime-edit-day-field,
+input::-webkit-datetime-edit-hour-field,
+input::-webkit-datetime-edit-minute-field,
+input::-webkit-datetime-edit-second-field,
+input::-webkit-datetime-edit-millisecond-field,
+input::-webkit-datetime-edit-meridiem-field {
+  padding: 0;
+  -webkit-text-fill-color: var(--col-text);
+}

@@ -1,10 +1,31 @@
-use hl7_parser::Message;
+use hl7_parser::{parser::ParseError, Message};
 use std::{borrow::Cow, ops::Range};
 
-use crate::spec::{get_version_with_fallback, is_component_a_timestamp, is_field_a_timestamp};
+use crate::spec::std_spec::{
+    get_version_with_fallback, is_component_a_timestamp, is_field_a_timestamp,
+};
+
+#[tauri::command]
+pub fn syntax_highlight(message: &str) -> String {
+    match hl7_parser::parse_message_with_lenient_newlines(message) {
+        Ok(msg) => do_syntax_highlight(&msg),
+        Err(ParseError::FailedToParse { position, .. }) => {
+            let before = html_escape(&message[..position]).replace('\n', "<br/>");
+            let after = html_escape(&message[position..]).replace('\n', "<br/>");
+            format!(r#"{before}<span class="err">{after}</span>"#)
+        }
+        Err(ParseError::IncompleteInput(position)) => {
+            let position = position.unwrap_or(0);
+            let before = html_escape(&message[..position]).replace('\n', "<br/>");
+            let after = html_escape(&message[position..]).replace('\n', "<br/>");
+            format!(r#"{before}<span class="err">{after}</span>"#)
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum RangeType {
+    #[allow(clippy::upper_case_acronyms)]
     MSH,
     Separators,
     SegmentName,
@@ -28,11 +49,11 @@ impl RangeType {
     }
 }
 
-pub fn syntax_highlight(message: &Message) -> String {
+fn do_syntax_highlight(message: &Message) -> String {
     let ranges = collect_ranges(message);
     // ranges will already be sorted by their start position because of the
     // structure of the message
-    let position_types = create_position_mapping(&ranges, message.raw_value().len());
+    let position_types = create_position_mapping(ranges, message.raw_value().len());
     generate_html(message, &position_types)
 }
 
@@ -70,9 +91,8 @@ fn collect_ranges(message: &Message) -> Vec<(Range<usize>, RangeType)> {
                                 segment.name,
                                 field_i + 1,
                                 component_i + 1,
-                            ) {
-                                RangeType::Timestamp
-                            } else if is_field_a_timestamp(version, segment.name, field_i + 1) {
+                            ) || is_field_a_timestamp(version, segment.name, field_i + 1)
+                            {
                                 RangeType::Timestamp
                             } else {
                                 RangeType::Cell
@@ -88,14 +108,14 @@ fn collect_ranges(message: &Message) -> Vec<(Range<usize>, RangeType)> {
 }
 
 fn create_position_mapping(
-    ranges: &[(Range<usize>, RangeType)],
+    ranges: Vec<(Range<usize>, RangeType)>,
     message_len: usize,
 ) -> Vec<Option<RangeType>> {
     let mut position_types = vec![None; message_len];
 
-    for (range, range_type) in ranges {
-        for pos in range.start..range.end {
-            position_types[pos] = Some(*range_type);
+    for (range, range_type) in ranges.into_iter() {
+        for i in range {
+            position_types[i] = Some(range_type);
         }
     }
 
@@ -140,15 +160,17 @@ fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> Str
     highlighted
 }
 
-pub fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
     let raw = raw.into();
     let bytes = raw.as_bytes();
     let mut escaped = None;
     let mut iter = bytes.iter();
     let mut pos = 0;
-    while let Some(i) = iter.position(|&b| match b {
-        b'<' | b'>' | b'&' | b'\'' | b'\"' | b'\t' | b'\r' | b'\n' | b' ' => true,
-        _ => false,
+    while let Some(i) = iter.position(|&b| {
+        matches!(
+            b,
+            b'<' | b'>' | b'&' | b'\'' | b'\"' | b'\t' | b'\r' | b'\n' | b' '
+        )
     }) {
         if escaped.is_none() {
             escaped = Some(Vec::with_capacity(raw.len()));
