@@ -351,6 +351,7 @@
       gap: 1ch;
       align-items: flex-end;
 
+      background-color: var(--col-overlay);
       padding: 0.5lh 1ch;
       margin: 0;
       border: 1px solid var(--col-muted);
@@ -381,7 +382,7 @@
       input {
         width: 100%;
         padding: 0.5em;
-        background-color: var(--col-overlay);
+        background-color: var(--col-surface);
         border: 1px solid var(--col-muted);
         color: var(--col-text);
         border-radius: 4px;

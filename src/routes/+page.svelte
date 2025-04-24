@@ -2,18 +2,27 @@
   import MessageEditor from "$lib/message_editor.svelte";
   import CursorDescription from "$lib/cursor_description.svelte";
   import PatientTab from "$lib/forms/patient_tab.svelte";
+  import Tabs from "$lib/tabs.svelte";
+  import Tab from "$lib/tab.svelte";
 
   let message: string = $state("");
   let cursorPos: number = $state(0);
 </script>
 
 <main>
-  <PatientTab
-    {message}
-    onchange={(m) => {
-      message = m;
-    }}
-  />
+  <Tabs>
+    <Tab label="Patient">
+      <PatientTab
+        {message}
+        onchange={(m) => {
+          message = m;
+        }}
+      />
+    </Tab>
+    <Tab label="Visit">
+      <p>TODO</p>
+    </Tab>
+  </Tabs>
 
   <MessageEditor
     --message-editor-flex="1"

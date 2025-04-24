@@ -115,6 +115,13 @@ body {
   background-color: var(--col-base);
 }
 
+/* view transitions */
+/* TODO: better transitions */
+/* ::view-transition-old(tab-content), */
+/* ::view-transition-new(tab-content) { */
+/*   animation-duration: 0.1s; */
+/* } */
+
 /* safari fixes */
 input::-webkit-datetime-edit,
 input::-webkit-datetime-edit-year-field,
