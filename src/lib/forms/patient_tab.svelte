@@ -23,7 +23,6 @@
       parsePatient(message).then((parsedPatient) => {
         if (parsedPatient) {
           patient = parsedPatient;
-          console.debug("parsed patient", parsedPatient);
         }
       });
     }
@@ -401,79 +400,4 @@
 </div>
 
 <style>
-  .patient {
-    form {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-      align-items: baseline;
-      gap: 1ch;
-    }
-
-    fieldset {
-      display: flex;
-      flex-direction: row;
-      gap: 1ch;
-      align-items: flex-end;
-
-      background-color: var(--col-overlay);
-      padding: 0.5lh 1ch;
-      margin: 0;
-      border: 1px solid var(--col-muted);
-      border-radius: 4px;
-    }
-
-    .form-group {
-      flex: 1 1 auto;
-      min-width: 10ch;
-      max-width: 30ch;
-
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-
-      position: relative;
-
-      &.short {
-        min-width: 5ch;
-        max-width: 12ch;
-      }
-
-      &:hover {
-        .popover {
-          display: block;
-        }
-      }
-    }
-    label {
-      margin-bottom: 0.1lh;
-      font-size: small;
-      color: var(--col-subtle);
-      white-space: nowrap;
-    }
-
-    .popover {
-      display: none;
-      position: absolute;
-      top: calc(100% + 0.25rem);
-      left: -10ch;
-      right: -10ch;
-      color: var(--col-text);
-      background-color: var(--col-overlay);
-      padding: 0.5ch;
-      border: 1px solid var(--col-highlightHigh);
-      z-index: 1;
-      border-radius: 4px;
-      font-size: smaller;
-
-      .note {
-        color: var(--col-pine);
-      }
-
-      :global(&.show) {
-        display: block;
-      }
-    }
-  }
 </style>

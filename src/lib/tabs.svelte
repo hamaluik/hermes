@@ -54,6 +54,7 @@
     gap: 0;
     align-items: stretch;
     justify-content: flex-start;
+    font-size: smaller;
 
     ul {
       display: flex;

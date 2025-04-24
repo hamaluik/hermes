@@ -13,6 +13,8 @@ pub fn run() {
             commands::locate_cursor,
             commands::get_std_description,
             commands::get_wizard_description,
+            commands::parse_header,
+            commands::render_header,
             commands::parse_patient,
             commands::render_patient,
         ])

@@ -1,7 +1,7 @@
 use hl7_parser::builder::{FieldBuilder, MessageBuilder, SegmentBuilder};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct PatientName {
     pub first: Option<String>,
     pub last: Option<String>,
@@ -10,7 +10,7 @@ pub struct PatientName {
     pub prefix: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct PatientAddress {
     pub address1: Option<String>,
     pub address2: Option<String>,
@@ -21,7 +21,7 @@ pub struct PatientAddress {
     pub address_type_code: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Patient {
     pub mrn: Option<String>,
     pub eid: Option<String>,
