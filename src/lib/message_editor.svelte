@@ -31,9 +31,9 @@
   async function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
     let message = target.value;
-    if (message[message.length - 1] == "\n") {
+    /*if (message[message.length - 1] == "\n") {
       message += " ";
-    }
+    }*/
     if (onchange) {
       onchange(message);
     }

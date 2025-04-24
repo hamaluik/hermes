@@ -69,7 +69,9 @@
 <div class="msh">
   <form>
     <div class="form-group">
-      <label for="sending_app">Sending Application</label>
+      <label for="sending_app"
+        >Sending Application <span class="path">MSH.3</span></label
+      >
       <input
         type="text"
         id="sending_app"
@@ -80,7 +82,9 @@
       />
     </div>
     <div class="form-group">
-      <label for="receiving_app">Receiving Application</label>
+      <label for="receiving_app"
+        >Receiving Application <span class="path">MSH.5</span></label
+      >
       <input
         type="text"
         id="receiving_app"
@@ -91,7 +95,9 @@
       />
     </div>
     <div class="form-group">
-      <label for="sending_facility">Sending Facility</label>
+      <label for="sending_facility"
+        >Sending Facility <span class="path">MSH.4</span></label
+      >
       <input
         type="text"
         id="sending_facility"
@@ -102,7 +108,9 @@
       />
     </div>
     <div class="form-group">
-      <label for="receiving_facility">Receiving Facility</label>
+      <label for="receiving_facility"
+        >Receiving Facility <span class="path">MSH.6</span></label
+      >
       <input
         type="text"
         id="receiving_facility"
@@ -114,7 +122,7 @@
     </div>
 
     <div class="form-group">
-      <label for="timestamp">Timestamp</label>
+      <label for="timestamp">Timestamp <span class="path">MSH.7</span></label>
       <input
         type="text"
         id="timestamp"
@@ -135,18 +143,23 @@
       </p>
     </div>
     <div class="form-group">
-      <label for="control_id">Control ID</label>
+      <label for="control_id">Control ID <span class="path">MSH.10</span></label
+      >
       <input
         type="text"
         id="control_id"
         bind:value={header.control_id}
         {oninput}
-        placeholder="1234567890"
+        placeholder={"{auto}"}
+        required
+        minlength="1"
         maxlength="20"
       />
     </div>
     <div class="form-group short">
-      <label for="message_type">Message Type</label>
+      <label for="message_type"
+        >Message Type <span class="path">MSH.9.1</span></label
+      >
       <input
         type="text"
         id="message_type"
@@ -154,11 +167,15 @@
         {oninput}
         placeholder="ADT"
         list="message_types"
+        required
+        minlength="3"
         maxlength="3"
       />
     </div>
     <div class="form-group short">
-      <label for="trigger_event">Trigger Event</label>
+      <label for="trigger_event"
+        >Trigger Event <span class="path">MSH.9.2</span></label
+      >
       <input
         type="text"
         id="trigger_event"
@@ -166,12 +183,16 @@
         {oninput}
         placeholder="A08"
         list={trigger_events_list}
+        required
+        minlength="3"
         maxlength="3"
       />
     </div>
 
     <div class="form-group short">
-      <label for="processing_id">Processing ID</label>
+      <label for="processing_id"
+        >Processing ID <span class="path">MSH.11</span></label
+      >
       <input
         type="text"
         id="processing_id"
@@ -179,11 +200,15 @@
         {oninput}
         placeholder="P"
         list="processing_ids"
+        pattern={"(P|D|T)"}
+        required
+        minlength="1"
         maxlength="1"
       />
     </div>
     <div class="form-group short">
-      <label for="version_id">Version ID</label>
+      <label for="version_id">Version ID <span class="path">MSH.12</span></label
+      >
       <input
         type="text"
         id="version_id"
@@ -192,11 +217,14 @@
         placeholder="2.5.1"
         pattern={"(\\d{1,2})(\\.\\d{1,2})?([\\.](\\d{1,2}))?"}
         list="version_ids"
+        required
+        minlength="3"
         maxlength="5"
       />
     </div>
     <div class="form-group short">
-      <label for="accept_ack">Accept ACK</label>
+      <label for="accept_ack">Accept ACK <span class="path">MSH.15</span></label
+      >
       <input
         type="text"
         id="accept_ack"
@@ -209,7 +237,9 @@
       />
     </div>
     <div class="form-group short">
-      <label for="app_ack">Application ACK</label>
+      <label for="app_ack"
+        >Application ACK <span class="path">MSH.16</span></label
+      >
       <input
         type="text"
         id="app_ack"
@@ -222,7 +252,9 @@
       />
     </div>
     <div class="form-group short">
-      <label for="character_set">Character Set</label>
+      <label for="character_set"
+        >Character Set <span class="path">MSH.18</span></label
+      >
       <input
         type="text"
         id="character_set"
@@ -285,4 +317,19 @@
   </form>
 </div>
 
-<style></style>
+<style>
+  .path {
+    font-size: x-small;
+    color: var(--col-subtle);
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
+
+  .form-group.short {
+    max-width: 18ch;
+  }
+</style>
