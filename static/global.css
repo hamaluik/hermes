@@ -58,9 +58,9 @@ h6 {
   text-wrap: balance;
 }
 
-body>div {
+/*body>div {
   isolation: isolate;
-}
+}*/
 
 /* base styles */
 :root {
@@ -122,6 +122,43 @@ body {
 /*   animation-duration: 0.1s; */
 /* } */
 
+/* global form styles */
+
+input {
+  width: 100%;
+  padding: 0.5em;
+  background-color: var(--col-surface);
+  border: 1px solid var(--col-muted);
+  color: var(--col-text);
+  border-radius: 4px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--col-iris);
+  box-shadow: 0 0 0 1px var(--col-iris);
+}
+
+input::placeholder {
+  color: var(--col-muted);
+}
+
+input:invalid {
+  color: var(--col-love);
+  border-color: var(--col-love);
+}
+
+input:disabled {
+  background-color: var(--col-surface);
+  color: var(--col-subtle);
+  border-color: var(--col-surface);
+}
+
+label:has(+ input:required)::after {
+  content: " *";
+  color: var(--col-rose);
+}
+
 /* safari fixes */
 input::-webkit-datetime-edit,
 input::-webkit-datetime-edit-year-field,
@@ -133,5 +170,5 @@ input::-webkit-datetime-edit-second-field,
 input::-webkit-datetime-edit-millisecond-field,
 input::-webkit-datetime-edit-meridiem-field {
   padding: 0;
-  -webkit-text-fill-color: var(--col-text);
+  /*-webkit-text-fill-color: var(--col-subtle);*/
 }

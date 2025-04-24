@@ -5,7 +5,7 @@
   import Tabs from "$lib/tabs.svelte";
   import Tab from "$lib/tab.svelte";
 
-  let message: string = $state("");
+  let message: string = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
 </script>
 

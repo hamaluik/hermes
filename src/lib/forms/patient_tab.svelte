@@ -36,6 +36,24 @@
       });
     }
   };
+
+  const onfocus = (event: Event) => {
+    const popover = (event.target as HTMLElement)
+      .closest(".form-group")
+      ?.querySelector(".popover");
+    if (popover) {
+      (popover as HTMLElement).classList.add("show");
+    }
+  };
+
+  const onblur = (event: Event) => {
+    const popover = (event.target as HTMLElement)
+      .closest(".form-group")
+      ?.querySelector(".popover");
+    if (popover) {
+      (popover as HTMLElement).classList.remove("show");
+    }
+  };
 </script>
 
 <div class="patient">
@@ -60,6 +78,7 @@
           type="text"
           id="first_name"
           bind:value={patient.name.first}
+          maxlength="30"
           {oninput}
           placeholder="Mickey"
         />
@@ -69,6 +88,7 @@
         <input
           type="text"
           id="middle_name"
+          maxlength="30"
           bind:value={patient.name.middle}
           {oninput}
           placeholder="Mickey"
@@ -79,6 +99,7 @@
         <input
           type="text"
           id="last_name"
+          maxlength="50"
           bind:value={patient.name.last}
           {oninput}
           placeholder="Mouse"
@@ -105,8 +126,16 @@
           id="mrn"
           bind:value={patient.mrn}
           {oninput}
+          {onfocus}
+          {onblur}
+          required
+          maxlength="20"
           placeholder="MRN123456"
         />
+        <p class="popover">
+          <span class="note">Note: </span>The core system uses MRN and Provider
+          as a means of recognizing existing patients.
+        </p>
       </div>
       <div class="form-group">
         <label for="eid">Enterprise ID</label>
@@ -114,9 +143,16 @@
           type="text"
           id="eid"
           bind:value={patient.eid}
+          maxlength="25"
           {oninput}
+          {onfocus}
+          {onblur}
           placeholder="EID123456"
         />
+        <p class="popover">
+          <span class="note">Note: </span>The Enterprise ID must be unique for a
+          non-merged patient. Null value can affect patient authentication.
+        </p>
       </div>
       <div class="form-group">
         <label for="ssn">Social Security Number</label>
@@ -125,8 +161,17 @@
           id="ssn"
           bind:value={patient.ssn}
           {oninput}
+          {onfocus}
+          {onblur}
+          pattern={"\\d{3}-?\\d{2}-?\\d{4}"}
+          maxlength="11"
           placeholder="123-45-6789"
         />
+        <p class="popover">
+          <span class="note">Note: </span>System will accept unformatted
+          (123456789) or dash formatted (123-45-6789) values. 9 characters will
+          be accepted.
+        </p>
       </div>
     </fieldset>
     <fieldset>
@@ -138,6 +183,7 @@
           id="date_of_birth"
           bind:value={patient.date_of_birth}
           {oninput}
+          required
           placeholder="YYYY-MM-DD"
         />
       </div>
@@ -149,9 +195,19 @@
           maxlength="1"
           bind:value={patient.gender_code}
           {oninput}
+          {onfocus}
+          {onblur}
+          required
           placeholder="M"
           list="gender_codes"
         />
+        <p class="popover">
+          <span class="note">Note: </span>This field is decoded, based on values
+          in INT_HL7_CONVERSION. Refer to CD_GENDER table for the core system
+          internal values.<br />
+          If the sent in sex code is not in CD_GENDER then the message will error
+          with AE (if requested).
+        </p>
       </div>
       <div class="form-group short">
         <label for="ethnicity_code">Ethnicity Code</label>
@@ -161,9 +217,18 @@
           maxlength="2"
           bind:value={patient.ethnicity_code}
           {oninput}
+          {onfocus}
+          {onblur}
           placeholder="OT"
           list="ethnicity_codes"
         />
+        <p class="popover">
+          <span class="note">Note: </span>This field is decoded, based on
+          INT_HL7_CONVERSION. Refer to CD_ETHNICITY table for the core system
+          internal values.<br />
+          If the sent in gender code is not in CD_ETHNICITY then the message will
+          error with AE (if requested).
+        </p>
       </div>
     </fieldset>
     <fieldset>
@@ -275,6 +340,7 @@
           id="account_number"
           bind:value={patient.account_number}
           {oninput}
+          maxlength="20"
           placeholder="123456789"
         />
       </div>
@@ -363,50 +429,50 @@
       min-width: 10ch;
       max-width: 30ch;
 
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+
+      position: relative;
+
       &.short {
         min-width: 5ch;
         max-width: 12ch;
       }
 
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      &:hover {
+        .popover {
+          display: block;
+        }
+      }
+    }
+    label {
+      margin-bottom: 0.1lh;
+      font-size: small;
+      color: var(--col-subtle);
+      white-space: nowrap;
+    }
 
-      label {
-        margin-bottom: 0.1lh;
-        font-size: small;
-        color: var(--col-subtle);
-        white-space: nowrap;
+    .popover {
+      display: none;
+      position: absolute;
+      top: calc(100% + 0.25rem);
+      left: -10ch;
+      right: -10ch;
+      color: var(--col-text);
+      background-color: var(--col-overlay);
+      padding: 0.5ch;
+      border: 1px solid var(--col-highlightHigh);
+      z-index: 1;
+      border-radius: 4px;
+      font-size: smaller;
+
+      .note {
+        color: var(--col-pine);
       }
 
-      input {
-        width: 100%;
-        padding: 0.5em;
-        background-color: var(--col-surface);
-        border: 1px solid var(--col-muted);
-        color: var(--col-text);
-        border-radius: 4px;
-      }
-
-      input:focus {
-        outline: none;
-        border-color: var(--col-iris);
-        box-shadow: 0 0 0 1px var(--col-iris);
-      }
-
-      input::placeholder {
-        color: var(--col-muted);
-      }
-
-      input:invalid {
-        color: var(--col-love);
-        border-color: var(--col-love);
-      }
-
-      input:disabled {
-        background-color: var(--col-surface);
-        color: var(--col-subtle);
-        border-color: var(--col-surface);
+      :global(&.show) {
+        display: block;
       }
     }
   }
