@@ -17,6 +17,8 @@ pub fn run() {
             commands::render_header,
             commands::parse_patient,
             commands::render_patient,
+            commands::parse_visit,
+            commands::render_visit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -60,7 +60,9 @@
     <fieldset>
       <legend>Name</legend>
       <div class="form-group short">
-        <label for="name_prefix">Prefix Code</label>
+        <label for="name_prefix"
+          >Prefix Code <span class="path">PID.5.5</span></label
+        >
         <input
           type="text"
           id="name_prefix"
@@ -72,7 +74,7 @@
         />
       </div>
       <div class="form-group">
-        <label for="first_name">First</label>
+        <label for="first_name">First <span class="path">PID.5.2</span></label>
         <input
           type="text"
           id="first_name"
@@ -83,7 +85,8 @@
         />
       </div>
       <div class="form-group short">
-        <label for="middle_name">Middle</label>
+        <label for="middle_name">Middle <span class="path">PID.5.3</span></label
+        >
         <input
           type="text"
           id="middle_name"
@@ -94,7 +97,7 @@
         />
       </div>
       <div class="form-group">
-        <label for="last_name">Last</label>
+        <label for="last_name">Last<span class="path">PID.5.1</span></label>
         <input
           type="text"
           id="last_name"
@@ -105,7 +108,7 @@
         />
       </div>
       <div class="form-group short">
-        <label for="name_suffix">Suffix</label>
+        <label for="name_suffix">Suffix <span class="path">PID.</span></label>
         <input
           type="text"
           id="name_suffix"
@@ -119,7 +122,9 @@
     <fieldset>
       <legend>IDs</legend>
       <div class="form-group">
-        <label for="mrn">Medical Record Number</label>
+        <label for="mrn"
+          >Medical Record Number <span class="path">PID.3</span></label
+        >
         <input
           type="text"
           id="mrn"
@@ -137,7 +142,7 @@
         </p>
       </div>
       <div class="form-group">
-        <label for="eid">Enterprise ID</label>
+        <label for="eid">Enterprise ID <span class="path">PID.2</span></label>
         <input
           type="text"
           id="eid"
@@ -154,7 +159,9 @@
         </p>
       </div>
       <div class="form-group">
-        <label for="ssn">Social Security Number</label>
+        <label for="ssn"
+          >Social Security Number <span class="path">PID.19</span></label
+        >
         <input
           type="text"
           id="ssn"
@@ -176,7 +183,9 @@
     <fieldset>
       <legend>Demographics</legend>
       <div class="form-group">
-        <label for="date_of_birth">Date of Birth</label>
+        <label for="date_of_birth"
+          >Date of Birth <span class="path">PID.7</span></label
+        >
         <input
           type="date"
           id="date_of_birth"
@@ -187,7 +196,9 @@
         />
       </div>
       <div class="form-group short">
-        <label for="gender_code">Gender Code</label>
+        <label for="gender_code"
+          >Gender Code <span class="path">PID.8</span></label
+        >
         <input
           type="text"
           id="gender_code"
@@ -209,7 +220,9 @@
         </p>
       </div>
       <div class="form-group short">
-        <label for="ethnicity_code">Ethnicity Code</label>
+        <label for="ethnicity_code"
+          >Ethnicity Code <span class="path">PID.10</span></label
+        >
         <input
           type="text"
           id="ethnicity_code"
@@ -233,7 +246,9 @@
     <fieldset>
       <legend>Address</legend>
       <div class="form-group">
-        <label for="address1">Address 1</label>
+        <label for="address1"
+          >Address 1 <span class="path">PID.11.1</span></label
+        >
         <input
           type="text"
           id="address1"
@@ -243,7 +258,9 @@
         />
       </div>
       <div class="form-group">
-        <label for="address2">Address 2</label>
+        <label for="address2"
+          >Address 2 <span class="path">PID.11.2</span></label
+        >
         <input
           type="text"
           id="address2"
@@ -253,7 +270,7 @@
         />
       </div>
       <div class="form-group">
-        <label for="city">City</label>
+        <label for="city">City <span class="path">PID.11.3</span></label>
         <input
           type="text"
           id="city"
@@ -263,7 +280,7 @@
         />
       </div>
       <div class="form-group short">
-        <label for="state">State</label>
+        <label for="state">State <span class="path">PID.11.4</span></label>
         <input
           type="text"
           id="state"
@@ -273,7 +290,7 @@
         />
       </div>
       <div class="form-group short">
-        <label for="zip">Zip</label>
+        <label for="zip">Zip <span class="path">PID.11.5</span></label>
         <input
           type="text"
           id="zip"
@@ -283,7 +300,7 @@
         />
       </div>
       <div class="form-group short">
-        <label for="country">Country</label>
+        <label for="country">Country <span class="path">PID.11.6</span></label>
         <input
           type="text"
           id="country"
@@ -293,7 +310,9 @@
         />
       </div>
       <div class="form-group short">
-        <label for="address_type_code">Type Code</label>
+        <label for="address_type_code"
+          >Type Code <span class="path">PID.11.7</span></label
+        >
         <input
           type="text"
           id="address_type_code"
@@ -308,7 +327,7 @@
     <fieldset>
       <legend>Phone</legend>
       <div class="form-group">
-        <label for="home_phone">Home</label>
+        <label for="home_phone">Home <span class="path">PID.13</span></label>
         <input
           type="text"
           id="home_phone"
@@ -319,7 +338,9 @@
         />
       </div>
       <div class="form-group">
-        <label for="business_phone">Business</label>
+        <label for="business_phone"
+          >Business <span class="path">PID.14</span></label
+        >
         <input
           type="text"
           id="business_phone"
@@ -333,7 +354,9 @@
     <fieldset>
       <legend>Other</legend>
       <div class="form-group">
-        <label for="account_number">Account Number</label>
+        <label for="account_number"
+          >Account Number <span class="path">PID.18</span></label
+        >
         <input
           type="text"
           id="account_number"
@@ -344,7 +367,9 @@
         />
       </div>
       <div class="form-group short">
-        <label for="status_code">Status Code</label>
+        <label for="status_code"
+          >Status Code <span class="path">PID.30</span></label
+        >
         <input
           type="text"
           id="status_code"
@@ -400,4 +425,14 @@
 </div>
 
 <style>
+  .path {
+    font-size: x-small;
+    color: var(--col-subtle);
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
 </style>

@@ -12,3 +12,6 @@ pub use header::*;
 
 mod patient;
 pub use patient::*;
+
+mod visit;
+pub use visit::*;
