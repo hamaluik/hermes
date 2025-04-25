@@ -101,6 +101,8 @@
     border: 1px solid var(--col-highlightHigh);
     border-radius: 4px;
     position: relative;
+    isolation: isolate;
+    z-index: 0;
 
     .editor,
     .highlighting {

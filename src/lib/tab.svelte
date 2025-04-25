@@ -46,5 +46,7 @@
     border-radius: 4px;
     view-transition-name: tab-content;
     height: calc-size(auto, size);
+    isolation: isolate;
+    z-index: 1;
   }
 </style>

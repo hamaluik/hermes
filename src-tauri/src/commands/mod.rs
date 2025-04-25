@@ -15,3 +15,9 @@ pub use patient::*;
 
 mod visit;
 pub use visit::*;
+
+mod schema;
+pub use schema::*;
+
+mod data;
+pub use data::*;

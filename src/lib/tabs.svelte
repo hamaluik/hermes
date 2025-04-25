@@ -62,6 +62,8 @@
       padding: 0;
       margin: 0 0 0 1ch;
       gap: 1ch;
+      isolation: isolate;
+      z-index: 2;
     }
 
     .tab {

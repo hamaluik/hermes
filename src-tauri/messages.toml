@@ -1,0 +1,18 @@
+[segments]
+msh = "msh.toml"
+adt = "adt.toml"
+
+[[message_segments.adt_a01]]
+name = "msh"
+required = true
+[[message_segments.adt_a01]]
+name = "evn"
+[[message_segments.adt_a01]]
+name = "pid"
+required = true
+[[message_segments.adt_a01]]
+name = "nk1"
+many = true
+[[message_segments.adt_a01]]
+name = "pv1"
+required = true

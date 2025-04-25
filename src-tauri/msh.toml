@@ -1,0 +1,145 @@
+[[fields]]
+field = 3
+name = "Sending Application"
+maxlength = 20
+placeholder = "EPIC"
+
+[[fields]]
+field = 4
+name = "Sending Facility"
+maxlength = 20
+placeholder = "Hospital"
+
+[[fields]]
+field = 5
+name = "Receiving Application"
+maxlength = 20
+placeholder = "LAB"
+
+[[fields]]
+field = 6
+name = "Receiving Facility"
+maxlength = 20
+placeholder = "Hospital"
+
+[[fields]]
+field = 7
+name = "Date/Time of Message"
+datatype = "datetime"
+placeholder = "YYYYMMDDHHMMSS"
+pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+maxlength = 23
+note = "Date/time the message was created. Timezone offset, if present, applies to date fields in the message that lack their own offset."
+
+[[fields]]
+field = 9
+component = 1
+name = "Message Type"
+required = true
+minlength = 3
+maxlength = 3
+placeholder = "ADT"
+[fields.values]
+ADT = "Patient Administration"
+ORM = "Order Entry"
+ORU = "Observation Result"
+ACK = "Acknowledgment"
+MFN = "Master Files"
+BTS = "Order Entry"
+
+[[fields]]
+field = 9
+component = 2
+name = "Trigger Event"
+required = true
+minlength = 3
+maxlength = 3
+[fields.values]
+A01 = "Admit Patient"
+A02 = "Transfer Patient"
+A03 = "Discharge Patient"
+A04 = "Register Patient"
+A05 = "Pre-Admit Patient"
+A06 = "Change Patient ID"
+A07 = "Change Patient Account Number"
+A08 = "Update Patient Information"
+O01 = "General Order"
+
+[[fields]]
+field = 10
+name = "Control ID"
+note = "Unique identifier for the message. Used to detect duplicate messages."
+required = true
+maxlength = 20
+
+[[fields]]
+field = 11
+name = "Processing ID"
+note = "Indicates the processing mode: D (debugging), P (production), or T (training)."
+Processing ID values: D (debugging), P (production), or T (training).
+Message is processed only if processing ID here matches the INT_PROCESSING_CD from INT_INTERFACE_PROVIDERS table."""
+required = true
+maxlength = 1
+placeholder = "P"
+pattern = "([PDT])"
+[fields.values]
+P = "Production"
+D = "Debugging"
+T = "Training"
+
+[[fields]]
+field = 12
+name = "Version ID"
+note = "HL7 version. Supported versions: 2.1, 2.2, 2.3, 2.4, and 2.5.1."
+Support versions 2.1, 2.2, 2.3, 2.4, and 2.5.1.
+For ORM messages the minimum version is 2.3.
+For BTS messages the minimum version is 2.5.1."""
+required = true
+minlength = 3
+maxlength = 5
+placeholder = "2.5.1"
+pattern = "(\\d)(\\.\\d)?(\\.\\d)?"
+[fields.values]
+"2.1" = "Version 2.1"
+"2.2" = "Version 2.2"
+"2.3" = "Version 2.3"
+"2.4" = "Version 2.4"
+"2.5.1" = "Version 2.5.1"
+
+[[fields]]
+field = 15
+name = "Accept ACK"
+note = "Accept acknowledgment type. If MSH.15 and MSH.16 are both null, Original Acknowledgment Mode is used."
+Supported for Enhanced Acknowledgment Mode
+If fields MSH.15 and MSH.16 are Null, indicates 'Original Acknowledgment Mode'"""
+maxlength = 2
+placeholder = "AL"
+pattern = "(AL|NE|ER|SU)?"
+[fields.values]
+AL = "Always"
+NE = "Never"
+ER = "Error"
+SU = "Success"
+
+[[fields]]
+field = 16
+name = "Application ACK"
+note = "Application acknowledgment type. If MSH.15 and MSH.16 are both null, Original Acknowledgment Mode is used."
+Supported for Enhanced Acknowledgment Mode
+If fields MSH.15 and MSH.16 are Null, indicates 'Original Acknowledgment Mode'"""
+maxlength = 2
+placeholder = "NE"
+pattern = "(AL|NE|ER|SU)?"
+[fields.values]
+AL = "Always"
+NE = "Never"
+ER = "Error"
+SU = "Success"
+
+[[fields]]
+field = 18
+name = "Character Set"
+note = "Character encoding for the message. If null, ASCII is assumed."
+pattern = "(ASCII)?"
+[fields.values]
+ASCII = "ASCII"

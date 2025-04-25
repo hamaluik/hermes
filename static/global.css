@@ -130,37 +130,48 @@ form {
   justify-content: flex-start;
   align-items: baseline;
   gap: 1ch;
+
+  &::after {
+    content: "";
+    flex-grow: 1;
+  }
 }
 
 .form-group {
   flex: 1 1 auto;
-  min-width: 10ch;
+  width: min-content;
   max-width: 30ch;
 
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas: "label" "input";
+  gap: 0;
+  align-items: stretch;
   position: relative;
 
-  &.short {
-    min-width: 5ch;
-    max-width: 12ch;
-  }
+  label {
+    margin-bottom: 0.1lh;
+    font-size: small;
+    color: var(--col-text);
+    white-space: nowrap;
 
-  &:hover {
-    .popover {
-      display: block;
+    .field-id {
+      font-size: x-small;
+      color: var(--col-subtle);
+
+      &::before {
+        content: "(";
+      }
+
+      &::after {
+        content: ")";
+      }
     }
   }
+
 }
 
-label {
-  margin-bottom: 0.1lh;
-  font-size: small;
-  color: var(--col-text);
-  white-space: nowrap;
-}
 
 .popover {
   display: none;
