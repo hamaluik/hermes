@@ -13,9 +13,21 @@ pub struct SegmentData {
 }
 
 #[tauri::command]
+pub fn get_message_segment_names(message: &str) -> Vec<String> {
+    let Ok(message) = hl7_parser::parse_message_with_lenient_newlines(message) else {
+        return vec!["MSH".to_string()];
+    };
+    message
+        .segments()
+        .map(|segment| segment.name.to_string())
+        .collect()
+}
+
+#[tauri::command]
 pub fn parse_message_segment(
     message: &str,
     segment: &str,
+    segment_repeat: usize,
     state: State<'_, AppData>,
 ) -> Result<SegmentData, String> {
     let schema = state
@@ -34,6 +46,7 @@ pub fn parse_message_segment(
             .map(|field| {
                 let field_id = format!(
                     "{segment}.{field}{component}",
+                    // segment_repeat = segment_repeat + 1,
                     field = field.field,
                     component = if let Some(comp) = field.component {
                         format!(".{comp}")
@@ -52,14 +65,25 @@ pub fn parse_message_segment(
 }
 
 #[tauri::command]
-pub fn render_message_segment(message: &str, segment: &str, data: SegmentData) -> String {
+pub fn render_message_segment(
+    message: &str,
+    segment: &str,
+    segment_repeat: usize,
+    data: SegmentData,
+) -> String {
     let Ok(message) = hl7_parser::parse_message_with_lenient_newlines(message) else {
         return message.to_string();
     };
 
     let mut message: MessageBuilder = (&message).into();
-    let has_segment = message.segment_named(segment).is_some();
-    if !has_segment {
+    // ensure the message has at least `segment_repeat + 1` segments of this type
+    // while message.segment_n(segment, segment_repeat + 1).is_none() {
+    //     message.push_segment(SegmentBuilder::new(segment));
+    // }
+    // let seg = message
+    //     .segment_n_mut(segment, segment_repeat + 1)
+    //     .expect("message has segment");
+    if !message.segment_named(segment).is_some() {
         message.push_segment(SegmentBuilder::new(segment));
     }
     let seg = message
@@ -81,6 +105,8 @@ pub fn render_message_segment(message: &str, segment: &str, data: SegmentData) -
             seg.set_field_value(field_id, field_value.unwrap_or_default());
         }
     }
+
+    // TODO: rearrange the segments if needed
 
     message.render_with_newlines().to_string()
 }

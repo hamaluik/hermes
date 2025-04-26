@@ -1,5 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type SegmentPaths = Record<string, string>;
+
+export interface SegmentMetadata {
+  name: string;
+  required?: boolean;
+}
+
+export interface MessagesSchema {
+  segments: SegmentPaths;
+  message: Record<string, SegmentMetadata[]>;
+}
+
 export enum DataType {
   Date = "date",
   DateTime = "datetime",
@@ -22,9 +34,16 @@ export interface Field {
 
 export type SegmentSchema = Field[];
 
-// TODO: get this from the backend
-export const KnownSegments = ["MSH"] as const;
 export type SegmentSchemas = Record<string, SegmentSchema>;
+
+export async function getMessagesSchema(): Promise<MessagesSchema> {
+  try {
+    return await invoke("get_messages_schema");
+  } catch (error) {
+    console.error("Error getting messages schema:", error);
+    throw error;
+  }
+}
 
 export async function getSegmentSchema(
   segment: string,
@@ -38,10 +57,15 @@ export async function getSegmentSchema(
 }
 
 export async function getAllSegmentSchemas(): Promise<SegmentSchemas> {
-  return Promise.all(
-    KnownSegments.map(async (segment) => {
-      const schema = await getSegmentSchema(segment);
-      return { [segment]: schema };
-    }),
-  ).then((schemas) => Object.assign({}, ...schemas));
+  return getMessagesSchema().then(async (schema) => {
+    const segments = Object.keys(schema.segments);
+    console.debug("Segments to fetch:", segments);
+    const schemas = await Promise.all(segments.map(getSegmentSchema));
+    console.debug("All segment schemas:", schemas);
+    return schemas.reduce((acc, schema, index) => {
+      const segment = segments[index];
+      acc[segment] = schema;
+      return acc;
+    }, {} as SegmentSchemas);
+  });
 }

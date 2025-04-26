@@ -8,11 +8,13 @@
 
   let {
     segment,
+    segmentRepeat,
     schema,
     message,
     onchange,
   }: {
     segment: string;
+    segmentRepeat: number;
     schema: SegmentSchema;
     message?: string;
     onchange?: (message: string) => void;
@@ -47,23 +49,30 @@
 
   $effect(() => {
     if (message) {
-      parseMessageSegment(message, segment).then((parsedSegment) => {
-        if (parsedSegment) {
-          data = parsedSegment;
-        }
-      });
+      parseMessageSegment(message, segment, segmentRepeat)
+        .then((parsedSegment) => {
+          if (parsedSegment) {
+            data = parsedSegment;
+          }
+        })
+        .catch((error: string) => {
+          console.error("Error parsing message segment:", error);
+        });
     }
   });
 
   const oninput = () => {
     if (onchange && message) {
-      renderMessageSegment(message, segment, $state.snapshot(data)).then(
-        (renderedMessage) => {
-          if (renderedMessage) {
-            onchange(renderedMessage);
-          }
-        },
-      );
+      renderMessageSegment(
+        message,
+        segment,
+        segmentRepeat,
+        $state.snapshot(data),
+      ).then((renderedMessage) => {
+        if (renderedMessage) {
+          onchange(renderedMessage);
+        }
+      });
     }
   };
 

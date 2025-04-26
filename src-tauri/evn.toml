@@ -1,0 +1,24 @@
+[[fields]]
+field = 1
+name = "Event Type Code"
+maxlength = 3
+placeholder = "A01"
+pattern="(\\{auto\\})|([A-Z0-9]{3})"
+[fields.values]
+A01 = "Admit Patient"
+A02 = "Transfer Patient"
+A03 = "Discharge Patient"
+A04 = "Register Patient"
+A05 = "Pre-Admit Patient"
+A06 = "Change Patient ID"
+A07 = "Change Patient Account Number"
+A08 = "Update Patient Information"
+O01 = "General Order"
+
+[[fields]]
+field = 2
+name = "Recorded Date/Time"
+datatype = "datetime"
+maxlength = 23
+placeholder = "YYYYMMDDHHMMSS"
+pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"

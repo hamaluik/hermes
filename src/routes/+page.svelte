@@ -7,10 +7,30 @@
   import { onMount } from "svelte";
   import { getAllSegmentSchemas, type SegmentSchemas } from "../backend/schema";
   import { message as messageDialog } from "@tauri-apps/plugin-dialog";
+  import { getMessageSegmentNames } from "../backend/data";
 
   let message: string = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
   let schemas: SegmentSchemas = $state({});
+  let messageSegments: string[] = $state([]);
+
+  $effect(() => {
+    if (!message) {
+      return;
+    }
+
+    getMessageSegmentNames(message)
+      .then((segments) => {
+        messageSegments = segments;
+      })
+      .catch((error: string) => {
+        console.error("Error loading message segments:", error);
+        messageDialog(error, {
+          title: "Error Loading Message Segments",
+          kind: "error",
+        });
+      });
+  });
 
   onMount(() => {
     getAllSegmentSchemas()
@@ -23,21 +43,37 @@
         messageDialog(error, { title: "Error Loading Schemas", kind: "error" });
       });
   });
+
+  const segmentRepeat = (segment: string, index: number): number => {
+    return messageSegments.slice(0, index).filter((s) => s === segment).length;
+  };
+
+  const tabLabel = (index: number): string => {
+    const segment = messageSegments[index];
+    const count = messageSegments.filter((s) => s === segment).length;
+    if (count > 1) {
+      return `${segment} (${segmentRepeat(segment, index) + 1})`;
+    }
+    return segment;
+  };
 </script>
 
 <main>
   <Tabs>
-    {#each Object.entries(schemas) as [key, schema]}
-      <Tab label={key}>
-        <SegmentTab
-          segment={key}
-          {schema}
-          {message}
-          onchange={(m) => {
-            message = m;
-          }}
-        />
-      </Tab>
+    {#each messageSegments as key, index}
+      {#if schemas[key]}
+        <Tab label={tabLabel(index)}>
+          <SegmentTab
+            segment={key}
+            segmentRepeat={segmentRepeat(key, index)}
+            schema={schemas[key]}
+            {message}
+            onchange={(m) => {
+              message = m;
+            }}
+          />
+        </Tab>
+      {/if}
     {/each}
   </Tabs>
 

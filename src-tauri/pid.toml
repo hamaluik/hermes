@@ -1,0 +1,217 @@
+[[fields]]
+field = 3
+component = 1
+name = "Medical Record Number"
+note = "Primary patient identifier within the healthcare facility."
+maxlength = 20
+placeholder = "123456789"
+required = true
+
+[[fields]]
+field = 2
+component = 1
+name = "Enterprise ID"
+note = "Enterprise-wide patient identifier. Should be unique for non-merged patients."
+maxlength = 25
+placeholder = "123456789"
+
+[[fields]]
+field = 5
+component = 5
+group = "Patient Name"
+name = "Prefix"
+maxlength = 2
+[fields.values]
+DR = "Doctor"
+FR = "Father"
+MI = "Miss"
+MR = "Mr"
+MS = "Mrs"
+MZ = "Ms"
+PF = "Professor"
+RV = "Reverend"
+SR = "Sister"
+
+[[fields]]
+field = 5
+component = 2
+group = "Patient Name"
+name = "First Name"
+maxlength = 30
+placeholder = "Mickey"
+
+[[fields]]
+field = 5
+component = 3
+group = "Patient Name"
+name = "Middle Name"
+maxlength = 30
+
+[[fields]]
+field = 5
+component = 1
+group = "Patient Name"
+name = "Last Name"
+maxlength = 50
+placeholder = "Mouse"
+
+[[fields]]
+field = 5
+component = 4
+group = "Patient Name"
+name = "Suffix"
+maxlength = 4
+
+[[fields]]
+field = 7
+name = "Date of Birth"
+datatype = "date"
+note = "Patients date of birth in YYYYMMDD format. Time component is ignored if present."
+Only use date (YYYYMMDD). Time is ignored.
+Null value of this field can affect the ability to perform patient identification.
+Birth Dates greater than the database server date will be rejected, the message will error with AE (if requested)."""
+placeholder = "YYYYMMDD"
+required = true
+
+[[fields]]
+field = 8
+name = "Gender"
+maxlength = 1
+required = true
+note = "Administrative gender of the patient."
+This field is decoded, based on values in INT_HL7_CONVERSION. Refer to CD_GENDER table for the core system internal values.
+If the sent in sex code is not in CD_GENDER then the message will error with AE (if requested)."""
+[fields.values]
+M = "Male"
+F = "Female"
+
+[[fields]]
+field = 10
+name = "Ethnicity"
+maxlength = 2
+placeholder = "OT"
+note = "Patients ethnic group."
+This field is decoded, based on INT_HL7_CONVERSION. Refer to CD_ETHNICITY table for  the core system internal values.
+If the sent in gender code is not in CD_ETHNICITY then the message will error with AE (if requested)."""
+[fields.values]
+AA = "African American"
+AS = "Asian"
+C = "Caucasian"
+HS = "Hispanic"
+ME = "Middle Eastern"
+NA = "Native American"
+OT = "Other"
+PI = "Pacific Islander"
+UK = "Unknown"
+
+[[fields]]
+field = 11
+component = 1
+group = "Address"
+name = "Address 1"
+maxlength = 28
+placeholder = "123 Main St"
+
+[[fields]]
+field = 11
+component = 2
+group = "Address"
+name = "Address 2"
+maxlength = 28
+placeholder = "Apt 4B"
+
+[[fields]]
+field = 11
+component = 3
+group = "Address"
+name = "City"
+maxlength = 25
+placeholder = "New York"
+
+[[fields]]
+field = 11
+component = 4
+group = "Address"
+name = "State"
+maxlength = 2
+placeholder = "NY"
+
+[[fields]]
+field = 11
+component = 5
+group = "Address"
+name = "Zip Code"
+maxlength = 11
+placeholder = "90210"
+
+[[fields]]
+field = 11
+component = 6
+group = "Address"
+name = "Country"
+maxlength = 24
+placeholder = "USA"
+
+[[fields]]
+field = 11
+component = 7
+group = "Address"
+name = "Type"
+maxlength = 1
+placeholder = "H"
+note = "Address type code. Required for address to be recorded."
+Address type is a required component of this field. The appropriate conversion must be specified in INT_HL7_CONVERSION table in order to accept the address. Otherwise the address is ignored.
+If a conversion rule for address type is not found, then only the  first character (not the entire value) is added to the database.
+In addition, the interface profile should have a valid, non-blank conversion code for the address information in the incoming message to be processed.
+If multiple addresses are sent using repetition only the first will be recorded."""
+[fields.values]
+H = "Home"
+W = "Work"
+B = "Business"
+M = "Mailing"
+
+[[fields]]
+field = 13
+name = "Home Phone"
+maxlength = 14
+pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
+placeholder = "867-5309"
+note = "Patients home phone number."
+
+[[fields]]
+field = 14
+name = "Business Phone"
+maxlength = 14
+pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
+placeholder = "(780)867-5309 X12345"
+note = "Patients business phone number."
+
+[[fields]]
+field = 18
+name = "Account Number"
+note = "Patient account number for billing purposes."
+maxlength = 20
+placeholder = "123456789"
+
+[[fields]]
+field = 19
+name = "Social Security Number"
+note = "Accepts formatted (123-45-6789) or unformatted (123456789) values."
+Only the SSN is accepted.
+System will accept unformatted (123456789) or dash formatted (123-45-6789) values. 9 characters will be accepted."""
+maxlength = 11
+pattern = "(\\d{9})|(\\d{3}-\\d{2}-\\d{4})"
+placeholder = "123-45-6789"
+
+[[fields]]
+field = 30
+name = "Status Code"
+note = "Patient status indicator."
+[fields.values]
+A = "Active"
+D = "Deceased"
+R = "Deleting"
+E = "Emergency"
+M = "Merged"
+P = "Partial"
+

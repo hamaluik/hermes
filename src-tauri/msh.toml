@@ -39,6 +39,7 @@ required = true
 minlength = 3
 maxlength = 3
 placeholder = "ADT"
+pattern="([A-Z0-9]{3})"
 [fields.values]
 ADT = "Patient Administration"
 ORM = "Order Entry"
@@ -54,6 +55,7 @@ name = "Trigger Event"
 required = true
 minlength = 3
 maxlength = 3
+pattern="([A-Z0-9]{3})"
 [fields.values]
 A01 = "Admit Patient"
 A02 = "Transfer Patient"

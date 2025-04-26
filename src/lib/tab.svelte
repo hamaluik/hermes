@@ -27,6 +27,7 @@
 
     return () => {
       items.set(get(items).filter((item) => item.id !== id));
+      activeId.set(get(items).length > 0 ? get(items)[0].id : null);
     };
   });
 </script>

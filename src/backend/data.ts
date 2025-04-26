@@ -6,12 +6,28 @@ export interface SegmentData {
   fields: Record<string, string | null>;
 }
 
+export async function getMessageSegmentNames(
+  message: string,
+): Promise<string[]> {
+  try {
+    return await invoke("get_message_segment_names", { message });
+  } catch (error) {
+    console.error("Error getting message segment names:", error);
+    throw error;
+  }
+}
+
 export async function parseMessageSegment(
   message: string,
   segment: string,
+  segmentRepeat: number,
 ): Promise<SegmentData> {
   try {
-    return await invoke("parse_message_segment", { message, segment });
+    return await invoke("parse_message_segment", {
+      message,
+      segment,
+      segmentRepeat,
+    });
   } catch (error) {
     console.error("Error parsing message segment:", error);
     throw error;
@@ -21,7 +37,13 @@ export async function parseMessageSegment(
 export async function renderMessageSegment(
   message: string,
   segment: string,
+  segmentRepeat: number,
   data: SegmentData,
 ): Promise<string> {
-  return await invoke("render_message_segment", { message, segment, data });
+  return await invoke("render_message_segment", {
+    message,
+    segment,
+    segmentRepeat,
+    data,
+  });
 }

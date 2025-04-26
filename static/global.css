@@ -186,6 +186,7 @@ form {
   z-index: 1000;
   border-radius: 4px;
   font-size: smaller;
+  white-space: pre-line;
 
   .note {
     color: var(--col-pine);

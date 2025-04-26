@@ -1,11 +1,11 @@
-use schema::SchemaCache;
+use color_eyre::eyre::Context;
+use schema::cache::SchemaCache;
 use tauri::Manager;
 
 mod commands;
 mod schema;
 mod spec;
 
-#[derive(Default)]
 struct AppData {
     schema: SchemaCache,
 }
@@ -27,9 +27,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Warn)
-                .level_for("hermes", log_level)
-                .level_for("hermes_lib", log_level)
+                // .level(log::LevelFilter::Warn)
+                // .level_for("hermes", log_level)
+                // .level_for("hermes_lib", log_level)
                 .format(|out, message, record| {
                     let now = jiff::Zoned::now();
                     out.finish(format_args!(
@@ -48,18 +48,17 @@ pub fn run() {
             commands::locate_cursor,
             commands::get_std_description,
             commands::get_wizard_description,
-            commands::parse_header,
-            commands::render_header,
-            commands::parse_patient,
-            commands::render_patient,
-            commands::parse_visit,
-            commands::render_visit,
+            commands::get_messages_schema,
             commands::get_segment_schema,
+            commands::get_message_segment_names,
             commands::parse_message_segment,
             commands::render_message_segment,
         ])
         .setup(|app| {
-            let app_data = AppData::default();
+            let app_data = AppData {
+                schema: SchemaCache::new("messages.toml")
+                    .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
+            };
             app.manage(app_data);
             Ok(())
         })

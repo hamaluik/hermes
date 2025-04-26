@@ -43,6 +43,9 @@
         </button>
       </li>
     {/each}
+    <li class="add-tab">
+      <button class="add-tab-button"> + </button>
+    </li>
   </ul>
   {@render children?.()}
 </div>
@@ -90,7 +93,8 @@
       }
     }
 
-    .tab button {
+    .tab button,
+    .add-tab button {
       background-color: transparent;
       color: var(--col-text);
       border: none;

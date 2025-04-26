@@ -1,0 +1,209 @@
+[[fields]]
+field = 1
+name = "Sequence Number"
+
+[[fields]]
+field = 2
+name = "Patient Class"
+
+[[fields]]
+field = 3
+component = 1
+group = "Patient Location"
+name = "Point of Care"
+maxlength = 10
+note = "Nursing unit or department where the patient is located."
+required = true
+
+[[fields]]
+field = 3
+component = 2
+group = "Patient Location"
+name = "Room"
+maxlength = 10
+note = "Room number within the nursing unit."
+
+[[fields]]
+field = 3
+component = 2
+group = "Patient Location"
+name = "Facility"
+maxlength = 10
+note = "Room number within the nursing unit."
+required = true
+
+[[fields]]
+field = 3
+component = 2
+group = "Patient Location"
+name = "Building"
+maxlength = 10
+note = "Room number within the nursing unit."
+
+[[fields]]
+field = 3
+component = 2
+group = "Patient Location"
+name = "Floor"
+maxlength = 10
+note = "Room number within the nursing unit."
+
+[[fields]]
+field = 6
+component = 1
+group = "Previous Location"
+trigger_filter = "A02"
+name = "Point of Care"
+maxlength = 10
+note = "Prior nursing unit (used in transfer messages)."
+required = true
+
+[[fields]]
+field = 6
+component = 2
+group = "Previous Location"
+trigger_filter = "A02"
+name = "Room"
+maxlength = 10
+note = "Prior room number (used in transfer messages)."
+
+[[fields]]
+field = 6
+component = 2
+group = "Previous Location"
+trigger_filter = "A02"
+name = "Facility"
+maxlength = 10
+note = "Prior room number (used in transfer messages)."
+required = true
+
+[[fields]]
+field = 6
+component = 2
+group = "Previous Location"
+trigger_filter = "A02"
+name = "Building"
+maxlength = 10
+note = "Prior room number (used in transfer messages)."
+
+[[fields]]
+field = 6
+component = 2
+group = "Previous Location"
+trigger_filter = "A02"
+name = "Floor"
+maxlength = 10
+note = "Prior room number (used in transfer messages)."
+
+[[fields]]
+field = 7
+group = "Attending Doctor"
+component = 1
+name = "Member ID"
+maxlength = 10
+note = "Identifier for the attending physician."
+
+[[fields]]
+field = 7
+group = "Attending Doctor"
+component = 2
+name = "Family Name"
+
+[[fields]]
+field = 7
+group = "Attending Doctor"
+component = 3
+name = "Given Name"
+
+[[fields]]
+field = 7
+group = "Attending Doctor"
+component = 4
+name = "Middle Name"
+
+[[fields]]
+field = 8
+group = "Referring Doctor"
+component = 1
+name = "Member ID"
+maxlength = 10
+note = "Identifier for the referring physician."
+
+[[fields]]
+field = 8
+group = "Referring Doctor"
+component = 2
+name = "Family Name"
+
+[[fields]]
+field = 8
+group = "Referring Doctor"
+component = 3
+name = "Given Name"
+
+[[fields]]
+field = 8
+group = "Referring Doctor"
+component = 4
+name = "Middle Name"
+
+[[fields]]
+field = 9
+group = "Consulting Doctor"
+component = 1
+name = "Member ID"
+maxlength = 10
+note = "Identifier for the consulting physician."
+
+[[fields]]
+field = 9
+group = "Consulting Doctor"
+component = 2
+name = "Family Name"
+
+[[fields]]
+field = 9
+group = "Consulting Doctor"
+component = 3
+name = "Given Name"
+
+[[fields]]
+field = 9
+group = "Consulting Doctor"
+component = 4
+name = "Middle Name"
+
+[[fields]]
+field = 17
+group = "Admitting Doctor"
+component = 1
+name = "Member ID"
+maxlength = 10
+note = "Identifier for the admitting physician."
+
+[[fields]]
+field = 17
+group = "Admitting Doctor"
+component = 2
+name = "Family Name"
+
+[[fields]]
+field = 17
+group = "Admitting Doctor"
+component = 3
+name = "Given Name"
+
+[[fields]]
+field = 17
+group = "Admitting Doctor"
+component = 4
+name = "Middle Name"
+
+[[fields]]
+field = 19
+name = "External Visit Number"
+maxlength = 20
+note = "Visit identifier assigned by an external system."
+First component represents external visit number. This value is used to recognize visits already in the database.
+If this field is null in ADT or ORMs, then PID 18 will be copied to this field."""
+

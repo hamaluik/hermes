@@ -8,7 +8,19 @@ use crate::spec::std_spec::{
 #[tauri::command]
 pub fn syntax_highlight(message: &str) -> String {
     match hl7_parser::parse_message_with_lenient_newlines(message) {
-        Ok(msg) => do_syntax_highlight(&msg),
+        Ok(msg) => {
+            let mut highlighted = do_syntax_highlight(&msg);
+            if msg.raw_value().len() != message.len() {
+                // the delivered message extends beyond the parsed message
+                // so just append the rest of the message wrapped in an error span
+                // to indicate that it is not part of the parsed message
+                let extra = html_escape(&message[msg.raw_value().len()..])
+                    .replace('\n', "<br/>")
+                    .replace(' ', "&nbsp;");
+                highlighted.push_str(&format!(r#"<span class="err">{extra}</span>"#));
+            }
+            highlighted
+        }
         Err(ParseError::FailedToParse { position, .. }) => {
             let before = html_escape(&message[..position]).replace('\n', "<br/>");
             let after = html_escape(&message[position..]).replace('\n', "<br/>");
