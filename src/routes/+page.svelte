@@ -7,7 +7,11 @@
   import { onMount } from "svelte";
   import { getAllSegmentSchemas, type SegmentSchemas } from "../backend/schema";
   import { message as messageDialog } from "@tauri-apps/plugin-dialog";
-  import { getMessageSegmentNames } from "../backend/data";
+  import {
+    generateDefaultData,
+    getMessageSegmentNames,
+    renderMessageSegment,
+  } from "../backend/data";
 
   let message: string = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
@@ -60,6 +64,30 @@
 
 <main>
   <Tabs>
+    {#snippet addMenu(closeMenu)}
+      <ul class="add-menu">
+        {#each Object.keys(schemas) as key}
+          <li>
+            <button
+              onclick={() => {
+                message = message + `\n${key}|`;
+                const data = generateDefaultData(key, schemas[key] ?? {});
+                renderMessageSegment(message, key, 0, data).then(
+                  (newMessage) => {
+                    if (newMessage) {
+                      message = newMessage;
+                    }
+                  },
+                );
+                closeMenu.closeMenu();
+              }}
+            >
+              {key}
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/snippet}
     {#each messageSegments as key, index}
       {#if schemas[key]}
         <Tab label={tabLabel(index)}>
@@ -100,5 +128,37 @@
 
     padding: 1rem;
     min-height: 100vh;
+  }
+
+  .add-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25lh;
+    white-space: nowrap;
+    padding: 0.5em 0;
+
+    li {
+      margin: 0;
+      padding: 0;
+    }
+
+    button {
+      width: 100%;
+      background-color: transparent;
+      outline: none;
+      border: none;
+      cursor: pointer;
+      color: var(--col-text);
+      padding: 0.25em 1ch;
+
+      &:hover {
+        background-color: var(--col-pine);
+        color: var(--col-surface);
+      }
+    }
   }
 </style>

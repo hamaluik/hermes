@@ -3,8 +3,10 @@
   import { writable, type Writable } from "svelte/store";
 
   let {
+    addMenu,
     children,
   }: {
+    addMenu?: Snippet<[{ closeMenu: () => void }]>;
     children: Snippet;
   } = $props();
 
@@ -12,6 +14,8 @@
     { id: symbol; label: string }[]
   >([]);
   const activeId = writable<symbol | null>(null);
+
+  let showAddMenu = $state(false);
 
   setContext("tabs", tabs);
   setContext("activeId", activeId);
@@ -43,9 +47,24 @@
         </button>
       </li>
     {/each}
-    <li class="add-tab">
-      <button class="add-tab-button"> + </button>
-    </li>
+    {#if addMenu}
+      <li class="tab">
+        <button
+          onclick={() => {
+            showAddMenu = !showAddMenu;
+          }}>+</button
+        >
+        {#if showAddMenu}
+          <div class="add-menu">
+            {@render addMenu?.({
+              closeMenu: () => {
+                showAddMenu = false;
+              },
+            })}
+          </div>
+        {/if}
+      </li>
+    {/if}
   </ul>
   {@render children?.()}
 </div>
@@ -59,7 +78,7 @@
     justify-content: flex-start;
     font-size: smaller;
 
-    ul {
+    > ul {
       display: flex;
       list-style: none;
       padding: 0;
@@ -74,6 +93,7 @@
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       background-color: var(--col-surface);
+      position: relative;
     }
 
     .tab.active {
@@ -93,8 +113,7 @@
       }
     }
 
-    .tab button,
-    .add-tab button {
+    .tab button {
       background-color: transparent;
       color: var(--col-text);
       border: none;
@@ -105,6 +124,18 @@
     .tab.active button {
       background-color: var(--col-primary);
       color: white;
+    }
+
+    .add-menu {
+      position: absolute;
+      top: 75%;
+      left: 50%;
+      min-width: 10ch;
+      background-color: var(--col-surface);
+      border: 1px solid var(--col-highlightHigh);
+      border-radius: 4px;
+      padding: 0.5rem;
+      z-index: 3;
     }
   }
 </style>

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { SegmentSchema } from "./schema";
 
 export interface SegmentData {
   /// fields accessed by their "<segment>.<field>(.<component>)?" name
@@ -46,4 +47,21 @@ export async function renderMessageSegment(
     segmentRepeat,
     data,
   });
+}
+
+export function generateDefaultData(
+  segment: string,
+  schema: SegmentSchema,
+): SegmentData {
+  const data: SegmentData = { fields: {} };
+  for (const field of schema) {
+    if (field.group) continue;
+    const fieldName = `${segment}.${field.field}`;
+    if (field.component) {
+      data.fields[`${fieldName}.${field.component}`] = null;
+    } else {
+      data.fields[fieldName] = null;
+    }
+  }
+  return data;
 }

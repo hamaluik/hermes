@@ -122,6 +122,14 @@ body {
 /*   animation-duration: 0.1s; */
 /* } */
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* global form styles */
 form {
   display: flex;
