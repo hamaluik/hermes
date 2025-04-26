@@ -22,6 +22,7 @@ export interface Field {
   name: string;
   component?: number;
   group?: string;
+  trigger_filter?: string;
   minlength?: number;
   maxlength?: number;
   placeholder?: string;

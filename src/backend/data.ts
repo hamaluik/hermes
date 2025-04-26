@@ -18,6 +18,17 @@ export async function getMessageSegmentNames(
   }
 }
 
+export async function getMessageTriggerEvent(
+  message: string,
+): Promise<string | null> {
+  try {
+    return await invoke("get_message_trigger_event", { message });
+  } catch (error) {
+    console.error("Error getting message trigger event:", error);
+    throw error;
+  }
+}
+
 export async function parseMessageSegment(
   message: string,
   segment: string,

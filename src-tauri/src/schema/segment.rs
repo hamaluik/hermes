@@ -15,6 +15,7 @@ pub struct Field {
     pub name: String,
     pub component: Option<u8>,
     pub group: Option<String>,
+    pub trigger_filter: Option<String>,
     pub minlength: Option<u16>,
     pub maxlength: Option<u16>,
     pub placeholder: Option<String>,

@@ -24,6 +24,14 @@ pub fn get_message_segment_names(message: &str) -> Vec<String> {
 }
 
 #[tauri::command]
+pub fn get_message_trigger_event(message: &str) -> Option<String> {
+    let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
+    message
+        .query("MSH.9.2")
+        .map(|value| message.separators.decode(value.raw_value()).to_string())
+}
+
+#[tauri::command]
 pub fn parse_message_segment(
     message: &str,
     segment: &str,

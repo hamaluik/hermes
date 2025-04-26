@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    getMessageTriggerEvent,
     parseMessageSegment,
     renderMessageSegment,
     type SegmentData,
@@ -27,10 +28,30 @@
 
   let data: SegmentData = $state({ fields: {} });
 
+  let triggerEvent: string | null = $state(null);
+  $effect(() => {
+    if (message) {
+      getMessageTriggerEvent(message)
+        .then((event) => {
+          triggerEvent = event;
+        })
+        .catch((error: string) => {
+          console.error("Error getting message trigger event:", error);
+          triggerEvent = null;
+        });
+    }
+  });
+
   // groupMembership encodes group names to the list of members by their field ID
   let groupMembership: Record<string, Field[]> = $derived.by(() => {
     const groupMembership: Record<string, Field[]> = {};
     for (const field of schema) {
+      // skip fields that are filtered out by trigger_filter
+      if (field.trigger_filter) {
+        if (triggerEvent != field.trigger_filter) {
+          continue;
+        }
+      }
       if (field.group) {
         groupMembership[field.group] = groupMembership[field.group] || [];
         groupMembership[field.group].push(field);
