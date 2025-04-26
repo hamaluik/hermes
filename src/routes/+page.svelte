@@ -12,6 +12,12 @@
     getMessageSegmentNames,
     renderMessageSegment,
   } from "../backend/data";
+  import Toolbar from "$lib/toolbar.svelte";
+  import ToolbarButton from "$lib/toolbar_button.svelte";
+  import IconNew from "$lib/icons/IconNew.svelte";
+  import IconOpen from "$lib/icons/IconOpen.svelte";
+  import IconSave from "$lib/icons/IconSave.svelte";
+  import IconSaveAs from "$lib/icons/IconSaveAs.svelte";
 
   let message: string = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
@@ -62,6 +68,25 @@
   };
 </script>
 
+<Toolbar>
+  <ToolbarButton
+    title="New"
+    onclick={() => {
+      message = "MSH|^~\\&|";
+    }}
+  >
+    <IconNew />
+  </ToolbarButton>
+  <ToolbarButton title="Open">
+    <IconOpen />
+  </ToolbarButton>
+  <ToolbarButton title="Save">
+    <IconSave />
+  </ToolbarButton>
+  <ToolbarButton title="Save As">
+    <IconSaveAs />
+  </ToolbarButton>
+</Toolbar>
 <main>
   <Tabs>
     {#snippet addMenu(closeMenu)}
@@ -127,7 +152,9 @@
     gap: 1rem;
 
     padding: 1rem;
-    min-height: 100vh;
+
+    isolation: isolate;
+    z-index: 0;
   }
 
   .add-menu {

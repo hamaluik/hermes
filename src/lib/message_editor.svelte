@@ -68,9 +68,14 @@
   onDestroy(() => {
     document.removeEventListener("selectionchange", selectionListener);
   });
+
+  let messageHeight: number = $derived.by(() => {
+    const lines = (message ?? "").split("\n").length;
+    return Math.max(lines, 3);
+  });
 </script>
 
-<div class="message-editor">
+<div class="message-editor" style="--message-height: {messageHeight}lh;">
   <textarea
     placeholder="MSH|^~\&|…"
     class="editor"
@@ -90,7 +95,7 @@
     flex: var(--message-editor-flex, 1);
     width: 100%;
     height: 100%;
-    min-height: 3lh;
+    min-height: calc(var(--message-height) + 1rem);
     padding: 1rem;
     background-color: var(--col-surface);
     border: 1px solid var(--col-highlightHigh);

@@ -72,6 +72,7 @@ body>div {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
 
   --col-base: #faf4ed;
   --col-surface: #fffaf3;

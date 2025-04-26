@@ -125,7 +125,7 @@
 
     .tab.active button {
       background-color: var(--col-primary);
-      color: white;
+      color: var(--col-text);
     }
 
     .add-menu {
