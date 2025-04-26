@@ -1,0 +1,20 @@
+[[fields]]
+field = 1
+name = "Set ID"
+note = "Sequence number for this NTE segment within the message, starting at 1. Numbering restarts after each OBR segment."
+
+[[fields]]
+field = 2
+name = "Source of Comment"
+required = true
+maxlength = 1
+[field.values]
+L = "Ancillary (filler) department is source of comment"
+P = "Order placer is source of comment"
+O = "Other system is source of comment"
+
+[[fields]]
+field = 3
+name = "Comment"
+note = "Free-text comment associated with the preceding segment."
+required = true

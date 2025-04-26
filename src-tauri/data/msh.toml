@@ -2,7 +2,7 @@
 field = 3
 name = "Sending Application"
 maxlength = 20
-placeholder = "EPIC"
+placeholder = "SApp"
 
 [[fields]]
 field = 4
@@ -14,7 +14,7 @@ placeholder = "Hospital"
 field = 5
 name = "Receiving Application"
 maxlength = 20
-placeholder = "LAB"
+placeholder = "RApp"
 
 [[fields]]
 field = 6
@@ -92,7 +92,7 @@ T = "Training"
 [[fields]]
 field = 12
 name = "Version ID"
-note = "HL7 version. Supported versions: 2.1, 2.2, 2.3, 2.4, and 2.5.1."
+note = "HL7 version."
 Support versions 2.1, 2.2, 2.3, 2.4, and 2.5.1.
 For ORM messages the minimum version is 2.3.
 For BTS messages the minimum version is 2.5.1."""
@@ -111,9 +111,7 @@ pattern = "(\\d)(\\.\\d)?(\\.\\d)?"
 [[fields]]
 field = 15
 name = "Accept ACK"
-note = "Accept acknowledgment type. If MSH.15 and MSH.16 are both null, Original Acknowledgment Mode is used."
-Supported for Enhanced Acknowledgment Mode
-If fields MSH.15 and MSH.16 are Null, indicates 'Original Acknowledgment Mode'"""
+note = "Accept acknowledgment type."
 maxlength = 2
 placeholder = "AL"
 pattern = "(AL|NE|ER|SU)?"
@@ -126,9 +124,7 @@ SU = "Success"
 [[fields]]
 field = 16
 name = "Application ACK"
-note = "Application acknowledgment type. If MSH.15 and MSH.16 are both null, Original Acknowledgment Mode is used."
-Supported for Enhanced Acknowledgment Mode
-If fields MSH.15 and MSH.16 are Null, indicates 'Original Acknowledgment Mode'"""
+note = "Application acknowledgment type."
 maxlength = 2
 placeholder = "NE"
 pattern = "(AL|NE|ER|SU)?"

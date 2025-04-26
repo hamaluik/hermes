@@ -4,7 +4,18 @@ name = "Sequence Number"
 
 [[fields]]
 field = 2
+group = "Patient Location"
 name = "Patient Class"
+maxlength = 1
+required = true
+note = "Classification of patient type: I (Inpatient), O (Outpatient), E (Emergency), P (Pre-admit), R (Recurring), B (Obstetrics)."
+[fields.values]
+I = "Inpatient"
+O = "Outpatient"
+E = "Emergency"
+P = "Pre-admit"
+R = "Recurring Patient"
+B = "Obstetrics"
 
 [[fields]]
 field = 3
@@ -200,6 +211,4 @@ field = 19
 name = "External Visit Number"
 maxlength = 20
 note = "Visit identifier assigned by an external system."
-First component represents external visit number. This value is used to recognize visits already in the database.
-If this field is null in ADT or ORMs, then PID 18 will be copied to this field."""
 

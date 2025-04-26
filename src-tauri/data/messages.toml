@@ -3,6 +3,12 @@ MSH = "msh.toml"
 EVN = "evn.toml"
 PID = "pid.toml"
 PV1 = "pv1.toml"
+NK1 = "nk1.toml"
+DG1 = "dg1.toml"
+NTE = "nte.toml"
+# ORC = "orc.toml"
+# OBR = "obr.toml"
+# OBX = "obx.toml"
 
 [[message.adt_a01]]
 name = "MSH"

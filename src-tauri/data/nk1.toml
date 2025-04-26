@@ -1,0 +1,163 @@
+[[fields]]
+field = 1
+name = "Set ID"
+note = "Sequence number for this NK1 segment within the message, starting at 1."
+required = true
+
+[[fields]]
+field = 2
+component = 5
+group = "Contact Name"
+name = "Prefix"
+maxlength = 2
+[fields.values]
+DR = "Doctor"
+FR = "Father"
+MI = "Miss"
+MR = "Mr"
+MS = "Mrs"
+MZ = "Ms"
+PF = "Professor"
+RV = "Reverend"
+SR = "Sister"
+
+[[fields]]
+field = 2
+component = 2
+group = "Contact Name"
+name = "First Name"
+maxlength = 30
+placeholder = "Mickey"
+required = true
+
+[[fields]]
+field = 2
+component = 3
+group = "Contact Name"
+name = "Middle Name"
+maxlength = 30
+
+[[fields]]
+field = 2
+component = 1
+group = "Contact Name"
+name = "Last Name"
+maxlength = 50
+placeholder = "Mouse"
+required = true
+
+[[fields]]
+field = 2
+component = 4
+group = "Contact Name"
+name = "Suffix"
+maxlength = 4
+
+[[fields]]
+field = 3
+name = "Relationship"
+note = "Code indicating the relationship of the contact to the patient."
+maxlength = 1
+required = true
+
+[[fields]]
+field = 4
+component = 1
+group = "Address"
+name = "Address 1"
+maxlength = 28
+placeholder = "123 Main St"
+
+[[fields]]
+field = 4
+component = 2
+group = "Address"
+name = "Address 2"
+maxlength = 28
+placeholder = "Apt 4B"
+
+[[fields]]
+field = 4
+component = 3
+group = "Address"
+name = "City"
+maxlength = 25
+placeholder = "New York"
+
+[[fields]]
+field = 4
+component = 4
+group = "Address"
+name = "State"
+maxlength = 2
+placeholder = "NY"
+
+[[fields]]
+field = 4
+component = 5
+group = "Address"
+name = "Zip Code"
+maxlength = 11
+placeholder = "90210"
+
+[[fields]]
+field = 4
+component = 6
+group = "Address"
+name = "Country"
+maxlength = 24
+placeholder = "USA"
+
+[[fields]]
+field = 4
+component = 7
+group = "Address"
+name = "Type"
+maxlength = 1
+placeholder = "H"
+note = "Address type code."
+[fields.values]
+H = "Home"
+W = "Work"
+B = "Business"
+M = "Mailing"
+
+[[fields]]
+field = 5
+name = "Phone Number"
+maxlength = 14
+pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
+placeholder = "867-5309"
+
+[[fields]]
+field = 6
+name = "Business Phone"
+maxlength = 14
+pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
+placeholder = "(780)867-5309 X12345"
+
+[[fields]]
+field = 7
+name = "Contact Role"
+note = "Code indicating the role of the contact (e.g., emergency contact, next of kin)."
+maxlength = 1
+required = true
+
+[[fields]]
+field = 8
+name = "Start Date"
+type = "datetime"
+required = true
+placeholder = "YYYYMMDDHHMMSS"
+pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+maxlength = 23
+note = "Date the contact relationship became effective."
+
+[[fields]]
+field = 9
+name = "End Date"
+type = "datetime"
+maxlength = 23
+placeholder = "YYYYMMDDHHMMSS"
+pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+note = "Date the contact relationship ended."

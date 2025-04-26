@@ -4,7 +4,12 @@
     renderMessageSegment,
     type SegmentData,
   } from "../../backend/data";
-  import type { Field, SegmentSchema } from "../../backend/schema";
+  import {
+    type Field,
+    type SegmentSchema,
+    fieldId as _fieldId,
+  } from "../../backend/schema";
+  import InputField from "./input_field.svelte";
 
   let {
     segment,
@@ -22,30 +27,19 @@
 
   let data: SegmentData = $state({ fields: {} });
 
-  const datalistId = (field: Field): string | null => {
-    if (!field.values) {
-      return null;
-    }
-    return `${fieldId(field)}.datalist`;
-  };
-
-  let datalists: Record<string, { value: string; label: string }[]> =
-    $derived.by(() => {
-      const datalists: Record<string, { value: string; label: string }[]> = {};
-      for (const field of schema) {
-        if (field.values) {
-          datalists[datalistId(field)!] = Object.entries(field.values).map(
-            ([value, label]) => {
-              return { value, label };
-            },
-          );
-          datalists[datalistId(field)!].sort((a, b) => {
-            return a.value.localeCompare(b.value);
-          });
-        }
+  // groupMembership encodes group names to the list of members by their field ID
+  let groupMembership: Record<string, Field[]> = $derived.by(() => {
+    const groupMembership: Record<string, Field[]> = {};
+    for (const field of schema) {
+      if (field.group) {
+        groupMembership[field.group] = groupMembership[field.group] || [];
+        groupMembership[field.group].push(field);
+      } else {
+        groupMembership[fieldId(field)] = [field];
       }
-      return datalists;
-    });
+    }
+    return groupMembership;
+  });
 
   $effect(() => {
     if (message) {
@@ -61,7 +55,7 @@
     }
   });
 
-  const oninput = () => {
+  const oninput = (_event: Event) => {
     if (onchange && message) {
       renderMessageSegment(
         message,
@@ -95,48 +89,37 @@
   };
 
   const fieldId = (field: Field): string => {
-    return (
-      `${segment}.${field.field}` +
-      (Number.isFinite(field.component) ? `.${field.component}` : "")
-    );
+    return _fieldId(segment, field);
   };
 </script>
 
 <div class="segment-form">
   <form>
-    {#each schema as field}
-      <div class="form-group">
-        <label for={field.name}
-          >{field.name} <span class="field-id">{fieldId(field)}</span></label
-        >
-        <input
-          type="text"
-          id={field.name}
-          name={field.name}
-          bind:value={data.fields[fieldId(field)]}
+    {#each Object.entries(groupMembership) as [groupName, fields]}
+      {#if fields.length > 1}
+        <fieldset>
+          <legend>{groupName}</legend>
+          {#each fields as field}
+            <InputField
+              {segment}
+              {field}
+              bind:data={data.fields[fieldId(field)]!}
+              {oninput}
+              {onfocus}
+              {onblur}
+            />
+          {/each}
+        </fieldset>
+      {:else}
+        <InputField
+          {segment}
+          field={fields[0]}
+          bind:data={data.fields[fieldId(fields[0])]!}
           {oninput}
           {onfocus}
           {onblur}
-          minlength={field.minlength}
-          maxlength={field.maxlength}
-          placeholder={field.placeholder}
-          required={field.required}
-          pattern={field.pattern}
-          list={datalistId(field)}
         />
-        {#if field.note}
-          <div class="popover">
-            <p>{field.note}</p>
-          </div>
-        {/if}
-      </div>
-    {/each}
-    {#each Object.entries(datalists) as [key, values]}
-      <datalist id={key}>
-        {#each values as { value, label }}
-          <option {value} {label}></option>
-        {/each}
-      </datalist>
+      {/if}
     {/each}
   </form>
 </div>

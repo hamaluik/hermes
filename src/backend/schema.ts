@@ -32,6 +32,13 @@ export interface Field {
   values?: Record<string, string>;
 }
 
+export const fieldId = (segment: string, field: Field): string => {
+  return (
+    `${segment}.${field.field}` +
+    (Number.isFinite(field.component) ? `.${field.component}` : "")
+  );
+};
+
 export type SegmentSchema = Field[];
 
 export type SegmentSchemas = Record<string, SegmentSchema>;

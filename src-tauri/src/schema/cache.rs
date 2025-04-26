@@ -24,20 +24,21 @@ pub struct SchemaCache {
 impl SchemaCache {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
-        let messages = MessagesSchema::load_from_file(path).wrap_err_with(|| {
+        let path = PathBuf::from("data").join(path);
+        let messages = MessagesSchema::load_from_file(&path).wrap_err_with(|| {
             format!(
                 "Failed to load messages schema from {path}",
                 path = path.display()
             )
         })?;
 
-        let message_mod_time = std::fs::metadata(path)
+        let message_mod_time = std::fs::metadata(&path)
             .ok()
             .and_then(|meta| meta.modified().ok())
             .unwrap_or(SystemTime::now());
 
         Ok(Self {
-            messages_path: RwLock::new(path.to_path_buf()),
+            messages_path: RwLock::new(path),
             segments: RwLock::new(HashMap::new()),
             segment_mod_time: RwLock::new(HashMap::new()),
             messages: RwLock::new(messages),
@@ -72,7 +73,7 @@ impl SchemaCache {
     fn path_for_segment(&self, segment: &str) -> Option<PathBuf> {
         let messages = self.messages.read().expect("Cannot read messages lock");
         let segment_path = messages.segments.get(segment).and_then(|path| {
-            let path = PathBuf::from(path);
+            let path = PathBuf::from("data").join(path);
             if path.exists() {
                 Some(path)
             } else {

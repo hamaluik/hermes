@@ -50,6 +50,8 @@
     {#if addMenu}
       <li class="tab">
         <button
+          aria-label="Add Segment"
+          title="Add Segment"
           onclick={() => {
             showAddMenu = !showAddMenu;
           }}>+</button

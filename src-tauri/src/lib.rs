@@ -27,9 +27,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
-                // .level(log::LevelFilter::Warn)
-                // .level_for("hermes", log_level)
-                // .level_for("hermes_lib", log_level)
+                .level(log::LevelFilter::Warn)
+                .level_for("hermes", log_level)
+                .level_for("hermes_lib", log_level)
                 .format(|out, message, record| {
                     let now = jiff::Zoned::now();
                     out.finish(format_args!(
