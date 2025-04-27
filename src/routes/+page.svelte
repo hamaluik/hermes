@@ -6,7 +6,12 @@
   import SegmentTab from "$lib/forms/segment_tab.svelte";
   import { onMount } from "svelte";
   import { getAllSegmentSchemas, type SegmentSchemas } from "../backend/schema";
-  import { message as messageDialog } from "@tauri-apps/plugin-dialog";
+  import {
+    message as messageDialog,
+    open as openDialog,
+    save,
+    save as saveDialog,
+  } from "@tauri-apps/plugin-dialog";
   import {
     generateDefaultData,
     getMessageSegmentNames,
@@ -18,11 +23,14 @@
   import IconOpen from "$lib/icons/IconOpen.svelte";
   import IconSave from "$lib/icons/IconSave.svelte";
   import IconSaveAs from "$lib/icons/IconSaveAs.svelte";
+  import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
+  let currentFilePath: string | undefined = $state(undefined);
   let message: string = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
   let schemas: SegmentSchemas = $state({});
   let messageSegments: string[] = $state([]);
+  let toolbarHeight: string | undefined = $state(undefined);
 
   $effect(() => {
     if (!message) {
@@ -66,28 +74,95 @@
     }
     return segment;
   };
+
+  async function handleOpenFile() {
+    const filePath = await openDialog({
+      filters: [
+        {
+          name: "HL7 Messages",
+          extensions: ["hl7"],
+        },
+      ],
+      multiple: false,
+      title: "Open HL7 Message",
+    });
+
+    if (!filePath) {
+      return;
+    }
+
+    currentFilePath = undefined;
+    message = await readTextFile(filePath);
+    currentFilePath = filePath;
+  }
+
+  let handleSave = $derived.by(() => {
+    if (!currentFilePath) {
+      return undefined;
+    }
+    return () => {
+      writeTextFile(currentFilePath!, message, {
+        append: false,
+        create: true,
+      }).catch((error) => {
+        console.error("Error saving file:", error);
+        messageDialog(error, { title: "Error Saving File", kind: "error" });
+      });
+    };
+  });
+
+  const handleSaveAs = async () => {
+    const filePath = await saveDialog({
+      filters: [
+        {
+          name: "HL7 Messages",
+          extensions: ["hl7"],
+        },
+      ],
+      title: "Save HL7 Message",
+    });
+    if (!filePath) {
+      return;
+    }
+
+    currentFilePath = filePath;
+    await writeTextFile(filePath, message, {
+      append: false,
+      create: true,
+    }).catch((error) => {
+      console.error("Error saving file:", error);
+      messageDialog(error, { title: "Error Saving File", kind: "error" });
+    });
+  };
 </script>
 
-<Toolbar>
+<Toolbar bind:toolbarHeight>
   <ToolbarButton
     title="New"
     onclick={() => {
       message = "MSH|^~\\&|";
+      currentFilePath = undefined;
+      const data = generateDefaultData("MSH", schemas["MSH"] ?? {});
+      renderMessageSegment(message, "MSH", 0, data).then((newMessage) => {
+        if (newMessage) {
+          message = newMessage;
+        }
+      });
     }}
   >
     <IconNew />
   </ToolbarButton>
-  <ToolbarButton title="Open">
+  <ToolbarButton title="Open" onclick={handleOpenFile}>
     <IconOpen />
   </ToolbarButton>
-  <ToolbarButton title="Save">
+  <ToolbarButton title="Save" onclick={handleSave}>
     <IconSave />
   </ToolbarButton>
-  <ToolbarButton title="Save As">
+  <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
   </ToolbarButton>
 </Toolbar>
-<main>
+<main style="--toolbar-height: {toolbarHeight ?? '1px'}">
   <Tabs>
     {#snippet addMenu(closeMenu)}
       <ul class="add-menu">
@@ -131,7 +206,6 @@
   </Tabs>
 
   <MessageEditor
-    --message-editor-flex="1"
     {message}
     onchange={(m) => {
       message = m;
@@ -140,7 +214,7 @@
       cursorPos = pos;
     }}
   />
-  <CursorDescription {message} {cursorPos} />
+  <CursorDescription {message} {cursorPos} segmentSchemas={schemas} />
 </main>
 
 <style>
@@ -150,6 +224,7 @@
     align-items: stretch;
     justify-content: flex-start;
     gap: 1rem;
+    min-height: calc(100vh - var(--toolbar-height, 0px));
 
     padding: 1rem;
 

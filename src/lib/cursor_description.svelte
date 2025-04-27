@@ -1,24 +1,27 @@
 <script lang="ts">
   import { locateCursor, type LocatedCursor } from "../backend/cursor";
-  import { getSpecAndDescription } from "../backend/description";
+  import { loadSpec } from "../backend/description";
+  import type { SegmentSchemas } from "../backend/schema";
   let {
     message,
     cursorPos,
     oncursorlocated,
+    segmentSchemas,
   }: {
     message?: string;
     cursorPos?: number;
+    segmentSchemas?: SegmentSchemas;
     oncursorlocated?: (locatedCursor: LocatedCursor | null) => void;
   } = $props();
 
   let _path = $state("");
-  let _description = $state("");
+  let _fieldName = $state("");
   let _spec = $state("");
 
   function renderLocatedCursor(locatedCursor: LocatedCursor | null) {
     if (!locatedCursor?.segment) {
       _path = "";
-      _description = "";
+      _fieldName = "";
       _spec = "";
       return;
     }
@@ -29,6 +32,13 @@
     const componentStr = component != null ? `.${component}` : "";
     const subcomponentStr = subcomponent != null ? `.${subcomponent}` : "";
     _path = `${segment}${fieldStr}${repeatStr}${componentStr}${subcomponentStr}`;
+
+    const fieldSchema = segmentSchemas?.[segment]?.find(
+      (s) => s.field === field && s.component === component,
+    );
+    _fieldName =
+      (fieldSchema?.group ? `${fieldSchema?.group} → ` : "") +
+      (fieldSchema?.name ?? "");
   }
 
   $effect(() => {
@@ -41,23 +51,21 @@
           }
           renderLocatedCursor(locatedCursor);
           if (locatedCursor?.segment) {
-            return getSpecAndDescription(
+            return loadSpec(
               locatedCursor.segment,
               locatedCursor.field ?? null,
               locatedCursor.component ?? null,
             );
           } else {
-            return { spec: null, description: null };
+            return null;
           }
         })
-        .then(({ spec, description }) => {
+        .then((spec) => {
           _spec = spec ?? "";
-          _description = description ?? "";
         });
     } else {
       _path = "";
       _spec = "";
-      _description = "";
     }
   });
 </script>
@@ -68,14 +76,12 @@
       {#if _path}
         <span class="path">{_path}</span>
       {/if}
+      {#if _fieldName}
+        <span class="field-name">{_fieldName}</span>
+      {/if}
       {#if _spec}
         <span class="spec">({_spec})</span>
       {/if}
-    </p>
-  {/if}
-  {#if _description}
-    <p class="description">
-      {_description}
     </p>
   {/if}
 </div>
@@ -100,13 +106,13 @@
     font-weight: bold;
     color: var(--col-iris);
   }
-  .spec {
-    font-size: smaller;
-    color: var(--col-subtle);
-  }
-  .description {
+  .field-name {
     font-size: small;
     color: var(--col-text);
     white-space: pre-line;
+  }
+  .spec {
+    font-size: smaller;
+    color: var(--col-subtle);
   }
 </style>

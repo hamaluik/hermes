@@ -26,4 +26,6 @@ toml = { version = "0.8.20", features = ["preserve_order"] }
 color-eyre = "0.6.3"
 tokio = { version = "1.44.2", features = ["full"] }
 tauri-plugin-dialog = "2"
+tauri-plugin-persisted-scope = "2"
+tauri-plugin-fs = "2"
 

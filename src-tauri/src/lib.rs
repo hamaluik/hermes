@@ -23,7 +23,11 @@ pub fn run() {
         log::LevelFilter::Info
     };
 
+    // TODO: file menu
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -47,7 +51,6 @@ pub fn run() {
             commands::syntax_highlight,
             commands::locate_cursor,
             commands::get_std_description,
-            commands::get_wizard_description,
             commands::get_messages_schema,
             commands::get_segment_schema,
             commands::get_message_segment_names,

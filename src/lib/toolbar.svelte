@@ -1,16 +1,20 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  let { children }: { children: Snippet } = $props();
+  let {
+    children,
+    toolbarHeight = $bindable(),
+  }: { children: Snippet; toolbarHeight?: string } = $props();
 
   let toolbarElement: HTMLElement | null = null;
   let spacerElement: HTMLElement | null = null;
 
   $effect(() => {
     if (toolbarElement && spacerElement) {
-      const toolbarHeight = getComputedStyle(toolbarElement).height;
-      console.log("Toolbar height:", toolbarHeight);
+      toolbarHeight = getComputedStyle(toolbarElement).height;
       spacerElement.style.height = toolbarHeight;
+    } else {
+      toolbarHeight = undefined;
     }
   });
 </script>
