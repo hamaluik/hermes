@@ -17,3 +17,23 @@ export async function locateCursor(
     cursor,
   });
 }
+
+export async function getRangeOfPreviousField(
+  message: string,
+  cursor: number,
+): Promise<{ start: number; end: number } | null> {
+  return invoke("get_range_of_previous_field", {
+    message,
+    cursor,
+  });
+}
+
+export async function getRangeOfNextField(
+  message: string,
+  cursor: number,
+): Promise<{ start: number; end: number } | null> {
+  return invoke("get_range_of_next_field", {
+    message,
+    cursor,
+  });
+}

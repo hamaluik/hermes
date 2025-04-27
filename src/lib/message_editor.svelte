@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { syntaxHighlight } from "../backend/syntax_highlight";
+  import {
+    getRangeOfNextField,
+    getRangeOfPreviousField,
+  } from "../backend/cursor";
 
   let {
     message,
@@ -14,6 +18,7 @@
 
   let editElement: HTMLElement;
   let highlightElement: HTMLElement;
+  let _cursorPos: number = $state(0);
 
   let selectionListener: () => void;
 
@@ -39,6 +44,29 @@
     handleScroll();
   }
 
+  async function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (!message || !editElement) {
+        return;
+      }
+      // if shift is pressed, move the cursor to the previous field
+      let range: { start: number; end: number } | undefined | null;
+      if (event.shiftKey) {
+        range = await getRangeOfPreviousField(message, _cursorPos);
+      } else {
+        range = await getRangeOfNextField(message, _cursorPos);
+      }
+      if (!range) {
+        return;
+      }
+      // select the text in the range in the editElement
+      const start = range.start;
+      const end = range.end;
+      (editElement as HTMLTextAreaElement).setSelectionRange(start, end);
+    }
+  }
+
   function handleScroll() {
     highlightElement.scrollTop = editElement.scrollTop;
     highlightElement.scrollLeft = editElement.scrollLeft;
@@ -47,6 +75,7 @@
   function handleCursorChange() {
     if (document.activeElement === editElement) {
       const cursorPos = (editElement as HTMLTextAreaElement).selectionStart;
+      _cursorPos = cursorPos;
       if (oncursorchange) {
         oncursorchange(cursorPos);
       }
@@ -81,6 +110,7 @@
     class="editor"
     oninput={handleInput}
     onscroll={handleScroll}
+    onkeydown={handleKeyDown}
     bind:this={editElement}
   ></textarea>
   <div

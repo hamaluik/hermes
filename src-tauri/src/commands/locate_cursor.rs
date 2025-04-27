@@ -1,4 +1,6 @@
+use hl7_parser::locate::LocatedCursor;
 use serde::Serialize;
+use std::ops::Range;
 
 #[derive(Default, Serialize)]
 pub struct CursorLocation {
@@ -41,4 +43,137 @@ pub fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
 
         location
     })
+}
+
+#[derive(Serialize)]
+pub struct CursorRange {
+    start: usize,
+    end: usize,
+}
+
+fn flatten_message(message: &hl7_parser::Message) -> Vec<Range<usize>> {
+    let mut cells = Vec::new();
+    for segment in message.segments() {
+        // include segment name as a navigable cell
+        cells.push(Range {
+            start: segment.range.start,
+            end: segment.range.start + segment.name.len(),
+        });
+
+        if segment.fields.is_empty() {
+            continue;
+        }
+
+        for field in segment.fields() {
+            if field.repeats.is_empty() {
+                cells.push(field.range.clone());
+                continue;
+            }
+
+            for repeat in field.repeats.iter() {
+                if repeat.components.is_empty() {
+                    cells.push(repeat.range.clone());
+                    continue;
+                }
+
+                for component in repeat.components.iter() {
+                    if component.subcomponents.is_empty() {
+                        cells.push(component.range.clone());
+                        continue;
+                    }
+
+                    for subcomponent in component.subcomponents.iter() {
+                        cells.push(subcomponent.range.clone());
+                    }
+                }
+            }
+        }
+    }
+    cells
+}
+
+#[tauri::command]
+pub fn get_range_of_next_field(message: &str, cursor: usize) -> Option<CursorRange> {
+    let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
+    let cells = flatten_message(&message);
+
+    let mut cells_iter = cells.iter();
+    while let Some(cell) = cells_iter.next() {
+        if cursor >= cell.start && cursor <= cell.end {
+            return cells_iter.next().map(|next_cell| CursorRange {
+                start: next_cell.start,
+                end: next_cell.end,
+            });
+        }
+    }
+
+    None
+}
+
+#[tauri::command]
+pub fn get_range_of_previous_field(message: &str, cursor: usize) -> Option<CursorRange> {
+    let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
+    let cells = flatten_message(&message);
+
+    let mut cells_iter = cells.iter().rev();
+    while let Some(cell) = cells_iter.next() {
+        if cursor >= cell.start && cursor <= cell.end {
+            return cells_iter.next().map(|prev_cell| CursorRange {
+                start: prev_cell.start,
+                end: prev_cell.end,
+            });
+        }
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_get_range_of_next_field_in_component_next_component() {
+        let message = r#"MSH|^~\&|a^b"#;
+        let cursor = 9;
+        let range = get_range_of_next_field(message, cursor).expect("range exists");
+        assert_eq!(range.start, 11);
+        assert_eq!(range.end, 12);
+    }
+
+    #[test]
+    fn can_get_range_of_next_field_in_component_next_repeat_component() {
+        let message = r#"MSH|^~\&|a~b^c"#;
+        let cursor = 9;
+        let range = get_range_of_next_field(message, cursor).expect("range exists");
+        assert_eq!(range.start, 11);
+        assert_eq!(range.end, 12);
+    }
+
+    #[test]
+    fn can_get_range_of_next_field_in_component_next_repeat() {
+        let message = r#"MSH|^~\&|a~bc"#;
+        let cursor = 9;
+        let range = get_range_of_next_field(message, cursor).expect("range exists");
+        assert_eq!(range.start, 11);
+        assert_eq!(range.end, 13);
+    }
+
+    #[test]
+    fn can_get_range_of_next_field_in_field_next_component() {
+        let message = r#"MSH|^~\&|a|b^c"#;
+        let cursor = 9;
+        let range = get_range_of_next_field(message, cursor).expect("range exists");
+        assert_eq!(range.start, 11);
+        assert_eq!(range.end, 12);
+    }
+
+    #[test]
+    fn can_get_range_of_next_field_in_field_next_field() {
+        let message = r#"MSH|^~\&|a|bc"#;
+        let cursor = 9;
+        let range = get_range_of_next_field(message, cursor).expect("range exists");
+        assert_eq!(range.start, 11);
+        assert_eq!(range.end, 13);
+    }
 }

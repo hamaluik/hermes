@@ -50,6 +50,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::syntax_highlight,
             commands::locate_cursor,
+            commands::get_range_of_next_field,
+            commands::get_range_of_previous_field,
             commands::get_std_description,
             commands::get_messages_schema,
             commands::get_segment_schema,
