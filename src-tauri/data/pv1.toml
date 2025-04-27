@@ -36,26 +36,28 @@ note = "Room number within the nursing unit."
 
 [[fields]]
 field = 3
-component = 3
+component = 4
 group = "Patient Location"
 name = "Facility"
 maxlength = 10
+note = "Facility or hospital identifier."
 required = true
 
 [[fields]]
 field = 3
-component = 4
+component = 7
 group = "Patient Location"
 name = "Building"
 maxlength = 10
-note = "Facility or hospital identifier."
+note = "Building identifier within the facility."
 
 [[fields]]
 field = 3
-component = 5
+component = 8
 group = "Patient Location"
 name = "Floor"
 maxlength = 10
+note = "Floor number within the building."
 
 [[fields]]
 field = 6
@@ -78,29 +80,31 @@ note = "Prior room number (used in transfer messages)."
 
 [[fields]]
 field = 6
-component = 3
+component = 4
 group = "Previous Location"
 trigger_filter = "A02"
 name = "Facility"
 maxlength = 10
+note = "Prior facility identifier (used in transfer messages)."
 required = true
 
 [[fields]]
 field = 6
-component = 4
+component = 7
 group = "Previous Location"
 trigger_filter = "A02"
 name = "Building"
 maxlength = 10
-note = "Prior facility identifier (used in transfer messages)."
+note = "Prior building identifier (used in transfer messages)."
 
 [[fields]]
 field = 6
-component = 5
+component = 8
 group = "Previous Location"
 trigger_filter = "A02"
 name = "Floor"
 maxlength = 10
+note = "Prior floor number (used in transfer messages)."
 
 [[fields]]
 field = 7

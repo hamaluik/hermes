@@ -1,37 +1,45 @@
 <script lang="ts">
   import { setContext, type Snippet } from "svelte";
-  import { writable, type Writable } from "svelte/store";
+  import { get, writable, type Writable } from "svelte/store";
 
   let {
+    setactive = $bindable(),
     addMenu,
     children,
   }: {
+    setactive?: (id: string) => void;
     addMenu?: Snippet<[{ closeMenu: () => void }]>;
     children: Snippet;
   } = $props();
 
-  const tabs: Writable<{ id: symbol; label: string }[]> = writable<
-    { id: symbol; label: string }[]
+  const tabs: Writable<{ id: string; label: string }[]> = writable<
+    { id: string; label: string }[]
   >([]);
-  const activeId = writable<symbol | null>(null);
+  const activeId = writable<string | null>(null);
+  let activeTabIsMissing: boolean = $state(false);
 
   let showAddMenu = $state(false);
 
   setContext("tabs", tabs);
   setContext("activeId", activeId);
 
-  const transitionTab = (id: symbol) => {
+  const transitionTab = (id: string) => {
     activeId.set(id);
-    // TODO: better view transitions
-    /*if (!document.startViewTransition) {
-      activeId.set(id);
-      return;
-    }
-
-    document.startViewTransition(() => {
-      activeId.set(id);
-    });*/
   };
+
+  $effect(() => {
+    setactive = (id: string) => {
+      // so we don't get weird selection issues
+      setTimeout(() => {
+        activeId.set(id);
+      }, 0);
+    };
+  });
+
+  activeId.subscribe((id) => {
+    const tabList = get(tabs);
+    activeTabIsMissing = !tabList.some((tab) => tab.id === id);
+  });
 </script>
 
 <div class="tabs">
@@ -69,6 +77,11 @@
     {/if}
   </ul>
   {@render children?.()}
+  {#if activeTabIsMissing}
+    <div class="missing-tab">
+      <p>(no configuration found for this message segment)</p>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -139,5 +152,17 @@
       padding: 0.5rem;
       z-index: 3;
     }
+  }
+
+  .missing-tab {
+    padding: 0.5lh 1ch;
+    margin: 0;
+    border: 1px solid var(--col-muted);
+    background-color: var(--col-surface);
+    border-radius: 4px;
+    view-transition-name: tab-content;
+    height: calc-size(auto, size);
+    isolation: isolate;
+    z-index: 1;
   }
 </style>

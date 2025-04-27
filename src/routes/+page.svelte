@@ -9,7 +9,6 @@
   import {
     message as messageDialog,
     open as openDialog,
-    save,
     save as saveDialog,
   } from "@tauri-apps/plugin-dialog";
   import {
@@ -31,6 +30,7 @@
   let schemas: SegmentSchemas = $state({});
   let messageSegments: string[] = $state([]);
   let toolbarHeight: string | undefined = $state(undefined);
+  let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
 
   $effect(() => {
     if (!message) {
@@ -163,7 +163,7 @@
   </ToolbarButton>
 </Toolbar>
 <main style="--toolbar-height: {toolbarHeight ?? '1px'}">
-  <Tabs>
+  <Tabs bind:setactive={setActiveTab}>
     {#snippet addMenu(closeMenu)}
       <ul class="add-menu">
         {#each Object.keys(schemas) as key}
@@ -190,7 +190,7 @@
     {/snippet}
     {#each messageSegments as key, index}
       {#if schemas[key]}
-        <Tab label={tabLabel(index)}>
+        <Tab id={key} label={tabLabel(index)}>
           <SegmentTab
             segment={key}
             segmentRepeat={segmentRepeat(key, index)}
@@ -214,7 +214,17 @@
       cursorPos = pos;
     }}
   />
-  <CursorDescription {message} {cursorPos} segmentSchemas={schemas} />
+  <CursorDescription
+    {message}
+    {cursorPos}
+    segmentSchemas={schemas}
+    oncursorlocated={(loc) => {
+      if (loc?.segment && setActiveTab) {
+        const setactive: (id: string) => void = setActiveTab;
+        setactive(loc.segment);
+      }
+    }}
+  />
 </main>
 
 <style>

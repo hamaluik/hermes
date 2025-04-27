@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export interface LocatedCursor {
   segment?: string;
+  sgement_n?: number;
   field?: number;
   repeat?: number;
   component?: number;

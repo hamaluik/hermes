@@ -1,10 +1,10 @@
-use hl7_parser::locate::LocatedCursor;
 use serde::Serialize;
 use std::ops::Range;
 
 #[derive(Default, Serialize)]
 pub struct CursorLocation {
     segment: Option<String>,
+    segment_number: Option<usize>,
     field: Option<usize>,
     repeat: Option<usize>,
     component: Option<usize>,
@@ -18,8 +18,9 @@ pub fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
     message.locate_cursor(cursor).map(|loc| {
         let mut location = CursorLocation::default();
 
-        if let Some((segment, _, _)) = loc.segment {
+        if let Some((segment, segment_n, _)) = loc.segment {
             location.segment = Some(segment.to_string());
+            location.segment_number = Some(segment_n);
             if let Some((field_i, field)) = loc.field {
                 location.field = Some(field_i);
                 if let Some((repeat_i, repeat)) = loc.repeat {

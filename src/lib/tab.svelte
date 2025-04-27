@@ -7,18 +7,14 @@
     label,
     children,
   }: {
-    id?: symbol;
+    id: string;
     label: string;
     children: Snippet;
   } = $props();
 
-  if (!id) {
-    id = Symbol();
-  }
-
-  const activeId: Writable<symbol | null> = getContext("activeId");
+  const activeId: Writable<string | null> = getContext("activeId");
   onMount(() => {
-    const items: Writable<{ id: symbol; label: string }[]> = getContext("tabs");
+    const items: Writable<{ id: string; label: string }[]> = getContext("tabs");
     items.set([...get(items), { id, label }]);
 
     if (get(activeId) === null) {
