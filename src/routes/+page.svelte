@@ -27,12 +27,17 @@
   import ToolbarSpacer from "$lib/toolbar_spacer.svelte";
   import IconSettings from "$lib/icons/IconSettings.svelte";
   import SettingsModal from "$lib/settings_modal.svelte";
+  import IconHelp from "$lib/icons/IconHelp.svelte";
+  import ToolbarSeparator from "$lib/toolbar_separator.svelte";
+  import IconSendReceive from "$lib/icons/IconSendReceive.svelte";
+  import { goto } from "$app/navigation";
+  import { get } from "svelte/store";
 
   let { data }: PageProps = $props();
 
   let currentFilePath: string | undefined = $state(undefined);
-  let message: string = $state("MSH|^~\\&|");
-  let savedMessage: string | undefined = $state("MSH|^~\\&|");
+  let message: string = $state("");
+  let savedMessage: string = $state("");
   let cursorPos: number = $state(0);
   let schemas: SegmentSchemas = $state({});
   let messageSegments: string[] = $state([]);
@@ -59,6 +64,8 @@
   });
 
   onMount(() => {
+    message = get(data.message);
+
     getAllSegmentSchemas()
       .then((_schemas) => {
         console.debug("Schemas loaded:", _schemas);
@@ -179,7 +186,27 @@
   <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
   </ToolbarButton>
+  <ToolbarSeparator />
+  <ToolbarButton
+    title="Send/Receive"
+    onclick={() => {
+      if (!document.startViewTransition) {
+        data.message.set(message);
+        goto("/send-receive");
+        return;
+      }
+      document.startViewTransition(() => {
+        data.message.set(message);
+        goto("/send-receive");
+      });
+    }}
+  >
+    <IconSendReceive />
+  </ToolbarButton>
   <ToolbarSpacer />
+  <ToolbarButton title="Help">
+    <IconHelp />
+  </ToolbarButton>
   <ToolbarButton
     title="Settings"
     onclick={() => {

@@ -1,6 +1,5 @@
 [[fields]]
 field = 3
-component = 1
 group = "Patient ID"
 name = "Medical Record Number"
 note = "Primary patient identifier within the healthcare facility."
@@ -10,7 +9,6 @@ required = true
 
 [[fields]]
 field = 2
-component = 1
 group = "Patient ID"
 name = "ID Number"
 note = "Patient ID number"

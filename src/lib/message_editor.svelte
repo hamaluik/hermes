@@ -10,10 +10,12 @@
     message,
     onchange,
     oncursorchange,
+    readonly,
   }: {
     message?: string;
     onchange?: (message: string) => void;
     oncursorchange?: (cursorPos: number) => void;
+    readonly?: boolean;
   } = $props();
 
   let editElement: HTMLElement;
@@ -112,6 +114,7 @@
     onscroll={handleScroll}
     onkeydown={handleKeyDown}
     bind:this={editElement}
+    {readonly}
   ></textarea>
   <div
     class="highlighting"

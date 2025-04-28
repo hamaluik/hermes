@@ -1,3 +1,4 @@
+import { writable } from "svelte/store";
 import { Settings } from "../settings";
 import type { LayoutLoad } from "./$types";
 
@@ -10,5 +11,6 @@ export const ssr = false;
 export const load: LayoutLoad = async () => {
   return {
     settings: new Settings(),
+    message: writable<string>("MSH|^~\\&|"),
   };
 };

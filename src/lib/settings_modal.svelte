@@ -38,7 +38,7 @@
   });
 </script>
 
-<dialog class="settings" bind:this={dialogElement}>
+<dialog class="settings" bind:this={dialogElement} closedby="any">
   <header>
     <h1>Settings</h1>
     <button

@@ -39,8 +39,10 @@
 
     display: flex;
     flex-direction: row;
-    align-items: baseline;
+    align-items: center;
     justify-content: flex-start;
     gap: 1ch;
+
+    view-transition-name: toolbar;
   }
 </style>
