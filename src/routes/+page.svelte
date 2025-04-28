@@ -32,6 +32,7 @@
 
   let currentFilePath: string | undefined = $state(undefined);
   let message: string = $state("MSH|^~\\&|");
+  let savedMessage: string | undefined = $state("MSH|^~\\&|");
   let cursorPos: number = $state(0);
   let schemas: SegmentSchemas = $state({});
   let messageSegments: string[] = $state([]);
@@ -100,21 +101,26 @@
 
     currentFilePath = undefined;
     message = await readTextFile(filePath);
+    savedMessage = message;
     currentFilePath = filePath;
   }
 
   let handleSave = $derived.by(() => {
-    if (!currentFilePath) {
+    if (!currentFilePath || message === savedMessage) {
       return undefined;
     }
     return () => {
       writeTextFile(currentFilePath!, message, {
         append: false,
         create: true,
-      }).catch((error) => {
-        console.error("Error saving file:", error);
-        messageDialog(error, { title: "Error Saving File", kind: "error" });
-      });
+      })
+        .then(() => {
+          savedMessage = message;
+        })
+        .catch((error) => {
+          console.error("Error saving file:", error);
+          messageDialog(error, { title: "Error Saving File", kind: "error" });
+        });
     };
   });
 
@@ -136,10 +142,14 @@
     await writeTextFile(filePath, message, {
       append: false,
       create: true,
-    }).catch((error) => {
-      console.error("Error saving file:", error);
-      messageDialog(error, { title: "Error Saving File", kind: "error" });
-    });
+    })
+      .then(() => {
+        savedMessage = message;
+      })
+      .catch((error) => {
+        console.error("Error saving file:", error);
+        messageDialog(error, { title: "Error Saving File", kind: "error" });
+      });
   };
 </script>
 
@@ -153,6 +163,7 @@
       renderMessageSegment(message, "MSH", 0, data).then((newMessage) => {
         if (newMessage) {
           message = newMessage;
+          savedMessage = message;
         }
       });
     }}

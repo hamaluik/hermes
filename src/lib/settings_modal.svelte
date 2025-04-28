@@ -139,7 +139,7 @@
         transition: color 0.2s ease-in-out;
 
         &:hover {
-          color: var(--col-love);
+          color: var(--col-rose);
         }
       }
     }
@@ -180,10 +180,27 @@
         background: var(--col-overlay);
         border: 1px solid var(--col-highlightLow);
         color: var(--col-text);
+        transition:
+          background 0.2s ease-in-out,
+          color 0.2s ease-in-out;
 
         &.save {
           background: var(--col-pine);
-          color: var(--col-overlay);
+          color: var(--col-base);
+
+          &:hover {
+            background: var(--col-gold);
+            color: var(--col-base);
+          }
+        }
+        @media (prefers-color-scheme: dark) {
+          &.save {
+            color: var(--col-text);
+          }
+        }
+
+        &.cancel:hover {
+          color: var(--col-rose);
         }
       }
     }
