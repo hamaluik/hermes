@@ -23,6 +23,12 @@
   import IconSave from "$lib/icons/IconSave.svelte";
   import IconSaveAs from "$lib/icons/IconSaveAs.svelte";
   import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+  import type { PageProps } from "./$types";
+  import ToolbarSpacer from "$lib/toolbar_spacer.svelte";
+  import IconSettings from "$lib/icons/IconSettings.svelte";
+  import SettingsModal from "$lib/settings_modal.svelte";
+
+  let { data }: PageProps = $props();
 
   let currentFilePath: string | undefined = $state(undefined);
   let message: string = $state("MSH|^~\\&|");
@@ -31,6 +37,7 @@
   let messageSegments: string[] = $state([]);
   let toolbarHeight: string | undefined = $state(undefined);
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
+  let showSettings: ((show: boolean) => void) | undefined = $state(undefined);
 
   $effect(() => {
     if (!message) {
@@ -161,6 +168,15 @@
   <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
   </ToolbarButton>
+  <ToolbarSpacer />
+  <ToolbarButton
+    title="Settings"
+    onclick={() => {
+      showSettings?.(true);
+    }}
+  >
+    <IconSettings />
+  </ToolbarButton>
 </Toolbar>
 <main style="--toolbar-height: {toolbarHeight ?? '1px'}">
   <Tabs bind:setactive={setActiveTab}>
@@ -219,6 +235,9 @@
     {cursorPos}
     segmentSchemas={schemas}
     oncursorlocated={(loc) => {
+      if (!data.settings.tabsFollowCursor) {
+        return;
+      }
       if (loc?.segment && setActiveTab) {
         const setactive: (id: string) => void = setActiveTab;
         setactive(loc.segment);
@@ -226,6 +245,7 @@
     }}
   />
 </main>
+<SettingsModal settings={data.settings} bind:show={showSettings} />
 
 <style>
   main {
