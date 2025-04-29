@@ -145,4 +145,18 @@
   </form>
 </div>
 
-<style></style>
+<style>
+  form {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 1ch;
+
+    &::after {
+      content: "";
+      flex-grow: 1;
+    }
+  }
+</style>

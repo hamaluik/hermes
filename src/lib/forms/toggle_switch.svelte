@@ -3,10 +3,12 @@
     checked = $bindable(false),
     id,
     onchange,
+    disabled,
   }: {
     checked: boolean;
     id: string;
     onchange?: (checked: boolean) => void;
+    disabled?: boolean;
   } = $props();
 
   const toggle = (event: Event) => {
@@ -17,7 +19,7 @@
 </script>
 
 <label class="toggle-switch">
-  <input type="checkbox" {id} {checked} onchange={toggle} />
+  <input type="checkbox" {id} {checked} onchange={toggle} {disabled} />
   <span class="slider"></span>
 </label>
 
@@ -51,6 +53,11 @@
     background-color: var(--col-pine);
   }
 
+  input:disabled + .slider {
+    background-color: var(--col-subtle);
+    cursor: not-allowed;
+  }
+
   /* the circle inside the slider */
   .slider:before {
     position: absolute;
@@ -66,6 +73,10 @@
 
   input:checked + .slider:before {
     background-color: var(--col-foam);
+  }
+
+  input:disabled + .slider:before {
+    background-color: var(--col-muted);
   }
 
   input:checked + .slider:before {

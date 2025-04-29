@@ -11,11 +11,13 @@
     onchange,
     oncursorchange,
     readonly,
+    placeholder,
   }: {
     message?: string;
     onchange?: (message: string) => void;
     oncursorchange?: (cursorPos: number) => void;
     readonly?: boolean;
+    placeholder?: string;
   } = $props();
 
   let editElement: HTMLElement;
@@ -108,7 +110,7 @@
 
 <div class="message-editor" style="--message-height: {messageHeight}lh;">
   <textarea
-    placeholder="MSH|^~\&|…"
+    placeholder={placeholder ?? "MSH|^~\\&|…"}
     class="editor"
     oninput={handleInput}
     onscroll={handleScroll}
@@ -128,7 +130,7 @@
     flex: var(--message-editor-flex, 1);
     width: 100%;
     height: 100%;
-    min-height: calc(var(--message-height) + 1rem);
+    min-height: var(--message-height);
     padding: 1rem;
     background-color: var(--col-surface);
     border: 1px solid var(--col-highlightHigh);
