@@ -5,17 +5,22 @@
     getRangeOfNextField,
     getRangeOfPreviousField,
   } from "../backend/cursor";
+  import IconClipboard from "./icons/IconClipboard.svelte";
+  import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+  import IconClipboardCheck from "./icons/IconClipboardCheck.svelte";
 
   let {
     message,
     onchange,
     oncursorchange,
+    onctrlenter,
     readonly,
     placeholder,
   }: {
     message?: string;
     onchange?: (message: string) => void;
     oncursorchange?: (cursorPos: number) => void;
+    onctrlenter?: () => void;
     readonly?: boolean;
     placeholder?: string;
   } = $props();
@@ -23,6 +28,15 @@
   let editElement: HTMLElement;
   let highlightElement: HTMLElement;
   let _cursorPos: number = $state(0);
+  let copied: boolean = $state(false);
+
+  $effect(() => {
+    if (copied) {
+      setTimeout(() => {
+        copied = false;
+      }, 2000);
+    }
+  });
 
   let selectionListener: () => void;
 
@@ -68,6 +82,13 @@
       const start = range.start;
       const end = range.end;
       (editElement as HTMLTextAreaElement).setSelectionRange(start, end);
+    } else if (
+      event.key === "Enter" &&
+      (event.ctrlKey || event.metaKey) &&
+      onctrlenter
+    ) {
+      event.preventDefault();
+      onctrlenter();
     }
   }
 
@@ -123,6 +144,27 @@
     aria-hidden="true"
     bind:this={highlightElement}
   ></div>
+  <div class="copy">
+    <button
+      class="copy-button"
+      disabled={message === undefined || message === "" || copied}
+      onclick={async () => {
+        try {
+          await writeText(message ?? "");
+          copied = true;
+        } catch (error) {
+          console.error("Error copying to clipboard:", error);
+          copied = false;
+        }
+      }}
+    >
+      {#if copied}
+        <IconClipboardCheck />
+      {:else}
+        <IconClipboard />
+      {/if}
+    </button>
+  </div>
 </div>
 
 <style>
@@ -130,7 +172,7 @@
     flex: var(--message-editor-flex, 1);
     width: 100%;
     height: 100%;
-    min-height: calc(var(--message-height) + 2.5rem);
+    min-height: calc(var(--message-height));
     padding: 1rem;
     background-color: var(--col-surface);
     border: 1px solid var(--col-highlightHigh);
@@ -196,6 +238,36 @@
       }
       :global(.err) {
         color: var(--col-love) !important;
+      }
+    }
+
+    &:hover {
+      .copy {
+        display: block;
+      }
+    }
+
+    .copy {
+      display: none;
+      position: absolute;
+      z-index: 2;
+      top: 2px;
+      right: 4px;
+
+      .copy-button {
+        background: var(--col-overlay);
+        color: var(--col-subtle);
+        border: none;
+        cursor: pointer;
+        margin: 0;
+        padding: 0;
+        font-size: medium;
+
+        &:hover,
+        &:active,
+        &:focus {
+          color: var(--col-text);
+        }
       }
     }
   }

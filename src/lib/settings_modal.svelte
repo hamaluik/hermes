@@ -16,6 +16,7 @@
   let dialogElement: HTMLDialogElement | null = $state(null);
 
   let tabsFollowCursor: boolean = $state(settings.tabsFollowCursor);
+  let sendWaitTimeoutSeconds: number = $state(settings.sendWaitTimeoutSeconds);
 
   const saveSettings = () => {
     settings.tabsFollowCursor = tabsFollowCursor;

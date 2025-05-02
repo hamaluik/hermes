@@ -34,4 +34,5 @@ hl7-mllp-codec = "0.4.0"
 tokio-util = "0.7.15"
 futures = "0.3.31"
 bytes = "1.10.1"
+tauri-plugin-clipboard-manager = "2"
 

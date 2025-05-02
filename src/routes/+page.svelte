@@ -30,8 +30,8 @@
   import IconHelp from "$lib/icons/IconHelp.svelte";
   import ToolbarSeparator from "$lib/toolbar_separator.svelte";
   import IconSendReceive from "$lib/icons/IconSendReceive.svelte";
-  import { goto } from "$app/navigation";
   import { get } from "svelte/store";
+  import MessageSendModal from "$lib/message_send_modal.svelte";
 
   let { data }: PageProps = $props();
 
@@ -43,6 +43,8 @@
   let toolbarHeight: string | undefined = $state(undefined);
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
   let showSettings: ((show: boolean) => void) | undefined = $state(undefined);
+  let showSend = $state(false);
+  let currentFilePath: string | undefined = $state(undefined);
 
   $effect(() => {
     if (!message) {
@@ -105,18 +107,18 @@
       return;
     }
 
-    data.currentFilePath.set(undefined);
+    currentFilePath = undefined;
     message = await readTextFile(filePath);
     savedMessage = message;
-    data.currentFilePath.set(filePath);
+    currentFilePath = filePath;
   }
 
   let handleSave = $derived.by(() => {
-    if (!get(data.currentFilePath) || message === savedMessage) {
+    if (!currentFilePath || message === savedMessage) {
       return undefined;
     }
     return () => {
-      writeTextFile(get(data.currentFilePath)!, message, {
+      writeTextFile(currentFilePath!, message, {
         append: false,
         create: true,
       })
@@ -144,7 +146,7 @@
       return;
     }
 
-    data.currentFilePath.set(filePath);
+    currentFilePath = filePath;
     await writeTextFile(filePath, message, {
       append: false,
       create: true,
@@ -164,7 +166,7 @@
     title="New"
     onclick={() => {
       message = "MSH|^~\\&|";
-      data.currentFilePath.set(undefined);
+      currentFilePath = undefined;
       const defaultData = generateDefaultData("MSH", schemas["MSH"] ?? {});
       renderMessageSegment(message, "MSH", 0, defaultData).then(
         (newMessage) => {
@@ -191,14 +193,7 @@
   <ToolbarButton
     title="Send/Receive"
     onclick={() => {
-      data.message.set(message);
-      if (!document.startViewTransition) {
-        goto("/send-receive");
-        return;
-      }
-      document.startViewTransition(() => {
-        goto("/send-receive");
-      });
+      showSend = true;
     }}
   >
     <IconSendReceive />
@@ -267,6 +262,9 @@
     oncursorchange={(pos) => {
       cursorPos = pos;
     }}
+    onctrlenter={() => {
+      showSend = true;
+    }}
   />
   <CursorDescription
     {message}
@@ -284,6 +282,9 @@
   />
 </main>
 <SettingsModal settings={data.settings} bind:show={showSettings} />
+{#if showSend}
+  <MessageSendModal bind:show={showSend} settings={data.settings} {message} />
+{/if}
 
 <style>
   main {

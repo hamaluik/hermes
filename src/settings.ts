@@ -8,11 +8,11 @@ export class Settings {
   private _tabsFollowCursor: boolean = true;
 
   // send/receive
-  private _lastHostname: string = "127.0.0.1";
-  private _lastPort: number = 2575;
-  private _lastTransformControlId: boolean = true;
-  private _lastTransformTimestamp: boolean = true;
-  private _lastWaitTimeoutSeconds: number = 5;
+  private _sendHostname: string = "127.0.0.1";
+  private _sendPort: number = 2575;
+  private _sendTransformControlId: boolean = true;
+  private _sendTransformTimestamp: boolean = true;
+  private _sendWaitTimeoutSeconds: number = 5;
 
   constructor() {
     load("settings.json", {
@@ -23,28 +23,28 @@ export class Settings {
 
         return Promise.all([
           store.get<boolean>("tabsFollowCursor"),
-          store.get<string>("lastHostname"),
-          store.get<number>("lastPort"),
-          store.get<boolean>("lastTransformControlId"),
-          store.get<boolean>("lastTransformTimestamp"),
-          store.get<number>("lastWaitTimeoutSeconds"),
+          store.get<string>("sendHostname"),
+          store.get<number>("sendPort"),
+          store.get<boolean>("sendTransformControlId"),
+          store.get<boolean>("sendTransformTimestamp"),
+          store.get<number>("sendWaitTimeoutSeconds"),
         ]);
       })
       .then(
         ([
           tabsFollowCursor,
-          lastHostname,
-          lastPort,
-          lastTransformControlId,
-          lastTransformTimestamp,
-          lastWaitTimeoutSeconds,
+          sendHostname,
+          sendPort,
+          sendTransformControlId,
+          sendTransformTimestamp,
+          sendWaitTimeoutSeconds,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
-          this._lastHostname = lastHostname ?? "127.0.0.1";
-          this._lastPort = lastPort ?? 2575;
-          this._lastTransformControlId = lastTransformControlId ?? true;
-          this._lastTransformTimestamp = lastTransformTimestamp ?? true;
-          this._lastWaitTimeoutSeconds = lastWaitTimeoutSeconds ?? 5;
+          this._sendHostname = sendHostname ?? "127.0.0.1";
+          this._sendPort = sendPort ?? 2575;
+          this._sendTransformControlId = sendTransformControlId ?? true;
+          this._sendTransformTimestamp = sendTransformTimestamp ?? true;
+          this._sendWaitTimeoutSeconds = sendWaitTimeoutSeconds ?? 5;
         },
       )
       .catch((error) => {
@@ -76,72 +76,72 @@ export class Settings {
     }
   }
 
-  get lastHostname(): string {
-    return this._lastHostname;
+  get sendHostname(): string {
+    return this._sendHostname;
   }
-  set lastHostname(value: string) {
-    console.debug("Setting lastHostname to:", value);
-    this._lastHostname = value;
+  set sendHostname(value: string) {
+    console.debug("Setting sendHostname to:", value);
+    this._sendHostname = value;
     if (this.store) {
-      this.store.set("lastHostname", value).catch((error) => {
-        console.error("Error saving lastHostname setting:", error);
-        logError("Failed to save lastHostname setting");
+      this.store.set("sendHostname", value).catch((error) => {
+        console.error("Error saving sendHostname setting:", error);
+        logError("Failed to save sendHostname setting");
       });
     }
   }
 
-  get lastPort(): number {
-    return this._lastPort;
+  get sendPort(): number {
+    return this._sendPort;
   }
-  set lastPort(value: number) {
-    console.debug("Setting lastPort to:", value);
-    this._lastPort = value;
+  set sendPort(value: number) {
+    console.debug("Setting sendPort to:", value);
+    this._sendPort = value;
     if (this.store) {
-      this.store.set("lastPort", value).catch((error) => {
-        console.error("Error saving lastPort setting:", error);
-        logError("Failed to save lastPort setting");
+      this.store.set("sendPort", value).catch((error) => {
+        console.error("Error saving sendPort setting:", error);
+        logError("Failed to save sendPort setting");
       });
     }
   }
 
-  get lastTransformControlId(): boolean {
-    return this._lastTransformControlId;
+  get sendTransformControlId(): boolean {
+    return this._sendTransformControlId;
   }
-  set lastTransformControlId(value: boolean) {
-    console.debug("Setting lastTransformControlId to:", value);
-    this._lastTransformControlId = value;
+  set sendTransformControlId(value: boolean) {
+    console.debug("Setting sendTransformControlId to:", value);
+    this._sendTransformControlId = value;
     if (this.store) {
-      this.store.set("lastTransformControlId", value).catch((error) => {
-        console.error("Error saving lastTransformControlId setting:", error);
-        logError("Failed to save lastTransformControlId setting");
+      this.store.set("sendTransformControlId", value).catch((error) => {
+        console.error("Error saving sendTransformControlId setting:", error);
+        logError("Failed to save sendTransformControlId setting");
       });
     }
   }
 
-  get lastTransformTimestamp(): boolean {
-    return this._lastTransformTimestamp;
+  get sendTransformTimestamp(): boolean {
+    return this._sendTransformTimestamp;
   }
-  set lastTransformTimestamp(value: boolean) {
-    console.debug("Setting lastTransformTimestamp to:", value);
-    this._lastTransformTimestamp = value;
+  set sendTransformTimestamp(value: boolean) {
+    console.debug("Setting sendTransformTimestamp to:", value);
+    this._sendTransformTimestamp = value;
     if (this.store) {
-      this.store.set("lastTransformTimestamp", value).catch((error) => {
-        console.error("Error saving lastTransformTimestamp setting:", error);
-        logError("Failed to save lastTransformTimestamp setting");
+      this.store.set("sendTransformTimestamp", value).catch((error) => {
+        console.error("Error saving sendTransformTimestamp setting:", error);
+        logError("Failed to save sendTransformTimestamp setting");
       });
     }
   }
 
-  get lastWaitTimeoutSeconds(): number {
-    return this._lastWaitTimeoutSeconds;
+  get sendWaitTimeoutSeconds(): number {
+    return this._sendWaitTimeoutSeconds;
   }
-  set lastWaitTimeoutSeconds(value: number) {
-    console.debug("Setting lastWaitTimeoutSeconds to:", value);
-    this._lastWaitTimeoutSeconds = value;
+  set sendWaitTimeoutSeconds(value: number) {
+    console.debug("Setting sendWaitTimeoutSeconds to:", value);
+    this._sendWaitTimeoutSeconds = value;
     if (this.store) {
-      this.store.set("lastWaitTimeoutSeconds", value).catch((error) => {
-        console.error("Error saving lastWaitTimeoutSeconds setting:", error);
-        logError("Failed to save lastWaitTimeoutSeconds setting");
+      this.store.set("sendWaitTimeoutSeconds", value).catch((error) => {
+        console.error("Error saving sendWaitTimeoutSeconds setting:", error);
+        logError("Failed to save sendWaitTimeoutSeconds setting");
       });
     }
   }

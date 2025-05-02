@@ -12,6 +12,5 @@ export const load: LayoutLoad = async () => {
   return {
     settings: new Settings(),
     message: writable<string>("MSH|^~\\&|"),
-    currentFilePath: writable<string | undefined>(undefined),
   };
 };

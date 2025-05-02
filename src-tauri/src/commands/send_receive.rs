@@ -4,6 +4,7 @@ use futures::{sink::SinkExt, StreamExt};
 use hl7_mllp_codec::MllpCodec;
 use hl7_parser::{builder::MessageBuilder, datetime::TimeStamp};
 use jiff::Zoned;
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::net::ToSocketAddrs;
 use tauri::{AppHandle, Emitter};
@@ -11,16 +12,9 @@ use tokio::{net::TcpStream, time::timeout};
 use tokio_util::codec::Framed;
 
 #[derive(Deserialize)]
-pub struct SendTransformationsRequest {
-    pub control_id: bool,
-    pub timestamp: bool,
-}
-
-#[derive(Deserialize)]
 pub struct SendRequest {
     pub host: String,
     pub port: u16,
-    pub transformations: SendTransformationsRequest,
     pub wait_timeout_seconds: f32,
     pub message: String,
 }
@@ -41,7 +35,6 @@ pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), St
     let SendRequest {
         host,
         port,
-        transformations,
         wait_timeout_seconds,
         message,
     } = request;
@@ -57,28 +50,30 @@ pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), St
 
     let mut message: MessageBuilder = (&message).into();
 
-    if transformations.control_id {
-        use rand::distr::{Alphanumeric, SampleString};
-        let value = Alphanumeric.sample_string(&mut rand::rng(), 20);
+    // some "select" auto transformations for now
+    // TODO: more general {auto} transformations
+    let msh = message
+        .segment_named_mut("MSH")
+        .expect("messages have MSH segments");
 
-        message
-            .segment_named_mut("MSH")
-            .expect("messages have MSH segments")
-            .set_field_value(10, value);
+    if let Some(timestamp) = msh.field_mut(7) {
+        if let Some(value) = timestamp.value_mut() {
+            if value == "{auto}" || value == "{now}" {
+                let now = jiff::Zoned::now();
+                let now: jiff::civil::DateTime = now.into();
+                let now: TimeStamp = now.into();
+                *value = now.to_string();
+            }
+        }
     }
 
-    if transformations.timestamp {
-        let now = jiff::Zoned::now();
-        let now: jiff::civil::DateTime = now.into();
-        let now: TimeStamp = now.into();
-
-        message
-            .segment_named_mut("MSH")
-            .expect("messages have MSH segments")
-            .set_field_value(7, now);
+    if let Some(control_id) = msh.field_mut(10) {
+        if let Some(value) = control_id.value_mut() {
+            if value == "{auto}" || value == "{random}" {
+                *value = Alphanumeric.sample_string(&mut rand::rng(), 20);
+            }
+        }
     }
-
-    // TODO: {auto} transformations
 
     let message = message.to_string();
     let wait_timeout = std::time::Duration::from_secs_f32(wait_timeout_seconds);
@@ -98,7 +93,7 @@ pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), St
             log::error!("Failed to connect to {addr}");
             if let Err(e) = app.emit(
                 "send-response",
-                SendResponse::FailedToConnect(format!("Failed to connect to {addr}")),
+                SendResponse::FailedToConnect(format!("{addr}")),
             ) {
                 log::error!("Failed to emit send-response event: {e:#}");
             }

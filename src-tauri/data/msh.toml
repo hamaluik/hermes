@@ -27,7 +27,7 @@ field = 7
 name = "Date/Time of Message"
 datatype = "datetime"
 placeholder = "YYYYMMDDHHMMSS"
-pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+pattern="(\\{auto\\})|(\\{now\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 maxlength = 23
 note = "Date/time the message was created. Timezone offset, if present, applies to date fields in the message that lack their own offset."
 

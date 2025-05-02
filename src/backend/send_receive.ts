@@ -5,15 +5,9 @@ import {
   type UnlistenFn,
 } from "@tauri-apps/api/event";
 
-export interface SendTransformationsRequest {
-  control_id: boolean;
-  timestamp: boolean;
-}
-
 export interface SendRequest {
   host: string;
   port: number;
-  transformations: SendTransformationsRequest;
   wait_timeout_seconds: number;
   message: string;
 }
@@ -56,16 +50,7 @@ export async function sendMessage(
 
   try {
     await invoke("send_message", {
-      request: {
-        host: request.host,
-        port: request.port,
-        transformations: {
-          control_id: request.transformations.control_id,
-          timestamp: request.transformations.timestamp,
-        },
-        wait_timeout_seconds: request.wait_timeout_seconds,
-        message: request.message,
-      },
+      request,
     });
   } finally {
     unlistenResponse?.();
