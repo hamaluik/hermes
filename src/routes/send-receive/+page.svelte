@@ -11,28 +11,103 @@
   import MessageEditor from "$lib/message_editor.svelte";
   import ToggleSwitch from "$lib/forms/toggle_switch.svelte";
   import IconSend from "$lib/icons/IconSend.svelte";
+  import { sendMessage, type SendRequest } from "../../backend/send_receive";
+  import { message as messageDialog } from "@tauri-apps/plugin-dialog";
+  import IconSpinner from "$lib/icons/IconSpinner.svelte";
 
   let { data }: PageProps = $props();
 
   let toolbarHeight: string | undefined = $state(undefined);
 
-  let hostname: string = $state("");
-  let port: number = $state(2575);
+  let hostname: string = $state(data.settings.lastHostname);
+  let port: number = $state(data.settings.lastPort);
   let message: string = $state("");
-  let autoCID: boolean = $state(false);
-  let autoTimestamp: boolean = $state(false);
+  let autoCID: boolean = $state(data.settings.lastTransformControlId);
+  let autoTimestamp: boolean = $state(data.settings.lastTransformTimestamp);
+  let waitTime: number = $state(data.settings.lastWaitTimeoutSeconds);
   let messageLog: string = $state("");
   let receivedMessage: string = $state("");
+  let sending: boolean = $state(false);
 
   onMount(() => {
     message = get(data.message);
   });
+
+  const onfocus = (event: Event) => {
+    const popover = (event.target as HTMLElement)
+      .closest("div")
+      ?.querySelector(".popover");
+    if (popover) {
+      (popover as HTMLElement).classList.add("show");
+    }
+  };
+
+  const onblur = (event: Event) => {
+    const popover = (event.target as HTMLElement)
+      .closest("div")
+      ?.querySelector(".popover");
+    if (popover) {
+      (popover as HTMLElement).classList.remove("show");
+    }
+  };
+
+  const updateSettings = async () => {
+    data.settings.lastHostname = hostname;
+    data.settings.lastPort = port;
+    data.settings.lastTransformControlId = autoCID;
+    data.settings.lastTransformTimestamp = autoTimestamp;
+    data.settings.lastWaitTimeoutSeconds = waitTime;
+    await data.settings.save();
+  };
+
+  const onSendSubmit = async (event: Event) => {
+    event.preventDefault();
+    sending = true;
+
+    updateSettings();
+
+    messageLog = "";
+    receivedMessage = "";
+    const request: SendRequest = {
+      host: hostname,
+      port: port,
+      message: message,
+      transformations: {
+        control_id: autoCID,
+        timestamp: autoTimestamp,
+      },
+      wait_timeout_seconds: waitTime,
+    };
+
+    let response: string | null = null;
+    try {
+      response = await sendMessage(request, (log: string) => {
+        messageLog += log + "\n\n";
+      });
+
+      if (response) {
+        receivedMessage = response;
+      } else {
+        receivedMessage = "No response received.";
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      messageLog += "Error: " + error + "\n\n";
+      await messageDialog(String(error), {
+        title: "Error Sending Message",
+        kind: "error",
+      });
+    } finally {
+      sending = false;
+    }
+  };
 </script>
 
 <Toolbar bind:toolbarHeight>
   <ToolbarButton
     title="Edit Message"
-    onclick={() => {
+    onclick={async () => {
+      await updateSettings();
       if (!document.startViewTransition) {
         goto("/");
         return;
@@ -52,7 +127,7 @@
 <main class="main" style="--toolbar-height: {toolbarHeight ?? '1px'}">
   <div class="send-receive">
     <h1>Send/Receive</h1>
-    <form class="send-form">
+    <form class="send-form" id="send-form" onsubmit={onSendSubmit}>
       <fieldset>
         <legend>MLLP Connection</legend>
 
@@ -67,7 +142,15 @@
             placeholder="localhost"
             required
             pattern="^[a-zA-Z0-9._-]+$"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            {onfocus}
+            {onblur}
           />
+          <p class="popover">
+            The hostname or IP address of the server to connect to.
+          </p>
         </div>
 
         <div class="form-group">
@@ -84,7 +167,10 @@
             required
             inputmode="numeric"
             pattern="\d*"
+            {onfocus}
+            {onblur}
           />
+          <p class="popover">The port number to connect to.</p>
         </div>
 
         <div class="switch-group">
@@ -99,16 +185,67 @@
         <label for="auto-timestamp">Auto-Set Timestamp</label>
         <ToggleSwitch id="auto-timestamp" bind:checked={autoTimestamp} />
       </fieldset>
+      <fieldset>
+        <legend>Send Options</legend>
+        <div class="form-group">
+          <label for="wait-time">Wait Time (s)</label>
+          <input
+            type="number"
+            id="wait-time"
+            bind:value={waitTime}
+            min="0"
+            max="600"
+            step="0.1"
+            maxlength="5"
+            placeholder="10"
+            required
+            inputmode="numeric"
+            pattern={'"^\\d+(\\.\\d{1,1})?$"'}
+            {onfocus}
+            {onblur}
+          />
+          <p class="popover">
+            The number of seconds to wait for an ACK response before timing out.
+            If set to 0, quit immediately after sending the message without
+            waiting for a response.
+          </p>
+        </div>
+      </fieldset>
     </form>
     <div class="send">
       <h2>Outbound Message</h2>
-      <button class="send-button" type="button" onclick={() => {}}>
-        <IconSend />
-        Send
+      <button
+        class="send-button"
+        form="send-form"
+        type="submit"
+        disabled={sending}
+      >
+        {#if sending}
+          <IconSpinner />
+          Sending...
+        {:else}
+          <IconSend />
+          Send
+        {/if}
       </button>
     </div>
     <MessageEditor {message} readonly={true} --message-editor-flex="0" />
-    <h2>Received Message</h2>
+    <div class="receive">
+      <h2>Received Message</h2>
+      {#if receivedMessage}
+        <button
+          class="receive-button"
+          onclick={async () => {
+            data.message.set(receivedMessage);
+            data.currentFilePath.set(undefined);
+            await updateSettings();
+            goto("/");
+          }}
+        >
+          <IconEditMessage /> Edit
+        </button>
+      {/if}
+    </div>
     <MessageEditor
       message={receivedMessage}
       readonly={true}
@@ -119,7 +256,6 @@
     <textarea class="message-log" bind:value={messageLog} readonly={true}
     ></textarea>
   </div>
-  <div></div>
 </main>
 
 <style>
@@ -153,10 +289,10 @@
       overflow-y: auto;
 
       form.send-form {
-        display: grid;
-        grid-template-columns: 1fr auto;
+        display: flex;
+        flex-direction: row;
         align-items: stretch;
-        justify-content: flex-start;
+        justify-content: stretch;
         gap: 1ch;
 
         fieldset {
@@ -171,6 +307,28 @@
         }
         input::-webkit-inner-spin-button {
           appearance: none;
+        }
+
+        .form-group {
+          position: relative;
+          .popover {
+            display: none;
+            position: absolute;
+            top: calc(100% + 0.25rem);
+            left: -3ch;
+            right: -3ch;
+            color: var(--col-text);
+            background-color: var(--col-overlay);
+            padding: 0.5ch;
+            border: 1px solid var(--col-highlightHigh);
+            z-index: 1000;
+            border-radius: 4px;
+            font-size: smaller;
+            white-space: pre-line;
+            :global(&.show) {
+              display: block;
+            }
+          }
         }
 
         .switch-group {
@@ -188,6 +346,7 @@
           gap: 0.5lh 1ch;
           align-items: center;
           align-content: start;
+          position: relative;
         }
       }
 
@@ -205,6 +364,42 @@
           gap: 1ch;
           font-weight: 700;
           background-color: var(--col-pine);
+          color: var(--col-text);
+          border-radius: 0.5rem;
+          border: none;
+          cursor: pointer;
+          font-size: inherit;
+          padding: 0.5em 1ch;
+
+          &:hover,
+          &:active,
+          &:focus {
+            background-color: var(--col-gold);
+            color: var(--col-surface);
+          }
+
+          &:disabled {
+            background-color: transparent;
+            color: var(--col-iris);
+            cursor: not-allowed;
+          }
+        }
+      }
+
+      .receive {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 1ch;
+
+        .receive-button {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: center;
+          gap: 1ch;
+          font-weight: 700;
+          background-color: var(--col-overlay);
           color: var(--col-text);
           border-radius: 0.5rem;
           border: none;

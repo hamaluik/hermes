@@ -35,7 +35,6 @@
 
   let { data }: PageProps = $props();
 
-  let currentFilePath: string | undefined = $state(undefined);
   let message: string = $state("");
   let savedMessage: string = $state("");
   let cursorPos: number = $state(0);
@@ -106,18 +105,18 @@
       return;
     }
 
-    currentFilePath = undefined;
+    data.currentFilePath.set(undefined);
     message = await readTextFile(filePath);
     savedMessage = message;
-    currentFilePath = filePath;
+    data.currentFilePath.set(filePath);
   }
 
   let handleSave = $derived.by(() => {
-    if (!currentFilePath || message === savedMessage) {
+    if (!get(data.currentFilePath) || message === savedMessage) {
       return undefined;
     }
     return () => {
-      writeTextFile(currentFilePath!, message, {
+      writeTextFile(get(data.currentFilePath)!, message, {
         append: false,
         create: true,
       })
@@ -145,7 +144,7 @@
       return;
     }
 
-    currentFilePath = filePath;
+    data.currentFilePath.set(filePath);
     await writeTextFile(filePath, message, {
       append: false,
       create: true,
@@ -165,14 +164,16 @@
     title="New"
     onclick={() => {
       message = "MSH|^~\\&|";
-      currentFilePath = undefined;
-      const data = generateDefaultData("MSH", schemas["MSH"] ?? {});
-      renderMessageSegment(message, "MSH", 0, data).then((newMessage) => {
-        if (newMessage) {
-          message = newMessage;
-          savedMessage = message;
-        }
-      });
+      data.currentFilePath.set(undefined);
+      const defaultData = generateDefaultData("MSH", schemas["MSH"] ?? {});
+      renderMessageSegment(message, "MSH", 0, defaultData).then(
+        (newMessage) => {
+          if (newMessage) {
+            message = newMessage;
+            savedMessage = message;
+          }
+        },
+      );
     }}
   >
     <IconNew />
@@ -190,13 +191,12 @@
   <ToolbarButton
     title="Send/Receive"
     onclick={() => {
+      data.message.set(message);
       if (!document.startViewTransition) {
-        data.message.set(message);
         goto("/send-receive");
         return;
       }
       document.startViewTransition(() => {
-        data.message.set(message);
         goto("/send-receive");
       });
     }}

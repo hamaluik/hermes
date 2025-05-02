@@ -4,11 +4,15 @@
     id,
     onchange,
     disabled,
+    onfocus,
+    onblur,
   }: {
     checked: boolean;
     id: string;
     onchange?: (checked: boolean) => void;
     disabled?: boolean;
+    onfocus?: (event: Event) => void;
+    onblur?: (event: Event) => void;
   } = $props();
 
   const toggle = (event: Event) => {
@@ -19,7 +23,15 @@
 </script>
 
 <label class="toggle-switch">
-  <input type="checkbox" {id} {checked} onchange={toggle} {disabled} />
+  <input
+    type="checkbox"
+    {id}
+    {checked}
+    onchange={toggle}
+    {disabled}
+    {onfocus}
+    {onblur}
+  />
   <span class="slider"></span>
 </label>
 
@@ -47,6 +59,10 @@
     background-color: var(--col-subtle);
     transition: 0.4s;
     border-radius: 1.25rem;
+  }
+
+  input:focus + .slider {
+    outline: 2px solid var(--col-iris);
   }
 
   input:checked + .slider {

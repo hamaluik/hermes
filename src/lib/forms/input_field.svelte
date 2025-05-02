@@ -108,5 +108,9 @@
     border-radius: 4px;
     font-size: smaller;
     white-space: pre-line;
+
+    :global(&.show) {
+      display: block;
+    }
   }
 </style>

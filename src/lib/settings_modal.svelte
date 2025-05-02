@@ -18,8 +18,8 @@
   let tabsFollowCursor: boolean = $state(settings.tabsFollowCursor);
 
   const saveSettings = () => {
-    // Save settings logic here
     settings.tabsFollowCursor = tabsFollowCursor;
+    settings.save();
   };
 
   onMount(() => {

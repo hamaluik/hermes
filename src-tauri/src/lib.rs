@@ -60,6 +60,7 @@ pub fn run() {
             commands::get_message_trigger_event,
             commands::parse_message_segment,
             commands::render_message_segment,
+            commands::send_message,
         ])
         .setup(|app| {
             let app_data = AppData {

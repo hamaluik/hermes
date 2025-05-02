@@ -103,7 +103,7 @@
   });
 
   let messageHeight: number = $derived.by(() => {
-    const lines = (message ?? "").split("\n").length;
+    const lines = (message?.trim() ?? "").split("\n").length;
     return Math.max(lines, 3);
   });
 </script>
@@ -130,7 +130,7 @@
     flex: var(--message-editor-flex, 1);
     width: 100%;
     height: 100%;
-    min-height: var(--message-height);
+    min-height: calc(var(--message-height) + 2.5rem);
     padding: 1rem;
     background-color: var(--col-surface);
     border: 1px solid var(--col-highlightHigh);
