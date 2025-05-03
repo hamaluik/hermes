@@ -32,6 +32,11 @@
   import IconSendReceive from "$lib/icons/IconSendReceive.svelte";
   import { get } from "svelte/store";
   import MessageSendModal from "$lib/message_send_modal.svelte";
+  import IconListen from "$lib/icons/IconListen.svelte";
+  import ListenModal from "$lib/listen_modal.svelte";
+  import NotificationIcon from "$lib/notification_icon.svelte";
+  import { listenToListenResponse } from "../backend/listen";
+  import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let { data }: PageProps = $props();
 
@@ -45,6 +50,11 @@
   let showSettings: ((show: boolean) => void) | undefined = $state(undefined);
   let showSend = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
+
+  let showListeningModal = $state(false);
+
+  let listening = $state(false);
+  let unreadMessageCount = $state(0);
 
   $effect(() => {
     if (!message) {
@@ -67,6 +77,18 @@
   onMount(() => {
     message = get(data.message);
 
+    let unlisten: UnlistenFn | undefined = undefined;
+    listenToListenResponse(data.listenedMessages).then((_unlisten) => {
+      unlisten = _unlisten;
+    });
+
+    data.listening.subscribe((value) => {
+      listening = value;
+    });
+    data.listenedMessages.subscribe((value) => {
+      unreadMessageCount = value.filter((m) => m.unread).length;
+    });
+
     getAllSegmentSchemas()
       .then((_schemas) => {
         console.debug("Schemas loaded:", _schemas);
@@ -76,6 +98,10 @@
         console.error("Error loading schemas:", error);
         messageDialog(error, { title: "Error Loading Schemas", kind: "error" });
       });
+
+    return () => {
+      unlisten?.();
+    };
   });
 
   const segmentRepeat = (segment: string, index: number): number => {
@@ -159,6 +185,10 @@
         messageDialog(error, { title: "Error Saving File", kind: "error" });
       });
   };
+
+  const handleListen = () => {
+    showListeningModal = true;
+  };
 </script>
 
 <Toolbar bind:toolbarHeight>
@@ -197,6 +227,13 @@
     }}
   >
     <IconSendReceive />
+  </ToolbarButton>
+  <ToolbarButton title="Listen" onclick={handleListen}>
+    <NotificationIcon count={unreadMessageCount}>
+      <span class={listening ? "listening" : "notListening"}>
+        <IconListen />
+      </span>
+    </NotificationIcon>
   </ToolbarButton>
   <ToolbarSpacer />
   <ToolbarButton title="Help">
@@ -282,6 +319,13 @@
   />
 </main>
 <SettingsModal settings={data.settings} bind:show={showSettings} />
+{#if showListeningModal}
+  <ListenModal
+    bind:show={showListeningModal}
+    listening={data.listening}
+    listenedMessages={data.listenedMessages}
+  />
+{/if}
 {#if showSend}
   <MessageSendModal bind:show={showSend} settings={data.settings} {message} />
 {/if}
@@ -331,5 +375,13 @@
         color: var(--col-surface);
       }
     }
+  }
+
+  span.listening {
+    color: var(--col-pine);
+  }
+
+  span.notListening {
+    color: var(--col-subtle);
   }
 </style>

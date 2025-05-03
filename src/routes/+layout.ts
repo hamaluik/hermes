@@ -12,5 +12,12 @@ export const load: LayoutLoad = async () => {
   return {
     settings: new Settings(),
     message: writable<string>("MSH|^~\\&|"),
+    listening: writable<boolean>(false),
+    listenedMessages: writable<
+      {
+        message: string;
+        unread: boolean;
+      }[]
+    >([]),
   };
 };

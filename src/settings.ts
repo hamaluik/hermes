@@ -53,15 +53,6 @@ export class Settings {
       });
   }
 
-  public async save(): Promise<void> {
-    try {
-      await this.store?.save();
-    } catch (error) {
-      console.error("Error saving settings:", error);
-      logError("Failed to save settings");
-    }
-  }
-
   get tabsFollowCursor(): boolean {
     return this._tabsFollowCursor;
   }

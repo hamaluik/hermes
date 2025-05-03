@@ -1,6 +1,7 @@
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
 use tauri::Manager;
+use tokio::sync::Mutex;
 
 mod commands;
 mod schema;
@@ -8,6 +9,7 @@ mod spec;
 
 struct AppData {
     schema: SchemaCache,
+    listen_join: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -62,13 +64,17 @@ pub fn run() {
             commands::parse_message_segment,
             commands::render_message_segment,
             commands::send_message,
+            commands::start_listening,
+            commands::stop_listening,
         ])
         .setup(|app| {
             let app_data = AppData {
                 schema: SchemaCache::new("messages.toml")
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
+                listen_join: Mutex::new(None),
             };
             app.manage(app_data);
+
             Ok(())
         })
         .run(tauri::generate_context!())
