@@ -1,6 +1,7 @@
 <script lang="ts">
   import { setContext, type Snippet } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
+  import IconWizard from "./icons/IconWizard.svelte";
 
   let {
     setactive = $bindable(),
@@ -12,9 +13,8 @@
     children: Snippet;
   } = $props();
 
-  const tabs: Writable<{ id: string; label: string }[]> = writable<
-    { id: string; label: string }[]
-  >([]);
+  const tabs: Writable<{ id: string; label: string; onWizard?: () => void }[]> =
+    writable<{ id: string; label: string; onWizard?: () => void }[]>([]);
   const activeId = writable<string | null>(null);
   let activeTabIsMissing: boolean = $state(false);
 
@@ -39,13 +39,14 @@
   activeId.subscribe((id) => {
     const tabList = get(tabs);
     // Only show missing tab message if there are tabs and the active one is missing
-    activeTabIsMissing = tabList.length > 0 && !tabList.some((tab) => tab.id === id);
+    activeTabIsMissing =
+      tabList.length > 0 && !tabList.some((tab) => tab.id === id);
   });
 </script>
 
 <div class="tabs">
   <ul>
-    {#each $tabs as { id, label }}
+    {#each $tabs as { id, label, onWizard }}
       <li class="tab" class:active={id === $activeId}>
         <button
           onclick={() => {
@@ -54,6 +55,18 @@
         >
           {label}
         </button>
+        {#if onWizard && id === $activeId}
+          <button
+            class="wizard"
+            aria-label="Open Wizard"
+            title="Open Wizard"
+            onclick={() => {
+              onWizard?.();
+            }}
+          >
+            <IconWizard />
+          </button>
+        {/if}
       </li>
     {/each}
     {#if addMenu}
@@ -142,6 +155,22 @@
     .tab.active button {
       background-color: var(--col-primary);
       color: var(--col-text);
+    }
+
+    .tab button.wizard {
+      width: 2em;
+      height: 2em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      margin: 0 0.5rem 0 -1rem;
+      width: auto;
+    }
+
+    .tab button.wizard:hover {
+      color: var(--col-gold);
+      cursor: pointer;
     }
 
     .add-menu {

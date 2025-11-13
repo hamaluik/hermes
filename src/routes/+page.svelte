@@ -37,6 +37,7 @@
   import NotificationIcon from "$lib/notification_icon.svelte";
   import { listenToListenResponse } from "../backend/listen";
   import type { UnlistenFn } from "@tauri-apps/api/event";
+  import HeaderWizard from "$lib/wizards/header_wizard.svelte";
 
   let { data }: PageProps = $props();
 
@@ -50,6 +51,8 @@
   let showSettings: ((show: boolean) => void) | undefined = $state(undefined);
   let showSend = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
+
+  let currentWizardModal: string | null = $state(null);
 
   let showListeningModal = $state(false);
 
@@ -68,6 +71,11 @@
   const MIN_EDITOR_HEIGHT = 100; // 100px minimum
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6); // 60% of viewport
 
+  const WIZARD_SEGMENTS = ["MSH", "PID", "PV1"];
+  const WIZARD_COMPONENTS: Record<string, any> = {
+    MSH: HeaderWizard,
+  };
+
   function handleResizeStart(event: PointerEvent) {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -84,11 +92,16 @@
     const delta = event.clientY - resizeStartY;
     // Invert delta because handle is at top: dragging up (negative delta) should increase height
     const newHeight = resizeStartHeight - delta;
-    const clampedHeight = Math.max(MIN_EDITOR_HEIGHT, Math.min(MAX_EDITOR_HEIGHT, newHeight));
+    const clampedHeight = Math.max(
+      MIN_EDITOR_HEIGHT,
+      Math.min(MAX_EDITOR_HEIGHT, newHeight),
+    );
 
     // Track if we're at the bounds for visual feedback
-    atMinBound = clampedHeight === MIN_EDITOR_HEIGHT && newHeight < MIN_EDITOR_HEIGHT;
-    atMaxBound = clampedHeight === MAX_EDITOR_HEIGHT && newHeight > MAX_EDITOR_HEIGHT;
+    atMinBound =
+      clampedHeight === MIN_EDITOR_HEIGHT && newHeight < MIN_EDITOR_HEIGHT;
+    atMaxBound =
+      clampedHeight === MAX_EDITOR_HEIGHT && newHeight > MAX_EDITOR_HEIGHT;
 
     editorHeight = clampedHeight;
   }
@@ -311,7 +324,10 @@
     <IconSettings />
   </ToolbarButton>
 </Toolbar>
-<main style="--toolbar-height: {toolbarHeight ?? '1px'};" class:resizing={isResizing}>
+<main
+  style="--toolbar-height: {toolbarHeight ?? '1px'};"
+  class:resizing={isResizing}
+>
   <div class="tabs-scroll-container">
     <Tabs bind:setactive={setActiveTab}>
       {#snippet addMenu(closeMenu)}
@@ -340,7 +356,15 @@
       {/snippet}
       {#each messageSegments as key, index}
         {#if schemas[key]}
-          <Tab id={key} label={tabLabel(index)}>
+          <Tab
+            id={key}
+            label={tabLabel(index)}
+            onWizard={WIZARD_SEGMENTS.includes(key)
+              ? () => {
+                  currentWizardModal = key;
+                }
+              : undefined}
+          >
             <SegmentTab
               segment={key}
               segmentRepeat={segmentRepeat(key, index)}
@@ -409,6 +433,14 @@
 {/if}
 {#if showSend}
   <MessageSendModal bind:show={showSend} settings={data.settings} {message} />
+{/if}
+{#if currentWizardModal && WIZARD_COMPONENTS[currentWizardModal]}
+  {@const WizardComponent = WIZARD_COMPONENTS[currentWizardModal]}
+  <WizardComponent
+    onclose={() => {
+      currentWizardModal = null;
+    }}
+  />
 {/if}
 
 <style>

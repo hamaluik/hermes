@@ -5,17 +5,21 @@
   let {
     id,
     label,
+    onWizard,
     children,
   }: {
     id: string;
     label: string;
+    onWizard?: () => void;
     children: Snippet;
   } = $props();
 
   const activeId: Writable<string | null> = getContext("activeId");
   onMount(() => {
-    const items: Writable<{ id: string; label: string }[]> = getContext("tabs");
-    items.set([...get(items), { id, label }]);
+    const items: Writable<
+      { id: string; label: string; onWizard?: () => void }[]
+    > = getContext("tabs");
+    items.set([...get(items), { id, label, onWizard }]);
 
     if (get(activeId) === null) {
       activeId.set(id);
