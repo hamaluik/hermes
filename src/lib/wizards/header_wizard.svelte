@@ -11,6 +11,10 @@
   import IconWizard from "$lib/icons/IconWizard.svelte";
   import type { Settings } from "../../settings";
   import DatabaseConnection from "$lib/forms/database_connection.svelte";
+  import {
+    getMessageTriggerEvent,
+    getMessageType,
+  } from "../../backend/data";
 
   let {
     onclose, // called when the user wants to close the wizard
@@ -108,6 +112,29 @@
 
   onMount(() => {
     dialogElement?.showModal();
+
+    // Auto-populate message type and trigger event from the current message
+    if (message) {
+      Promise.all([
+        getMessageType(message).catch(() => null),
+        getMessageTriggerEvent(message).catch(() => null),
+      ]).then(([msgType, trigEvent]) => {
+        // Auto-populate message type if it matches available options
+        if (msgType === "ADT" || msgType === "ORM") {
+          messageType = msgType;
+        }
+
+        // Auto-populate trigger event if it matches available options
+        if (trigEvent) {
+          const validEvent = triggerEventOptions.find(
+            (opt) => opt.value === trigEvent,
+          );
+          if (validEvent) {
+            triggerEvent = trigEvent;
+          }
+        }
+      });
+    }
 
     dialogElement?.addEventListener("close", () => {
       close();

@@ -29,6 +29,17 @@ export async function getMessageTriggerEvent(
   }
 }
 
+export async function getMessageType(
+  message: string,
+): Promise<string | null> {
+  try {
+    return await invoke("get_message_type", { message });
+  } catch (error) {
+    console.error("Error getting message type:", error);
+    throw error;
+  }
+}
+
 export async function parseMessageSegment(
   message: string,
   segment: string,

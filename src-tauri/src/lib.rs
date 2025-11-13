@@ -61,6 +61,7 @@ pub fn run() {
             commands::get_segment_schema,
             commands::get_message_segment_names,
             commands::get_message_trigger_event,
+            commands::get_message_type,
             commands::parse_message_segment,
             commands::render_message_segment,
             commands::send_message,
