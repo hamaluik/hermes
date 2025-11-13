@@ -440,6 +440,10 @@
     onclose={() => {
       currentWizardModal = null;
     }}
+    {message}
+    onchange={(m: string) => {
+      message = m;
+    }}
   />
 {/if}
 
