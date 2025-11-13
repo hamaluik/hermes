@@ -444,6 +444,7 @@
     onchange={(m: string) => {
       message = m;
     }}
+    settings={data.settings}
   />
 {/if}
 

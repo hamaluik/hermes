@@ -9,24 +9,24 @@
   } from "../../backend/wizards/header_wizard";
   import type { WizardDatabase } from "../../backend/wizards/wizard_database";
   import IconWizard from "$lib/icons/IconWizard.svelte";
+  import type { Settings } from "../../settings";
+  import DatabaseConnection from "$lib/forms/database_connection.svelte";
 
   let {
     onclose, // called when the user wants to close the wizard
     message, // the message as passed into the wizard
     onchange, // called when the wizard wants to change the message
+    settings, // settings instance for persistent database connection
   }: {
     onclose?: () => void;
     message?: string;
     onchange?: (message: string) => void;
+    settings: Settings;
   } = $props();
 
   let dialogElement: HTMLDialogElement | null = $state(null);
 
-  let dbHost: string = $state("");
-  let dbPort: number = $state(1433);
-  let dbDatabase: string = $state("");
-  let dbUser: string = $state("");
-  let dbPass: string = $state("");
+  let dbFormValid: boolean = $state(false);
   let messageType: "ADT" | "ORM" = $state("ADT");
   let triggerEvent: string = $state("A01");
 
@@ -57,29 +57,6 @@
       : [{ value: "O01", label: "O01 (Order message)" }],
   );
 
-  // Form validation
-  const isFormValid = $derived.by(() => {
-    const hostPattern = /^[a-zA-Z0-9]([a-zA-Z0-9\-\.:]*[a-zA-Z0-9])?$/;
-    const dbNamePattern = /^[a-zA-Z_@#][a-zA-Z0-9_@#$]{0,127}$/;
-    const userPattern = /^[a-zA-Z_@#\\][a-zA-Z0-9_@#$\\]{0,127}$|^[a-zA-Z0-9_\\]+\\[a-zA-Z0-9_@#$]+$/;
-
-    return (
-      dbHost.length >= 3 &&
-      dbHost.length <= 255 &&
-      hostPattern.test(dbHost) &&
-      dbPort >= 0 &&
-      dbPort <= 65535 &&
-      dbDatabase.length >= 1 &&
-      dbDatabase.length <= 128 &&
-      dbNamePattern.test(dbDatabase) &&
-      dbUser.length >= 1 &&
-      dbUser.length <= 128 &&
-      userPattern.test(dbUser) &&
-      dbPass.length >= 1 &&
-      dbPass.length <= 128
-    );
-  });
-
   const close = () => {
     if (dialogElement) {
       dialogElement.close();
@@ -95,11 +72,11 @@
 
     try {
       const db: WizardDatabase = {
-        host: dbHost,
-        port: dbPort,
-        database: dbDatabase,
-        user: dbUser,
-        password: dbPass,
+        host: settings.wizardDbHost,
+        port: settings.wizardDbPort,
+        database: settings.wizardDbDatabase,
+        user: settings.wizardDbUser,
+        password: settings.wizardDbPassword,
       };
       interfaces = await wizardQueryInterfaces(db, messageType);
     } catch (error) {
@@ -151,78 +128,7 @@
   </header>
   <main>
     <form onsubmit={handleSearch}>
-      <fieldset>
-        <legend>Database Connection</legend>
-        <div class="form-group">
-          <label for="dbHost">Host</label>
-          <input
-            type="text"
-            id="dbHost"
-            name="dbHost"
-            bind:value={dbHost}
-            minlength={3}
-            maxlength={255}
-            placeholder="localhost"
-            required={true}
-            pattern="^[a-zA-Z0-9]([a-zA-Z0-9\-\.:]*[a-zA-Z0-9])?$"
-          />
-        </div>
-        <div class="form-group">
-          <label for="dbPort">Port</label>
-          <input
-            type="number"
-            id="dbPort"
-            name="dbPort"
-            bind:value={dbPort}
-            min={0}
-            max={65535}
-            step={1}
-            placeholder="1433"
-            required={true}
-          />
-        </div>
-        <div class="form-group">
-          <label for="dbDatabase">Database</label>
-          <input
-            type="text"
-            id="dbDatabase"
-            name="dbDatabase"
-            bind:value={dbDatabase}
-            minlength={1}
-            maxlength={128}
-            placeholder="LAB"
-            required={true}
-            pattern={"^[a-zA-Z_@#][a-zA-Z0-9_@#$]{0,127}$"}
-          />
-        </div>
-        <div class="form-group">
-          <label for="dbUser">User</label>
-          <input
-            type="text"
-            id="dbUser"
-            name="dbUser"
-            bind:value={dbUser}
-            minlength={1}
-            maxlength={128}
-            placeholder="sa"
-            required={true}
-            pattern={"^[a-zA-Z_@#\\\\][a-zA-Z0-9_@#$\\\\]{0,127}$|^[a-zA-Z0-9_\\\\]+\\\\[a-zA-Z0-9_@#$]+$"}
-          />
-        </div>
-        <div class="form-group">
-          <label for="dbPass">Password</label>
-          <input
-            type="password"
-            id="dbPass"
-            name="dbPass"
-            bind:value={dbPass}
-            minlength={1}
-            maxlength={128}
-            placeholder="Password123"
-            required={true}
-          />
-        </div>
-      </fieldset>
+      <DatabaseConnection {settings} bind:isValid={dbFormValid} />
       <fieldset>
         <legend>Message Options</legend>
         <div class="form-group">
@@ -254,8 +160,8 @@
           <button
             type="submit"
             class="search-button"
-            disabled={isSearching || !isFormValid}
-            title={isSearching ? "Searching..." : !isFormValid ? "Please fill out all required fields correctly" : "Get Interfaces"}
+            disabled={isSearching || !dbFormValid}
+            title={isSearching ? "Searching..." : !dbFormValid ? "Please fill out all required fields correctly" : "Get Interfaces"}
           >
             <IconSearch />
           </button>
@@ -398,7 +304,6 @@
         min-width: auto;
       }
 
-      input,
       select {
         width: 100%;
         background: var(--col-surface);
@@ -411,23 +316,6 @@
         transition:
           border-color 0.2s ease-in-out,
           background-color 0.2s ease-in-out;
-
-        &:hover {
-          border-color: var(--col-highlightHigh);
-        }
-
-        &:focus {
-          outline: none;
-          border-color: var(--col-iris);
-          background: var(--col-overlay);
-        }
-
-        &::placeholder {
-          color: var(--col-subtle);
-        }
-      }
-
-      select {
         cursor: pointer;
         appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23908caa' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
@@ -437,6 +325,7 @@
         padding-right: 2.5em;
 
         &:hover {
+          border-color: var(--col-highlightHigh);
           background-color: var(--col-surface);
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0def4' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
           background-repeat: no-repeat;
@@ -445,16 +334,14 @@
         }
 
         &:focus {
+          outline: none;
+          border-color: var(--col-iris);
+          background: var(--col-overlay);
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4a7e7' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: right 0.75em center;
           background-size: 12px 12px;
         }
-      }
-
-      input[type="number"]::-webkit-inner-spin-button,
-      input[type="number"]::-webkit-outer-spin-button {
-        opacity: 1;
       }
 
       .search-button {

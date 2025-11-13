@@ -20,7 +20,6 @@
 
   const saveSettings = () => {
     settings.tabsFollowCursor = tabsFollowCursor;
-    settings.save();
   };
 
   onMount(() => {
