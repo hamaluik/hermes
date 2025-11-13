@@ -16,6 +16,7 @@
     onctrlenter,
     readonly,
     placeholder,
+    height,
   }: {
     message?: string;
     onchange?: (message: string) => void;
@@ -23,6 +24,7 @@
     onctrlenter?: () => void;
     readonly?: boolean;
     placeholder?: string;
+    height?: number;
   } = $props();
 
   let editElement: HTMLElement;
@@ -62,6 +64,11 @@
     handleScroll();
   }
 
+  function handleScroll() {
+    highlightElement.scrollTop = editElement.scrollTop;
+    highlightElement.scrollLeft = editElement.scrollLeft;
+  }
+
   async function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
@@ -90,11 +97,6 @@
       event.preventDefault();
       onctrlenter();
     }
-  }
-
-  function handleScroll() {
-    highlightElement.scrollTop = editElement.scrollTop;
-    highlightElement.scrollLeft = editElement.scrollLeft;
   }
 
   function handleCursorChange() {
@@ -129,7 +131,10 @@
   });
 </script>
 
-<div class="message-editor" style="--message-height: {messageHeight}lh;">
+<div
+  class="message-editor"
+  style="--message-height: {messageHeight}lh; {height !== undefined ? `--editor-height: ${height}px;` : ''}"
+>
   <textarea
     placeholder={placeholder ?? "MSH|^~\\&|…"}
     class="editor"
@@ -171,8 +176,9 @@
   .message-editor {
     flex: var(--message-editor-flex, 1);
     width: 100%;
-    height: 100%;
-    min-height: calc(var(--message-height));
+    /* Use --editor-height if provided, otherwise default to content-based height */
+    height: var(--editor-height, calc(var(--message-height) + 1rem));
+    min-height: var(--editor-height, calc(var(--message-height) + 1rem));
     padding: 1rem;
     background-color: var(--col-surface);
     border: 1px solid var(--col-highlightHigh);

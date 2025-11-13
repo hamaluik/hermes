@@ -6,6 +6,7 @@ export class Settings {
 
   // message editor
   private _tabsFollowCursor: boolean = true;
+  private _editorHeight: number = 200;
 
   // send/receive
   private _sendHostname: string = "127.0.0.1";
@@ -23,6 +24,7 @@ export class Settings {
 
         return Promise.all([
           store.get<boolean>("tabsFollowCursor"),
+          store.get<number>("editorHeight"),
           store.get<string>("sendHostname"),
           store.get<number>("sendPort"),
           store.get<boolean>("sendTransformControlId"),
@@ -33,6 +35,7 @@ export class Settings {
       .then(
         ([
           tabsFollowCursor,
+          editorHeight,
           sendHostname,
           sendPort,
           sendTransformControlId,
@@ -40,6 +43,7 @@ export class Settings {
           sendWaitTimeoutSeconds,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
+          this._editorHeight = editorHeight ?? 200;
           this._sendHostname = sendHostname ?? "127.0.0.1";
           this._sendPort = sendPort ?? 2575;
           this._sendTransformControlId = sendTransformControlId ?? true;
@@ -63,6 +67,20 @@ export class Settings {
       this.store.set("tabsFollowCursor", value).catch((error) => {
         console.error("Error saving tabsFollowCursor setting:", error);
         logError("Failed to save tabsFollowCursor setting");
+      });
+    }
+  }
+
+  get editorHeight(): number {
+    return this._editorHeight;
+  }
+  set editorHeight(value: number) {
+    console.debug("Setting editorHeight to:", value);
+    this._editorHeight = value;
+    if (this.store) {
+      this.store.set("editorHeight", value).catch((error) => {
+        console.error("Error saving editorHeight setting:", error);
+        logError("Failed to save editorHeight setting");
       });
     }
   }

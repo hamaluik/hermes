@@ -42,8 +42,10 @@
     background-color: var(--col-surface);
     border-radius: 4px;
     view-transition-name: tab-content;
-    height: calc-size(auto, size);
     isolation: isolate;
     z-index: 1;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 </style>

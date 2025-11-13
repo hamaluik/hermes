@@ -38,7 +38,8 @@
 
   activeId.subscribe((id) => {
     const tabList = get(tabs);
-    activeTabIsMissing = !tabList.some((tab) => tab.id === id);
+    // Only show missing tab message if there are tabs and the active one is missing
+    activeTabIsMissing = tabList.length > 0 && !tabList.some((tab) => tab.id === id);
   });
 </script>
 
@@ -92,6 +93,7 @@
     align-items: stretch;
     justify-content: flex-start;
     font-size: smaller;
+    height: 100%;
 
     > ul {
       display: flex;
@@ -101,6 +103,7 @@
       gap: 1ch;
       isolation: isolate;
       z-index: 2;
+      flex: 0 0 auto;
     }
 
     .tab {
@@ -161,8 +164,10 @@
     background-color: var(--col-surface);
     border-radius: 4px;
     view-transition-name: tab-content;
-    height: calc-size(auto, size);
     isolation: isolate;
     z-index: 1;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 </style>

@@ -56,6 +56,57 @@
   let listening = $state(false);
   let unreadMessageCount = $state(0);
 
+  // Message editor resize state
+  let editorHeight = $state(data.settings.editorHeight); // Height in pixels
+  let isResizing = $state(false);
+  let resizeStartY = 0;
+  let resizeStartHeight = 0;
+  let windowHeight = $state(window.innerHeight);
+  let atMinBound = $state(false);
+  let atMaxBound = $state(false);
+
+  const MIN_EDITOR_HEIGHT = 100; // 100px minimum
+  const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6); // 60% of viewport
+
+  function handleResizeStart(event: PointerEvent) {
+    event.preventDefault();
+    const target = event.currentTarget as HTMLElement;
+    target.setPointerCapture(event.pointerId);
+    isResizing = true;
+    resizeStartY = event.clientY;
+    resizeStartHeight = editorHeight;
+  }
+
+  function handleResizeMove(event: PointerEvent) {
+    if (!isResizing) return;
+    event.preventDefault();
+
+    const delta = event.clientY - resizeStartY;
+    // Invert delta because handle is at top: dragging up (negative delta) should increase height
+    const newHeight = resizeStartHeight - delta;
+    const clampedHeight = Math.max(MIN_EDITOR_HEIGHT, Math.min(MAX_EDITOR_HEIGHT, newHeight));
+
+    // Track if we're at the bounds for visual feedback
+    atMinBound = clampedHeight === MIN_EDITOR_HEIGHT && newHeight < MIN_EDITOR_HEIGHT;
+    atMaxBound = clampedHeight === MAX_EDITOR_HEIGHT && newHeight > MAX_EDITOR_HEIGHT;
+
+    editorHeight = clampedHeight;
+  }
+
+  function handleResizeEnd(event: PointerEvent) {
+    if (!isResizing) return;
+    event.preventDefault();
+
+    const target = event.currentTarget as HTMLElement;
+    target.releasePointerCapture(event.pointerId);
+    isResizing = false;
+    atMinBound = false;
+    atMaxBound = false;
+
+    // Save the new height to settings
+    data.settings.editorHeight = editorHeight;
+  }
+
   $effect(() => {
     if (!message) {
       return;
@@ -99,8 +150,20 @@
         messageDialog(error, { title: "Error Loading Schemas", kind: "error" });
       });
 
+    // Listen for window resize events to update MAX_EDITOR_HEIGHT
+    const handleWindowResize = () => {
+      windowHeight = window.innerHeight;
+      // Clamp editor height if it exceeds new max
+      if (editorHeight > MAX_EDITOR_HEIGHT) {
+        editorHeight = MAX_EDITOR_HEIGHT;
+        data.settings.editorHeight = editorHeight;
+      }
+    };
+    window.addEventListener("resize", handleWindowResize);
+
     return () => {
       unlisten?.();
+      window.removeEventListener("resize", handleWindowResize);
     };
   });
 
@@ -248,51 +311,69 @@
     <IconSettings />
   </ToolbarButton>
 </Toolbar>
-<main style="--toolbar-height: {toolbarHeight ?? '1px'}">
-  <Tabs bind:setactive={setActiveTab}>
-    {#snippet addMenu(closeMenu)}
-      <ul class="add-menu">
-        {#each Object.keys(schemas) as key}
-          <li>
-            <button
-              onclick={() => {
-                message = message + `\n${key}|`;
-                const data = generateDefaultData(key, schemas[key] ?? {});
-                renderMessageSegment(message, key, 0, data).then(
-                  (newMessage) => {
-                    if (newMessage) {
-                      message = newMessage;
-                    }
-                  },
-                );
-                closeMenu.closeMenu();
+<main style="--toolbar-height: {toolbarHeight ?? '1px'};" class:resizing={isResizing}>
+  <div class="tabs-scroll-container">
+    <Tabs bind:setactive={setActiveTab}>
+      {#snippet addMenu(closeMenu)}
+        <ul class="add-menu">
+          {#each Object.keys(schemas) as key}
+            <li>
+              <button
+                onclick={() => {
+                  message = message + `\n${key}|`;
+                  const data = generateDefaultData(key, schemas[key] ?? {});
+                  renderMessageSegment(message, key, 0, data).then(
+                    (newMessage) => {
+                      if (newMessage) {
+                        message = newMessage;
+                      }
+                    },
+                  );
+                  closeMenu.closeMenu();
+                }}
+              >
+                {key}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/snippet}
+      {#each messageSegments as key, index}
+        {#if schemas[key]}
+          <Tab id={key} label={tabLabel(index)}>
+            <SegmentTab
+              segment={key}
+              segmentRepeat={segmentRepeat(key, index)}
+              schema={schemas[key]}
+              {message}
+              onchange={(m) => {
+                message = m;
               }}
-            >
-              {key}
-            </button>
-          </li>
-        {/each}
-      </ul>
-    {/snippet}
-    {#each messageSegments as key, index}
-      {#if schemas[key]}
-        <Tab id={key} label={tabLabel(index)}>
-          <SegmentTab
-            segment={key}
-            segmentRepeat={segmentRepeat(key, index)}
-            schema={schemas[key]}
-            {message}
-            onchange={(m) => {
-              message = m;
-            }}
-          />
-        </Tab>
-      {/if}
-    {/each}
-  </Tabs>
+            />
+          </Tab>
+        {/if}
+      {/each}
+    </Tabs>
+  </div>
+
+  <div
+    class="resize-handle"
+    class:resizing={isResizing}
+    class:at-min-bound={atMinBound}
+    class:at-max-bound={atMaxBound}
+    onpointerdown={handleResizeStart}
+    onpointermove={handleResizeMove}
+    onpointerup={handleResizeEnd}
+    role="separator"
+    aria-orientation="horizontal"
+    aria-label="Resize message editor"
+  >
+    <div class="resize-grip"></div>
+  </div>
 
   <MessageEditor
     {message}
+    height={editorHeight}
     onchange={(m) => {
       message = m;
     }}
@@ -337,12 +418,70 @@
     align-items: stretch;
     justify-content: flex-start;
     gap: 1rem;
-    min-height: calc(100vh - var(--toolbar-height, 0px));
+    height: calc(100vh - var(--toolbar-height, 0px));
+    max-height: calc(100vh - var(--toolbar-height, 0px));
 
     padding: 1rem;
 
     isolation: isolate;
     z-index: 0;
+  }
+
+  main.resizing {
+    user-select: none;
+    cursor: ns-resize;
+  }
+
+  .tabs-scroll-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  main :global(.message-editor) {
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+
+  .resize-handle {
+    flex: 0 0 auto;
+    height: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ns-resize;
+    user-select: none;
+    touch-action: none;
+    position: relative;
+    margin: -4px 0;
+    z-index: 10;
+  }
+
+  .resize-handle:hover .resize-grip,
+  .resize-handle.resizing .resize-grip {
+    background-color: var(--col-pine);
+    opacity: 1;
+  }
+
+  .resize-handle.at-min-bound .resize-grip,
+  .resize-handle.at-max-bound .resize-grip {
+    background-color: var(--col-love);
+    opacity: 1;
+    width: 80px;
+  }
+
+  .resize-grip {
+    width: 60px;
+    height: 4px;
+    background-color: var(--col-subtle);
+    border-radius: 2px;
+    opacity: 0.5;
+    transition: all 0.15s ease;
+    pointer-events: none;
+  }
+
+  main :global(.cursor-description) {
+    flex: 0 0 auto;
   }
 
   .add-menu {
