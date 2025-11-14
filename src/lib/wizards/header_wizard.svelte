@@ -1,8 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { message as tauriMessage } from "@tauri-apps/plugin-dialog";
-  import IconClose from "../icons/IconClose.svelte";
-  import IconSearch from "$lib/icons/IconSearch.svelte";
   import {
     wizardQueryInterfaces,
     wizardApplyInterface,
@@ -13,20 +11,27 @@
   import type { Settings } from "../../settings";
   import DatabaseConnection from "$lib/forms/database_connection.svelte";
   import { getMessageTriggerEvent, getMessageType } from "../../backend/data";
+  import Modal from "$lib/components/modal.svelte";
+  import ModalHeader from "$lib/components/modal_header.svelte";
+  import ModalFooter from "$lib/components/modal_footer.svelte";
+  import WizardLoading from "./wizard_loading.svelte";
+  import WizardNoResults from "./wizard_no_results.svelte";
+  import WizardResults from "./wizard_results.svelte";
+  import WizardToggle from "./wizard_toggle.svelte";
+  import WizardSearchButton from "./wizard_search_button.svelte";
+  import WizardTooltip from "./wizard_tooltip.svelte";
 
   let {
-    onclose, // called when the user wants to close the wizard
+    show = $bindable(false),
     message, // the message as passed into the wizard
     onchange, // called when the wizard wants to change the message
     settings, // settings instance for persistent database connection
   }: {
-    onclose?: () => void;
+    show: boolean;
     message?: string;
     onchange?: (message: string) => void;
     settings: Settings;
   } = $props();
-
-  let dialogElement: HTMLDialogElement | null = $state(null);
 
   let dbFormValid: boolean = $state(false);
   let messageType: "ADT" | "ORM" = $state("ADT");
@@ -61,10 +66,7 @@
   );
 
   const close = () => {
-    if (dialogElement) {
-      dialogElement.close();
-    }
-    onclose?.();
+    show = false;
   };
 
   const handleSearch = async (e: Event) => {
@@ -117,8 +119,6 @@
   };
 
   onMount(() => {
-    dialogElement?.showModal();
-
     // Auto-populate message type and trigger event from the current message
     if (message) {
       Promise.all([
@@ -141,24 +141,49 @@
         }
       });
     }
+  });
 
-    dialogElement?.addEventListener("close", () => {
-      close();
-    });
+  // Reset wizard state when modal opens (but keep database settings)
+  $effect(() => {
+    if (show) {
+      // Reset search results and selection
+      interfaces = [];
+      selectedInterface = null;
+      isSearching = false;
+      hasSearched = false;
 
-    return () => {
-      close();
-    };
+      // Reset to default values
+      messageType = "ADT";
+      triggerEvent = "A01";
+      overrideSegment = true;
+
+      // Re-populate from current message if available
+      if (message) {
+        Promise.all([
+          getMessageType(message).catch(() => null),
+          getMessageTriggerEvent(message).catch(() => null),
+        ]).then(([msgType, trigEvent]) => {
+          if (msgType === "ADT" || msgType === "ORM") {
+            messageType = msgType;
+          }
+          if (trigEvent) {
+            const validEvent = triggerEventOptions.find(
+              (opt) => opt.value === trigEvent,
+            );
+            if (validEvent) {
+              triggerEvent = trigEvent;
+            }
+          }
+        });
+      }
+    }
   });
 </script>
 
-<dialog class="modal" closedby="any" bind:this={dialogElement}>
-  <header>
-    <h1><IconWizard /> Header Wizard</h1>
-    <button class="close" onclick={close}>
-      <IconClose />
-    </button>
-  </header>
+<Modal bind:show maxWidth="90vw" maxHeight="90vh">
+  <ModalHeader onclose={close}>
+    <IconWizard /> Header Wizard
+  </ModalHeader>
   <main>
     <form onsubmit={handleSearch}>
       <DatabaseConnection {settings} bind:isValid={dbFormValid} />
@@ -166,14 +191,6 @@
         <legend>Message Options</legend>
         <label for="messageType">Message Type</label>
         <label for="triggerEvent">Trigger Event</label>
-        <div class="label-with-tooltip">
-          <span>Override Segment</span>
-          <span
-            class="tooltip-icon"
-            title="When enabled, this will completely overwrite the MSH segment with the selected interface values"
-            >ⓘ</span
-          >
-        </div>
         <select
           id="messageType"
           name="messageType"
@@ -193,162 +210,84 @@
             <option value={option.value}>{option.label}</option>
           {/each}
         </select>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            id="overrideSegment"
-            bind:checked={overrideSegment}
-          />
-          <span class="toggle-slider"></span>
-        </label>
-        <button
-          type="submit"
-          class="search-button"
+      </fieldset>
+      <div class="search-action">
+        <WizardSearchButton
           disabled={isSearching || !dbFormValid}
           title={isSearching
             ? "Searching..."
             : !dbFormValid
               ? "Please fill out all required fields correctly"
               : "Get Interfaces"}
-        >
-          <IconSearch />
-        </button>
-      </fieldset>
+        />
+      </div>
     </form>
     {#if isSearching}
-      <div class="loading">
-        <div class="spinner"></div>
-        <p>Searching for interfaces...</p>
-      </div>
+      <WizardLoading message="Searching for interfaces..." />
     {/if}
     {#if hasSearched && !isSearching}
       {#if interfaces.length > 0}
-        <div class="results">
-          <table>
-            <thead>
-              <tr>
-                <th>Interface</th>
-                <th>Sending App</th>
-                <th>Sending Facility</th>
-                <th>Receiving App</th>
-                <th>Receiving Facility</th>
+        <WizardResults>
+          {#snippet header()}
+            <tr>
+              <th>Interface</th>
+              <th>Sending App</th>
+              <th>Sending Facility</th>
+              <th>Receiving App</th>
+              <th>Receiving Facility</th>
+            </tr>
+          {/snippet}
+          {#snippet body()}
+            {#each interfaces as iface}
+              <tr
+                class:selected={selectedInterface === iface}
+                onclick={() => selectInterface(iface)}
+              >
+                <td>{iface.name}</td>
+                <td>{iface.sending_app}</td>
+                <td>{iface.sending_fac}</td>
+                <td>{iface.receiving_app}</td>
+                <td>{iface.receiving_fac}</td>
               </tr>
-            </thead>
-            <tbody>
-              {#each interfaces as iface}
-                <tr
-                  class:selected={selectedInterface === iface}
-                  onclick={() => selectInterface(iface)}
-                >
-                  <td>{iface.name}</td>
-                  <td>{iface.sending_app}</td>
-                  <td>{iface.sending_fac}</td>
-                  <td>{iface.receiving_app}</td>
-                  <td>{iface.receiving_fac}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
+            {/each}
+          {/snippet}
+        </WizardResults>
       {:else}
-        <div class="no-results">
-          <p>No interfaces found matching your criteria.</p>
-        </div>
+        <WizardNoResults message="No interfaces found matching your criteria." />
       {/if}
     {/if}
   </main>
-  <footer>
-    <button class="cancel" onclick={close}>Cancel</button>
-    <button class="apply" onclick={handleApply} disabled={!selectedInterface}>
-      Apply
-    </button>
-  </footer>
-</dialog>
+  <ModalFooter>
+    {#snippet left()}
+      <div class="override-toggle">
+        <WizardToggle id="overrideSegment" bind:checked={overrideSegment} />
+        <label for="overrideSegment">Override Segment</label>
+        <WizardTooltip
+          title="When enabled, this will completely overwrite the MSH segment with the selected interface values"
+        />
+      </div>
+    {/snippet}
+    {#snippet right()}
+      <button class="apply" onclick={handleApply} disabled={!selectedInterface}>
+        Apply
+      </button>
+    {/snippet}
+  </ModalFooter>
+</Modal>
 
 <style>
-  .modal {
-    display: none;
-    &[open] {
-      display: flex;
-    }
-
-    isolation: isolate;
-    z-index: 2000;
-
-    background: var(--col-overlay);
-    border: 1px solid var(--col-highlightHigh);
-    outline: none;
-    color: var(--col-text);
-    border-radius: 0.5em;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    padding: 0;
-    margin: 0;
-
-    max-width: 90vw;
-    max-height: 90vh;
-
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(5px);
-    }
-
-    position: fixed;
-    inset: 0;
-    margin: auto;
-
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-
-    header {
-      width: 100%;
-      height: 2.5em;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      justify-content: space-between;
-      margin: 0;
-      padding: 0;
-      background: none;
-
-      h1 {
-        font-size: medium;
-        font-weight: 700;
-        padding: 0.5em 1ch;
-
-        display: inline-flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 1ch;
-      }
-
-      button.close {
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        color: var(--col-text);
-        padding: 0.25em 1ch;
-
-        &:hover {
-          color: var(--col-love);
-        }
-      }
-    }
-
-    main {
-      padding: 1rem;
-      overflow-y: auto;
+  main {
+    padding: 1rem;
+    overflow-y: auto;
 
       fieldset {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr auto;
+        grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto;
         gap: 0.5rem 0.75rem;
         align-items: center;
 
-        > label,
-        > .label-with-tooltip {
+        > label {
           font-size: 0.9em;
           font-weight: 500;
           color: var(--col-text);
@@ -358,16 +297,12 @@
         > select {
           grid-row: 2;
         }
+      }
 
-        > .toggle-switch {
-          grid-row: 2;
-        }
-
-        > .search-button {
-          grid-row: 1 / 3;
-          grid-column: 4;
-          align-self: center;
-        }
+      .search-action {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1rem;
       }
 
       select {
@@ -410,228 +345,18 @@
         }
       }
 
-      .search-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 3.5em;
-        height: 3.5em;
-        padding: 0;
-        background: var(--col-iris);
-        color: var(--col-base);
-        border: 1px solid var(--col-highlightHigh);
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1em;
-
-        &:hover:not(:disabled) {
-          background: var(--col-love);
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        :global(svg) {
-          width: 1.5em;
-          height: 1.5em;
-        }
-      }
-
-      .results {
-        margin-top: 1rem;
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-
-          th,
-          td {
-            padding: 0.5em;
-            text-align: left;
-            border-bottom: 1px solid var(--col-highlightMed);
-          }
-
-          th {
-            background: var(--col-surface);
-            font-weight: 600;
-          }
-
-          tbody tr {
-            cursor: pointer;
-            transition: background-color 0.2s;
-
-            &:hover {
-              background: var(--col-love);
-              color: var(--col-base);
-            }
-
-            &.selected {
-              background: var(--col-gold);
-              color: var(--col-base);
-            }
-          }
-        }
-      }
-
-      .no-results {
-        margin-top: 1rem;
-        padding: 1rem;
-        text-align: center;
-        color: var(--col-subtle);
-        background: var(--col-highlightLow);
-        border-radius: 4px;
-      }
-
-      .loading {
-        margin-top: 1rem;
-        padding: 1.5rem;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-
-        p {
-          color: var(--col-text);
-          font-size: 0.95em;
-        }
-      }
-
-      .spinner {
-        width: 2.5em;
-        height: 2.5em;
-        border: 3px solid var(--col-highlightMed);
-        border-top: 3px solid var(--col-iris);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      .label-with-tooltip {
-        display: flex;
-        align-items: center;
-        gap: 0.5ch;
-      }
-
-      .tooltip-icon {
-        display: inline-block;
-        color: var(--col-subtle);
-        font-size: 0.9em;
-        cursor: help;
-        transition: color 0.2s ease-in-out;
-
-        &:hover {
-          color: var(--col-iris);
-        }
-      }
-
-      .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 3em;
-        height: 1.75em;
-
-        input[type="checkbox"] {
-          opacity: 0;
-          width: 0;
-          height: 0;
-
-          &:checked + .toggle-slider {
-            background-color: var(--col-iris);
-          }
-
-          &:checked + .toggle-slider::before {
-            transform: translateX(1.25em);
-          }
-
-          &:focus + .toggle-slider {
-            box-shadow: 0 0 0 2px var(--col-iris);
-          }
-        }
-
-        .toggle-slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: var(--col-highlightMed);
-          transition: 0.2s;
-          border-radius: 1.75em;
-          border: 1px solid var(--col-highlightHigh);
-
-          &::before {
-            position: absolute;
-            content: "";
-            height: 1.25em;
-            width: 1.25em;
-            left: 0.25em;
-            bottom: 0.125em;
-            background-color: var(--col-base);
-            transition: 0.2s;
-            border-radius: 50%;
-          }
-
-          &:hover {
-            background-color: var(--col-highlightHigh);
-          }
-        }
-      }
-    }
-
-    footer {
-      width: 100%;
-      border-radius: 0 0 8px 8px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
-      background: none;
-
-      button {
-        padding: 0.5em 1.5em;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.9em;
-        border: 1px solid var(--col-highlightHigh);
-        transition: all 0.2s;
-
-        &.cancel {
-          background: transparent;
-          color: var(--col-text);
-
-          &:hover {
-            background: var(--col-highlightLow);
-          }
-        }
-
-        &.apply {
-          background: var(--col-iris);
-          color: var(--col-base);
-
-          &:hover:not(:disabled) {
-            background: var(--col-love);
-          }
-
-          &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-        }
-      }
-    }
   }
 
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
+  .override-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    label {
+      font-size: 0.9em;
+      font-weight: 500;
+      color: var(--col-text);
+      cursor: pointer;
     }
   }
 </style>

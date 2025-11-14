@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import type { Settings } from "../../settings";
 
   let {
@@ -9,29 +10,30 @@
     isValid?: boolean;
   } = $props();
 
-  // Local reactive state for database connection (synced with settings)
-  let dbHost: string = $state(settings.wizardDbHost);
-  let dbPort: number = $state(settings.wizardDbPort);
-  let dbDatabase: string = $state(settings.wizardDbDatabase);
-  let dbUser: string = $state(settings.wizardDbUser);
-  let dbPassword: string = $state(settings.wizardDbPassword);
+  // Local reactive state for database connection
+  let dbHost: string = $state("");
+  let dbPort: number = $state(1433);
+  let dbDatabase: string = $state("");
+  let dbUser: string = $state("");
+  let dbPassword: string = $state("");
 
-  // Sync changes back to settings
-  $effect(() => {
+  // Load settings values after component mounts (avoids race condition)
+  onMount(() => {
+    dbHost = settings.wizardDbHost;
+    dbPort = settings.wizardDbPort;
+    dbDatabase = settings.wizardDbDatabase;
+    dbUser = settings.wizardDbUser;
+    dbPassword = settings.wizardDbPassword;
+  });
+
+  // Save to settings when local values change
+  const saveToSettings = () => {
     settings.wizardDbHost = dbHost;
-  });
-  $effect(() => {
     settings.wizardDbPort = dbPort;
-  });
-  $effect(() => {
     settings.wizardDbDatabase = dbDatabase;
-  });
-  $effect(() => {
     settings.wizardDbUser = dbUser;
-  });
-  $effect(() => {
     settings.wizardDbPassword = dbPassword;
-  });
+  };
 
   // Form validation
   const isFormValid = $derived.by(() => {
@@ -71,6 +73,7 @@
       id="dbHost"
       name="dbHost"
       bind:value={dbHost}
+      oninput={saveToSettings}
       minlength={3}
       maxlength={255}
       placeholder="localhost"
@@ -85,6 +88,7 @@
       id="dbPort"
       name="dbPort"
       bind:value={dbPort}
+      oninput={saveToSettings}
       min={0}
       max={65535}
       step={1}
@@ -99,6 +103,7 @@
       id="dbDatabase"
       name="dbDatabase"
       bind:value={dbDatabase}
+      oninput={saveToSettings}
       minlength={1}
       maxlength={128}
       placeholder="LAB"
@@ -113,6 +118,7 @@
       id="dbUser"
       name="dbUser"
       bind:value={dbUser}
+      oninput={saveToSettings}
       minlength={1}
       maxlength={128}
       placeholder="sa"
@@ -127,6 +133,7 @@
       id="dbPass"
       name="dbPass"
       bind:value={dbPassword}
+      oninput={saveToSettings}
       minlength={1}
       maxlength={128}
       placeholder="Password123"

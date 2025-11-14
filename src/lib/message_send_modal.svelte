@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import IconClose from "./icons/IconClose.svelte";
   import type { Settings } from "../settings";
   import IconSend from "./icons/IconSend.svelte";
   import IconSpinner from "./icons/IconSpinner.svelte";
   import { sendMessage, type SendRequest } from "../backend/send_receive";
   import MessageEditor from "./message_editor.svelte";
   import IconSendError from "./icons/IconSendError.svelte";
+  import Modal from "./components/modal.svelte";
+  import ModalHeader from "./components/modal_header.svelte";
 
   type ActionState = "Form" | "Sending" | "Results" | "Error";
 
@@ -16,7 +16,6 @@
     message,
   }: { show: boolean; settings: Settings; message: string } = $props();
 
-  let dialogElement: HTMLDialogElement | null = $state(null);
   let hostname: string = $state(settings.sendHostname);
   let port: number = $state(settings.sendPort);
 
@@ -47,23 +46,9 @@
     saveSettings(hostname, port);
   });
 
-  onMount(() => {
-    dialogElement?.showModal();
-    const close = () => {
-      if (dialogElement) {
-        dialogElement.close();
-      }
-      show = false;
-    };
-
-    dialogElement?.addEventListener("close", () => {
-      close();
-    });
-
-    return () => {
-      close();
-    };
-  });
+  const handleClose = () => {
+    show = false;
+  };
 
   const onsubmit = async (event: Event) => {
     event.preventDefault();
@@ -100,22 +85,17 @@
   });
 </script>
 
-<dialog class="modal" closedby="any" bind:this={dialogElement}>
-  <header>
-    <h1>
-      {#if actionState === "Form"}Send Message{/if}
-      {#if actionState === "Sending"}<IconSpinner /> Sending to
-        <span class="target">{hostname}:{port}</span>{/if}
-      {#if actionState === "Results"}Response from <span class="target"
-          >{hostname}:{port}</span
-        >{/if}
-      {#if actionState === "Error"}<IconSendError /> Error sending to
-        <span class="target">{hostname}:{port}</span>{/if}
-    </h1>
-    <button class="close" onclick={() => (show = false)}>
-      <IconClose />
-    </button>
-  </header>
+<Modal bind:show>
+  <ModalHeader onclose={handleClose}>
+    {#if actionState === "Form"}Send Message{/if}
+    {#if actionState === "Sending"}<IconSpinner /> Sending to
+      <span class="target">{hostname}:{port}</span>{/if}
+    {#if actionState === "Results"}Response from <span class="target"
+        >{hostname}:{port}</span
+      >{/if}
+    {#if actionState === "Error"}<IconSendError /> Error sending to
+      <span class="target">{hostname}:{port}</span>{/if}
+  </ModalHeader>
   {#if actionState === "Form"}
     <main>
       <form {onsubmit}>
@@ -178,86 +158,19 @@
       </div>
     </main>
   {/if}
-</dialog>
+</Modal>
 
 <style>
-  .modal {
-    display: none;
-    &[open] {
-      display: flex;
-    }
-
-    isolation: isolate;
-    z-index: 2000;
-
-    background: var(--col-overlay);
-    border: 1px solid var(--col-highlightHigh);
-    outline: none;
+  .target {
+    background: var(--col-highlightMed);
     color: var(--col-text);
-    border-radius: 0.5em;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    padding: 0;
-    margin: 0;
+    padding: 0.0625em 0.5ch;
+    border-radius: 4px;
+    border: 1px solid var(--col-highlightHigh);
+  }
 
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(5px);
-    }
-
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-
-    header {
-      width: 100%;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      justify-content: space-between;
-      margin: 0;
-      padding: 0;
-      background: none;
-
-      h1 {
-        font-size: medium;
-        font-weight: 700;
-        padding: 0.5em 1ch;
-
-        display: inline-flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 1ch;
-
-        .target {
-          background: var(--col-highlightMed);
-          color: var(--col-text);
-          padding: 0.0625em 0.5ch;
-          border-radius: 4px;
-          border: 1px solid var(--col-highlightHigh);
-        }
-      }
-
-      button.close {
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        color: var(--col-text);
-        padding: 0.25em 1ch;
-
-        &:hover {
-          color: var(--col-love);
-        }
-      }
-    }
-
-    main {
-      padding: 1rem;
+  main {
+    padding: 1rem;
 
       form {
         display: flex;
@@ -355,9 +268,8 @@
         }
       }
 
-      &.results {
-        min-width: min(80vw, calc(80ch + 2rem));
-      }
+    &.results {
+      min-width: min(80vw, calc(80ch + 2rem));
     }
   }
 </style>

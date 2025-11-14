@@ -49,11 +49,12 @@
   let messageSegments: string[] = $state([]);
   let toolbarHeight: string | undefined = $state(undefined);
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
-  let showSettings: ((show: boolean) => void) | undefined = $state(undefined);
+  let showSettings = $state(false);
   let showSend = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
 
-  let currentWizardModal: string | null = $state(null);
+  let showHeaderWizard = $state(false);
+  let showPatientWizard = $state(false);
 
   let showListeningModal = $state(false);
 
@@ -71,11 +72,6 @@
 
   const MIN_EDITOR_HEIGHT = 100; // 100px minimum
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6); // 60% of viewport
-
-  const WIZARD_COMPONENTS: Record<string, any> = {
-    MSH: HeaderWizard,
-    PID: PatientWizard,
-  };
 
   function handleResizeStart(event: PointerEvent) {
     event.preventDefault();
@@ -296,22 +292,22 @@
   <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
   </ToolbarButton>
-  <ToolbarSeparator />
-  <ToolbarButton
-    title="Send/Receive"
-    onclick={() => {
-      showSend = true;
-    }}
-  >
-    <IconSendReceive />
-  </ToolbarButton>
-  <ToolbarButton title="Listen" onclick={handleListen}>
-    <NotificationIcon count={unreadMessageCount}>
-      <span class={listening ? "listening" : "notListening"}>
-        <IconListen />
-      </span>
-    </NotificationIcon>
-  </ToolbarButton>
+  <!-- <ToolbarSeparator /> -->
+  <!-- <ToolbarButton -->
+  <!--   title="Send/Receive" -->
+  <!--   onclick={() => { -->
+  <!--     showSend = true; -->
+  <!--   }} -->
+  <!-- > -->
+  <!--   <IconSendReceive /> -->
+  <!-- </ToolbarButton> -->
+  <!-- <ToolbarButton title="Listen" onclick={handleListen}> -->
+  <!--   <NotificationIcon count={unreadMessageCount}> -->
+  <!--     <span class={listening ? "listening" : "notListening"}> -->
+  <!--       <IconListen /> -->
+  <!--     </span> -->
+  <!--   </NotificationIcon> -->
+  <!-- </ToolbarButton> -->
   <ToolbarSpacer />
   <ToolbarButton title="Help">
     <IconHelp />
@@ -319,7 +315,7 @@
   <ToolbarButton
     title="Settings"
     onclick={() => {
-      showSettings?.(true);
+      showSettings = true;
     }}
   >
     <IconSettings />
@@ -360,11 +356,15 @@
           <Tab
             id={key}
             label={tabLabel(index)}
-            onWizard={WIZARD_COMPONENTS[key]
+            onWizard={key === "MSH"
               ? () => {
-                  currentWizardModal = key;
+                  showHeaderWizard = true;
                 }
-              : undefined}
+              : key === "PID"
+                ? () => {
+                    showPatientWizard = true;
+                  }
+                : undefined}
           >
             <SegmentTab
               segment={key}
@@ -425,29 +425,28 @@
   />
 </main>
 <SettingsModal settings={data.settings} bind:show={showSettings} />
-{#if showListeningModal}
-  <ListenModal
-    bind:show={showListeningModal}
-    listening={data.listening}
-    listenedMessages={data.listenedMessages}
-  />
-{/if}
-{#if showSend}
-  <MessageSendModal bind:show={showSend} settings={data.settings} {message} />
-{/if}
-{#if currentWizardModal && WIZARD_COMPONENTS[currentWizardModal]}
-  {@const WizardComponent = WIZARD_COMPONENTS[currentWizardModal]}
-  <WizardComponent
-    onclose={() => {
-      currentWizardModal = null;
-    }}
-    {message}
-    onchange={(m: string) => {
-      message = m;
-    }}
-    settings={data.settings}
-  />
-{/if}
+<ListenModal
+  bind:show={showListeningModal}
+  listening={data.listening}
+  listenedMessages={data.listenedMessages}
+/>
+<MessageSendModal bind:show={showSend} settings={data.settings} {message} />
+<HeaderWizard
+  bind:show={showHeaderWizard}
+  {message}
+  onchange={(m: string) => {
+    message = m;
+  }}
+  settings={data.settings}
+/>
+<PatientWizard
+  bind:show={showPatientWizard}
+  {message}
+  onchange={(m: string) => {
+    message = m;
+  }}
+  settings={data.settings}
+/>
 
 <style>
   main {
