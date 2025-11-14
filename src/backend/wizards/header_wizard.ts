@@ -16,7 +16,7 @@ export interface WizardInterface {
 
 export async function wizardQueryInterfaces(
   db: WizardDatabase,
-  message_type: "ADT" | "ORM",
+  messageType: "ADT" | "ORM",
 ): Promise<WizardInterface[]> {
   // TODO: implement the backend
   // return invoke("wizard_query_interfaces", {
@@ -55,11 +55,17 @@ export async function wizardQueryInterfaces(
 export async function wizardApplyInterface(
   message: string,
   _interface: WizardInterface,
+  message_type: string,
+  trigger_event: string,
+  override_segment: boolean,
 ): Promise<string> {
-  // TODO: implement the backend
-  // return invoke("wizard_apply_interface", {
-  //   message,
-  //   interface: _interface,
-  // });
-  return "TODO";
+  const args = {
+    message,
+    interface: _interface,
+    messagetype: message_type,
+    triggerevent: trigger_event,
+    overridesegment: override_segment,
+  };
+  console.debug(args);
+  return invoke("wizard_apply_interface", args);
 }

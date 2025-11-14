@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { message as tauriMessage } from "@tauri-apps/plugin-dialog";
   import IconClose from "../icons/IconClose.svelte";
   import IconSearch from "$lib/icons/IconSearch.svelte";
   import {
@@ -11,10 +12,7 @@
   import IconWizard from "$lib/icons/IconWizard.svelte";
   import type { Settings } from "../../settings";
   import DatabaseConnection from "$lib/forms/database_connection.svelte";
-  import {
-    getMessageTriggerEvent,
-    getMessageType,
-  } from "../../backend/data";
+  import { getMessageTriggerEvent, getMessageType } from "../../backend/data";
 
   let {
     onclose, // called when the user wants to close the wizard
@@ -33,6 +31,7 @@
   let dbFormValid: boolean = $state(false);
   let messageType: "ADT" | "ORM" = $state("ADT");
   let triggerEvent: string = $state("A01");
+  let overrideSegment: boolean = $state(false);
 
   let interfaces: WizardInterface[] = $state([]);
   let selectedInterface: WizardInterface | null = $state(null);
@@ -102,11 +101,18 @@
       const updatedMessage = await wizardApplyInterface(
         message,
         selectedInterface,
+        messageType,
+        triggerEvent,
+        overrideSegment,
       );
       onchange?.(updatedMessage);
       close();
     } catch (error) {
       console.error("Error applying interface:", error);
+      await tauriMessage("Failed to apply interface.\n\n" + error, {
+        title: "Error",
+        kind: "error",
+      });
     }
   };
 
@@ -158,41 +164,55 @@
       <DatabaseConnection {settings} bind:isValid={dbFormValid} />
       <fieldset>
         <legend>Message Options</legend>
-        <div class="form-group">
-          <label for="messageType">Message Type</label>
-          <select
-            id="messageType"
-            name="messageType"
-            bind:value={messageType}
-            required
+        <label for="messageType">Message Type</label>
+        <label for="triggerEvent">Trigger Event</label>
+        <div class="label-with-tooltip">
+          <span>Override Segment</span>
+          <span
+            class="tooltip-icon"
+            title="When enabled, this will completely overwrite the MSH segment with the selected interface values"
+            >ⓘ</span
           >
-            <option value="ADT">ADT</option>
-            <option value="ORM">ORM</option>
-          </select>
         </div>
-        <div class="form-group">
-          <label for="triggerEvent">Trigger Event</label>
-          <select
-            id="triggerEvent"
-            name="triggerEvent"
-            bind:value={triggerEvent}
-            required
-          >
-            {#each triggerEventOptions as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </div>
-        <div class="form-group search-group">
-          <button
-            type="submit"
-            class="search-button"
-            disabled={isSearching || !dbFormValid}
-            title={isSearching ? "Searching..." : !dbFormValid ? "Please fill out all required fields correctly" : "Get Interfaces"}
-          >
-            <IconSearch />
-          </button>
-        </div>
+        <select
+          id="messageType"
+          name="messageType"
+          bind:value={messageType}
+          required
+        >
+          <option value="ADT">ADT</option>
+          <option value="ORM">ORM</option>
+        </select>
+        <select
+          id="triggerEvent"
+          name="triggerEvent"
+          bind:value={triggerEvent}
+          required
+        >
+          {#each triggerEventOptions as option}
+            <option value={option.value}>{option.label}</option>
+          {/each}
+        </select>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            id="overrideSegment"
+            bind:checked={overrideSegment}
+          />
+          <span class="toggle-slider"></span>
+        </label>
+        <button
+          type="submit"
+          class="search-button"
+          disabled={isSearching || !dbFormValid}
+          title={isSearching
+            ? "Searching..."
+            : !dbFormValid
+              ? "Please fill out all required fields correctly"
+              : "Get Interfaces"}
+        >
+          <IconSearch />
+        </button>
       </fieldset>
     </form>
     {#if hasSearched}
@@ -316,19 +336,33 @@
       overflow-y: auto;
 
       fieldset {
-        flex-wrap: wrap;
-      }
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr auto;
+        grid-template-rows: auto auto;
+        gap: 0.5rem 0.75rem;
+        align-items: center;
 
-      .form-group {
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 0;
-        min-width: 8ch;
-      }
+        > label,
+        > .label-with-tooltip {
+          font-size: 0.9em;
+          font-weight: 500;
+          color: var(--col-text);
+          grid-row: 1;
+        }
 
-      .search-group {
-        flex: 0 0 auto;
-        min-width: auto;
+        > select {
+          grid-row: 2;
+        }
+
+        > .toggle-switch {
+          grid-row: 2;
+        }
+
+        > .search-button {
+          grid-row: 1 / 3;
+          grid-column: 4;
+          align-self: center;
+        }
       }
 
       select {
@@ -384,7 +418,6 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 1em;
-        margin-top: auto;
 
         &:hover:not(:disabled) {
           background: var(--col-love);
@@ -444,6 +477,78 @@
         color: var(--col-subtle);
         background: var(--col-highlightLow);
         border-radius: 4px;
+      }
+
+      .label-with-tooltip {
+        display: flex;
+        align-items: center;
+        gap: 0.5ch;
+      }
+
+      .tooltip-icon {
+        display: inline-block;
+        color: var(--col-subtle);
+        font-size: 0.9em;
+        cursor: help;
+        transition: color 0.2s ease-in-out;
+
+        &:hover {
+          color: var(--col-iris);
+        }
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 3em;
+        height: 1.75em;
+
+        input[type="checkbox"] {
+          opacity: 0;
+          width: 0;
+          height: 0;
+
+          &:checked + .toggle-slider {
+            background-color: var(--col-iris);
+          }
+
+          &:checked + .toggle-slider::before {
+            transform: translateX(1.25em);
+          }
+
+          &:focus + .toggle-slider {
+            box-shadow: 0 0 0 2px var(--col-iris);
+          }
+        }
+
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--col-highlightMed);
+          transition: 0.2s;
+          border-radius: 1.75em;
+          border: 1px solid var(--col-highlightHigh);
+
+          &::before {
+            position: absolute;
+            content: "";
+            height: 1.25em;
+            width: 1.25em;
+            left: 0.25em;
+            bottom: 0.125em;
+            background-color: var(--col-base);
+            transition: 0.2s;
+            border-radius: 50%;
+          }
+
+          &:hover {
+            background-color: var(--col-highlightHigh);
+          }
+        }
       }
     }
 

@@ -67,6 +67,7 @@ pub fn run() {
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
+            commands::wizards::wizard_apply_interface,
         ])
         .setup(|app| {
             let app_data = AppData {
