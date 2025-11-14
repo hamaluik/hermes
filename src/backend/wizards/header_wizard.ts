@@ -18,38 +18,38 @@ export async function wizardQueryInterfaces(
   db: WizardDatabase,
   messageType: "ADT" | "ORM",
 ): Promise<WizardInterface[]> {
-  // TODO: implement the backend
-  // return invoke("wizard_query_interfaces", {
-  //   db,
-  //   message_type,
-  // });
+  return invoke("wizard_query_interfaces", {
+    db,
+    messagetype: messageType,
+    providerid: null,
+  });
   // TODO: remove this demo data
-  return [
-    {
-      name: "DemoInterfaceA",
-      provider_id: "provider_001",
-      sending_app: "AppA",
-      sending_fac: "FacilityA",
-      receiving_app: "AppB",
-      receiving_fac: "FacilityB",
-      version: "2.5.1",
-      processing_cd: "P",
-      default_timezone: "UTC",
-      receive_port: 12345,
-    },
-    {
-      name: "DemoInterfaceB",
-      provider_id: "provider_002",
-      sending_app: "AppC",
-      sending_fac: "FacilityC",
-      receiving_app: "AppD",
-      receiving_fac: "FacilityD",
-      version: "2.3",
-      processing_cd: "T",
-      default_timezone: "America/New_York",
-      receive_port: 23456,
-    },
-  ];
+  // return [
+  //   {
+  //     name: "DemoInterfaceA",
+  //     provider_id: "provider_001",
+  //     sending_app: "AppA",
+  //     sending_fac: "FacilityA",
+  //     receiving_app: "AppB",
+  //     receiving_fac: "FacilityB",
+  //     version: "2.5.1",
+  //     processing_cd: "P",
+  //     default_timezone: "UTC",
+  //     receive_port: 12345,
+  //   },
+  //   {
+  //     name: "DemoInterfaceB",
+  //     provider_id: "provider_002",
+  //     sending_app: "AppC",
+  //     sending_fac: "FacilityC",
+  //     receiving_app: "AppD",
+  //     receiving_fac: "FacilityD",
+  //     version: "2.3",
+  //     processing_cd: "T",
+  //     default_timezone: "America/New_York",
+  //     receive_port: 23456,
+  //   },
+  // ];
 }
 
 export async function wizardApplyInterface(

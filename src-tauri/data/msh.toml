@@ -83,8 +83,6 @@ maxlength = 20
 field = 11
 name = "Processing ID"
 note = "Indicates the processing mode: D (debugging), P (production), or T (training)."
-Processing ID values: D (debugging), P (production), or T (training).
-Message is processed only if processing ID here matches the INT_PROCESSING_CD from INT_INTERFACE_PROVIDERS table."""
 required = true
 maxlength = 1
 placeholder = "P"
@@ -98,9 +96,6 @@ T = "Training"
 field = 12
 name = "Version ID"
 note = "HL7 version."
-Support versions 2.1, 2.2, 2.3, 2.4, and 2.5.1.
-For ORM messages the minimum version is 2.3.
-For BTS messages the minimum version is 2.5.1."""
 required = true
 minlength = 3
 maxlength = 5

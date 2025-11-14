@@ -31,7 +31,7 @@
   let dbFormValid: boolean = $state(false);
   let messageType: "ADT" | "ORM" = $state("ADT");
   let triggerEvent: string = $state("A01");
-  let overrideSegment: boolean = $state(false);
+  let overrideSegment: boolean = $state(true);
 
   let interfaces: WizardInterface[] = $state([]);
   let selectedInterface: WizardInterface | null = $state(null);
@@ -215,7 +215,13 @@
         </button>
       </fieldset>
     </form>
-    {#if hasSearched}
+    {#if isSearching}
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Searching for interfaces...</p>
+      </div>
+    {/if}
+    {#if hasSearched && !isSearching}
       {#if interfaces.length > 0}
         <div class="results">
           <table>
@@ -479,6 +485,30 @@
         border-radius: 4px;
       }
 
+      .loading {
+        margin-top: 1rem;
+        padding: 1.5rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+
+        p {
+          color: var(--col-text);
+          font-size: 0.95em;
+        }
+      }
+
+      .spinner {
+        width: 2.5em;
+        height: 2.5em;
+        border: 3px solid var(--col-highlightMed);
+        border-top: 3px solid var(--col-iris);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
       .label-with-tooltip {
         display: flex;
         align-items: center;
@@ -594,6 +624,15 @@
           }
         }
       }
+    }
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 </style>

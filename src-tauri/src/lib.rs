@@ -67,6 +67,7 @@ pub fn run() {
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
+            commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_interface,
         ])
         .setup(|app| {
@@ -76,6 +77,14 @@ pub fn run() {
                 listen_join: Mutex::new(None),
             };
             app.manage(app_data);
+
+            // Open devtools automatically in dev mode
+            #[cfg(debug_assertions)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
 
             Ok(())
         })

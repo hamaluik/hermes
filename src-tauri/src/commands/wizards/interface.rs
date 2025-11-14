@@ -74,3 +74,43 @@ pub fn wizard_apply_interface(
 
     Ok(message.to_string())
 }
+
+#[tauri::command]
+pub async fn wizard_query_interfaces(
+    db: super::WizardDatabase,
+    messagetype: &str,
+    providerid: Option<&str>,
+) -> Result<Vec<Interface>, String> {
+    log::info!(
+        "wizard_query_interfaces called with messagetype={}, providerid={:?}",
+        messagetype,
+        providerid
+    );
+
+    Ok(vec![
+        Interface {
+            name: "Test Interface".to_string(),
+            provider_id: providerid.unwrap_or("provider_123").to_string(),
+            sending_app: "AppA".to_string(),
+            sending_fac: "FacilityA".to_string(),
+            receiving_app: "AppB".to_string(),
+            receiving_fac: "FacilityB".to_string(),
+            version: "2.5".to_string(),
+            processing_cd: "P".to_string(),
+            default_timezone: "UTC".to_string(),
+            receive_port: 12345,
+        },
+        Interface {
+            name: "Demo Interface".to_string(),
+            provider_id: providerid.unwrap_or("provider_456").to_string(),
+            sending_app: "AppC".to_string(),
+            sending_fac: "FacilityC".to_string(),
+            receiving_app: "AppD".to_string(),
+            receiving_fac: "FacilityD".to_string(),
+            version: "2.3".to_string(),
+            processing_cd: "T".to_string(),
+            default_timezone: "America/New_York".to_string(),
+            receive_port: 23456,
+        },
+    ])
+}
