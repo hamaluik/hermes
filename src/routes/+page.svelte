@@ -38,6 +38,7 @@
   import { listenToListenResponse } from "../backend/listen";
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
+  import PatientWizard from "$lib/wizards/patient_wizard.svelte";
 
   let { data }: PageProps = $props();
 
@@ -71,9 +72,9 @@
   const MIN_EDITOR_HEIGHT = 100; // 100px minimum
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6); // 60% of viewport
 
-  const WIZARD_SEGMENTS = ["MSH", "PID", "PV1"];
   const WIZARD_COMPONENTS: Record<string, any> = {
     MSH: HeaderWizard,
+    PID: PatientWizard,
   };
 
   function handleResizeStart(event: PointerEvent) {
@@ -359,7 +360,7 @@
           <Tab
             id={key}
             label={tabLabel(index)}
-            onWizard={WIZARD_SEGMENTS.includes(key)
+            onWizard={WIZARD_COMPONENTS[key]
               ? () => {
                   currentWizardModal = key;
                 }

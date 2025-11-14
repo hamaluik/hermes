@@ -67,8 +67,10 @@ pub fn run() {
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
-            commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_interface,
+            commands::wizards::wizard_query_interfaces,
+            commands::wizards::wizard_apply_patient,
+            commands::wizards::wizard_search_patients,
         ])
         .setup(|app| {
             let app_data = AppData {

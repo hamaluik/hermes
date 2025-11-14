@@ -1,6 +1,6 @@
 use color_eyre::eyre::Context;
 use hl7_parser::{
-    builder::{FieldBuilder, MessageBuilder},
+    builder::{FieldBuilder, MessageBuilder, SegmentBuilder},
     message::Separators,
 };
 use serde::{Deserialize, Serialize};
@@ -72,12 +72,34 @@ pub fn wizard_apply_interface(
         msh.set_field_value(16, "NE");
     }
 
-    Ok(message.to_string())
+    if message.segment_named("EVN").is_none() && message.segments().len() == 1 {
+        message.push_segment(
+            SegmentBuilder::new("EVN")
+                .with_field_value(1, triggerevent)
+                .with_field_value(2, "{auto}"),
+        );
+    }
+
+    // convenience additions for blank messages
+    if messagetype == "ADT" || messagetype == "ORM" {
+        if message.segment_named("PID").is_none() {
+            message.push_segment(SegmentBuilder::new("PID").with_field_value(1, ""));
+        }
+        if message.segment_named("PV1").is_none() {
+            message.push_segment(SegmentBuilder::new("PV1").with_field_value(1, ""));
+        }
+
+        if messagetype == "ORM" {
+            message.push_segment(SegmentBuilder::new("ORC").with_field_value(1, ""));
+        }
+    }
+
+    Ok(message.render_with_newlines().to_string())
 }
 
 #[tauri::command]
 pub async fn wizard_query_interfaces(
-    db: super::WizardDatabase,
+    _db: super::WizardDatabase,
     messagetype: &str,
     providerid: Option<&str>,
 ) -> Result<Vec<Interface>, String> {

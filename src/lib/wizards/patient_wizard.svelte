@@ -4,15 +4,14 @@
   import IconClose from "../icons/IconClose.svelte";
   import IconSearch from "$lib/icons/IconSearch.svelte";
   import {
-    wizardQueryInterfaces,
-    wizardApplyInterface,
-    type WizardInterface,
-  } from "../../backend/wizards/header_wizard";
+    wizardSearchPatients,
+    wizardApplyPatient,
+    type WizardPatient,
+  } from "../../backend/wizards/patient_wizard";
   import type { WizardDatabase } from "../../backend/wizards/wizard_database";
   import IconWizard from "$lib/icons/IconWizard.svelte";
   import type { Settings } from "../../settings";
   import DatabaseConnection from "$lib/forms/database_connection.svelte";
-  import { getMessageTriggerEvent, getMessageType } from "../../backend/data";
 
   let {
     onclose, // called when the user wants to close the wizard
@@ -29,35 +28,22 @@
   let dialogElement: HTMLDialogElement | null = $state(null);
 
   let dbFormValid: boolean = $state(false);
-  let messageType: "ADT" | "ORM" = $state("ADT");
-  let triggerEvent: string = $state("A01");
+  let patientName: string = $state("");
+  let patientId: string = $state("");
+  let patientMrn: string = $state("");
   let overrideSegment: boolean = $state(true);
 
-  let interfaces: WizardInterface[] = $state([]);
-  let selectedInterface: WizardInterface | null = $state(null);
+  let patients: WizardPatient[] = $state([]);
+  let selectedPatient: WizardPatient | null = $state(null);
   let isSearching: boolean = $state(false);
   let hasSearched: boolean = $state(false);
 
-  // Trigger event options based on message type
-  const triggerEventOptions = $derived(
-    messageType === "ADT"
-      ? [
-          { value: "A01", label: "A01 (Admit/visit notification)" },
-          { value: "A02", label: "A02 (Transfer a patient)" },
-          { value: "A03", label: "A03 (Discharge/end visit)" },
-          { value: "A04", label: "A04 (Register a patient)" },
-          { value: "A05", label: "A05 (Pre-admit a patient)" },
-          {
-            value: "A06",
-            label: "A06 (Change an outpatient to an inpatient)",
-          },
-          {
-            value: "A07",
-            label: "A07 (Change an inpatient to an outpatient)",
-          },
-          { value: "A08", label: "A08 (Update patient information)" },
-        ]
-      : [{ value: "O01", label: "O01 (Order message)" }],
+  // Form is valid if database connection is valid AND at least one search field is filled
+  const searchFormValid = $derived(
+    dbFormValid &&
+      (patientName.trim() !== "" ||
+        patientId.trim() !== "" ||
+        patientMrn.trim() !== ""),
   );
 
   const close = () => {
@@ -71,7 +57,7 @@
     e.preventDefault();
     isSearching = true;
     hasSearched = true;
-    selectedInterface = null;
+    selectedPatient = null;
 
     try {
       const db: WizardDatabase = {
@@ -81,35 +67,38 @@
         user: settings.wizardDbUser,
         password: settings.wizardDbPassword,
       };
-      interfaces = await wizardQueryInterfaces(db, messageType);
+      patients = await wizardSearchPatients(
+        db,
+        patientName.trim() || "",
+        patientId.trim() || "",
+        patientMrn.trim() || "",
+      );
     } catch (error) {
-      console.error("Error querying interfaces:", error);
-      interfaces = [];
+      console.error("Error searching patients:", error);
+      patients = [];
     } finally {
       isSearching = false;
     }
   };
 
-  const selectInterface = (iface: WizardInterface) => {
-    selectedInterface = iface;
+  const selectPatient = (patient: WizardPatient) => {
+    selectedPatient = patient;
   };
 
   const handleApply = async () => {
-    if (!selectedInterface || !message) return;
+    if (!selectedPatient || !message) return;
 
     try {
-      const updatedMessage = await wizardApplyInterface(
+      const updatedMessage = await wizardApplyPatient(
         message,
-        selectedInterface,
-        messageType,
-        triggerEvent,
+        selectedPatient,
         overrideSegment,
       );
       onchange?.(updatedMessage);
       close();
     } catch (error) {
-      console.error("Error applying interface:", error);
-      await tauriMessage("Failed to apply interface.\n\n" + error, {
+      console.error("Error applying patient:", error);
+      await tauriMessage("Failed to apply patient.\\n\\n" + error, {
         title: "Error",
         kind: "error",
       });
@@ -118,30 +107,6 @@
 
   onMount(() => {
     dialogElement?.showModal();
-
-    // Auto-populate message type and trigger event from the current message
-    if (message) {
-      Promise.all([
-        getMessageType(message).catch(() => null),
-        getMessageTriggerEvent(message).catch(() => null),
-      ]).then(([msgType, trigEvent]) => {
-        // Auto-populate message type if it matches available options
-        if (msgType === "ADT" || msgType === "ORM") {
-          messageType = msgType;
-        }
-
-        // Auto-populate trigger event if it matches available options
-        if (trigEvent) {
-          const validEvent = triggerEventOptions.find(
-            (opt) => opt.value === trigEvent,
-          );
-          if (validEvent) {
-            triggerEvent = trigEvent;
-          }
-        }
-      });
-    }
-
     dialogElement?.addEventListener("close", () => {
       close();
     });
@@ -154,7 +119,7 @@
 
 <dialog class="modal" closedby="any" bind:this={dialogElement}>
   <header>
-    <h1><IconWizard /> Header Wizard</h1>
+    <h1><IconWizard /> Patient Wizard</h1>
     <button class="close" onclick={close}>
       <IconClose />
     </button>
@@ -163,36 +128,43 @@
     <form onsubmit={handleSearch}>
       <DatabaseConnection {settings} bind:isValid={dbFormValid} />
       <fieldset>
-        <legend>Message Options</legend>
-        <label for="messageType">Message Type</label>
-        <label for="triggerEvent">Trigger Event</label>
+        <legend>Patient Search</legend>
+        <!-- TODO: inform the user that at least one field is required, not all -->
+        <label for="patientName">Patient Name</label>
+        <label for="patientId">Patient ID</label>
+        <label for="patientMrn">Patient MRN</label>
         <div class="label-with-tooltip">
           <span>Override Segment</span>
           <span
             class="tooltip-icon"
-            title="When enabled, this will completely overwrite the MSH segment with the selected interface values"
+            title="When enabled, this will completely overwrite the PID segment with the selected interface values"
             >ⓘ</span
           >
         </div>
-        <select
-          id="messageType"
-          name="messageType"
-          bind:value={messageType}
-          required
-        >
-          <option value="ADT">ADT</option>
-          <option value="ORM">ORM</option>
-        </select>
-        <select
-          id="triggerEvent"
-          name="triggerEvent"
-          bind:value={triggerEvent}
-          required
-        >
-          {#each triggerEventOptions as option}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
+        <input
+          type="text"
+          id="patientName"
+          name="patientName"
+          bind:value={patientName}
+          maxlength={81}
+          placeholder="Doe"
+        />
+        <input
+          type="text"
+          id="patientId"
+          name="patientId"
+          bind:value={patientId}
+          maxlength={10}
+          placeholder="123456"
+        />
+        <input
+          type="text"
+          id="patientMrn"
+          name="patientMrn"
+          bind:value={patientMrn}
+          maxlength={20}
+          placeholder="MRN00123"
+        />
         <label class="toggle-switch">
           <input
             type="checkbox"
@@ -204,12 +176,14 @@
         <button
           type="submit"
           class="search-button"
-          disabled={isSearching || !dbFormValid}
+          disabled={isSearching || !searchFormValid}
           title={isSearching
             ? "Searching..."
             : !dbFormValid
-              ? "Please fill out all required fields correctly"
-              : "Get Interfaces"}
+              ? "Please configure database connection"
+              : !searchFormValid
+                ? "Please enter at least one search criteria"
+                : "Search Patients"}
         >
           <IconSearch />
         </button>
@@ -218,33 +192,35 @@
     {#if isSearching}
       <div class="loading">
         <div class="spinner"></div>
-        <p>Searching for interfaces...</p>
+        <p>Searching for patients...</p>
       </div>
     {/if}
     {#if hasSearched && !isSearching}
-      {#if interfaces.length > 0}
+      {#if patients.length > 0}
         <div class="results">
           <table>
             <thead>
               <tr>
-                <th>Interface</th>
-                <th>Sending App</th>
-                <th>Sending Facility</th>
-                <th>Receiving App</th>
-                <th>Receiving Facility</th>
+                <th>Patient ID</th>
+                <th>MRN</th>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>DOB</th>
+                <th>Sex</th>
               </tr>
             </thead>
             <tbody>
-              {#each interfaces as iface}
+              {#each patients as patient}
                 <tr
-                  class:selected={selectedInterface === iface}
-                  onclick={() => selectInterface(iface)}
+                  class:selected={selectedPatient === patient}
+                  onclick={() => selectPatient(patient)}
                 >
-                  <td>{iface.name}</td>
-                  <td>{iface.sending_app}</td>
-                  <td>{iface.sending_fac}</td>
-                  <td>{iface.receiving_app}</td>
-                  <td>{iface.receiving_fac}</td>
+                  <td>{patient.id}</td>
+                  <td>{patient.mrn}</td>
+                  <td>{patient.lname}</td>
+                  <td>{patient.fname}</td>
+                  <td>{patient.dob || ""}</td>
+                  <td>{patient.gender || ""}</td>
                 </tr>
               {/each}
             </tbody>
@@ -252,14 +228,14 @@
         </div>
       {:else}
         <div class="no-results">
-          <p>No interfaces found matching your criteria.</p>
+          <p>No patients found matching your criteria.</p>
         </div>
       {/if}
     {/if}
   </main>
   <footer>
     <button class="cancel" onclick={close}>Cancel</button>
-    <button class="apply" onclick={handleApply} disabled={!selectedInterface}>
+    <button class="apply" onclick={handleApply} disabled={!selectedPatient}>
       Apply
     </button>
   </footer>
@@ -342,71 +318,15 @@
 
       fieldset {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr auto;
+        grid-template-columns: 1fr 1fr 1fr 1fr auto;
         grid-template-rows: auto auto;
         gap: 0.5rem 0.75rem;
         align-items: center;
 
-        > label,
-        > .label-with-tooltip {
-          font-size: 0.9em;
-          font-weight: 500;
-          color: var(--col-text);
-          grid-row: 1;
-        }
-
-        > select {
-          grid-row: 2;
-        }
-
-        > .toggle-switch {
-          grid-row: 2;
-        }
-
         > .search-button {
           grid-row: 1 / 3;
-          grid-column: 4;
+          grid-column: 5;
           align-self: center;
-        }
-      }
-
-      select {
-        width: 100%;
-        background: var(--col-surface);
-        color: var(--col-text);
-        border: 1px solid var(--col-highlightMed);
-        border-radius: 4px;
-        padding: 0.5em 0.75em;
-        font-size: 1em;
-        font-family: inherit;
-        transition:
-          border-color 0.2s ease-in-out,
-          background-color 0.2s ease-in-out;
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23908caa' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.75em center;
-        background-size: 12px 12px;
-        padding-right: 2.5em;
-
-        &:hover {
-          border-color: var(--col-highlightHigh);
-          background-color: var(--col-surface);
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e0def4' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 0.75em center;
-          background-size: 12px 12px;
-        }
-
-        &:focus {
-          outline: none;
-          border-color: var(--col-iris);
-          background: var(--col-overlay);
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4a7e7' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 0.75em center;
-          background-size: 12px 12px;
         }
       }
 

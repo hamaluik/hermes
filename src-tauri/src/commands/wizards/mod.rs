@@ -1,6 +1,9 @@
-mod interface;
 use color_eyre::{eyre::WrapErr, Result};
+
+mod interface;
 pub use interface::*;
+mod patient;
+pub use patient::*;
 
 pub type DbClient = tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>;
 
@@ -13,9 +16,7 @@ pub struct WizardDatabase {
     pub password: String,
 }
 
-pub async fn connect_to_database(
-    db: &WizardDatabase,
-) -> Result<tiberius::Client<tokio_util::compat::Compat<tokio::net::TcpStream>>> {
+pub async fn connect_to_database(db: &WizardDatabase) -> Result<DbClient> {
     use tiberius::{AuthMethod, Client, Config, EncryptionLevel};
     use tokio_util::compat::TokioAsyncWriteCompatExt;
 
