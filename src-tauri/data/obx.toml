@@ -1,0 +1,53 @@
+[[fields]]
+field = 3
+component = 1
+name = "Observation Identifier"
+required = true
+note = "Code identifying the observation or measurement."
+
+[[fields]]
+field = 5
+name = "Observation Value"
+required = true
+note = "The actual observation value or measurement result."
+
+[[fields]]
+field = 6
+component = 1
+name = "Identifier"
+required = true
+note = "Code for the units of measure."
+
+[[fields]]
+field = 6
+component = 2
+name = "Text"
+required = true
+note = "Text description of the units."
+
+[[fields]]
+field = 7
+name = "Reference Range"
+required = true
+note = "Normal range for the observation value."
+
+[[fields]]
+field = 8
+name = "Abnormal Flag"
+note = "Flag indicating whether the result is abnormal (e.g., H for high, L for low, A for abnormal)."
+
+[[fields]]
+field = 11
+name = "Result Status"
+maxlength = 1
+note = "Status of the observation result."
+[fields.values]
+F = "Final result"
+C = "Corrected result"
+
+[[fields]]
+field = 14
+name = "Date/Time of the Observation"
+datatype = "datetime"
+required = true
+note = "Date/time the observation was made."

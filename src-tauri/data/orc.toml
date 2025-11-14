@@ -1,0 +1,164 @@
+[[fields]]
+field = 1
+name = "Order Control"
+maxlength = 2
+required = true
+note = "Code indicating the purpose of the order message (e.g., NW for new order, CA for cancel)."
+
+[[fields]]
+field = 2
+component = 1
+group = "Placer Order Number"
+name = "Entity Identifier"
+maxlength = 75
+note = "Order number assigned by the placer. Must match OBR-2 if both are present."
+
+[[fields]]
+field = 2
+component = 2
+group = "Placer Order Number"
+name = "Namespace ID"
+
+[[fields]]
+field = 3
+component = 1
+group = "Filler Order Number"
+name = "Entity Identifier"
+maxlength = 75
+note = "Order number assigned by the filler. Must match OBR-3 if both are present."
+
+[[fields]]
+field = 3
+component = 2
+group = "Filler Order Number"
+name = "Namespace ID"
+
+[[fields]]
+field = 4
+component = 1
+group = "Placer Group Number"
+name = "Entity Identifier"
+note = "Identifier for grouping related orders."
+
+[[fields]]
+field = 4
+component = 2
+group = "Placer Group Number"
+name = "Namespace ID"
+
+[[fields]]
+field = 6
+name = "Response Flag"
+maxlength = 1
+note = "Controls the level of detail in order response messages."
+[fields.values]
+E = "Report exceptions only"
+R = "Same as E, also Replacement and Parent-Child"
+D = "Same as R, also other associated segments"
+F = "Same as D, plus confirmations explicitly"
+N = "Only the MSA segment is returned"
+
+[[fields]]
+field = 7
+component = 1
+group = "Quantity/Timing"
+name = "Quantity"
+note = "Quantity ordered. Used if OBR-27 is not specified."
+
+[[fields]]
+field = 7
+component = 4
+group = "Quantity/Timing"
+name = "Start Date/Time"
+datatype = "datetime"
+note = "Requested start date/time for the order."
+
+[[fields]]
+field = 7
+component = 6
+group = "Quantity/Timing"
+name = "Priority"
+note = "Order priority code."
+
+[[fields]]
+field = 12
+component = 1
+group = "Ordering Provider"
+name = "ID Number"
+maxlength = 10
+required = true
+note = "Identifier for the ordering provider."
+
+[[fields]]
+field = 12
+component = 2
+group = "Ordering Provider"
+name = "Family Name"
+
+[[fields]]
+field = 12
+component = 3
+group = "Ordering Provider"
+name = "Given Name"
+
+[[fields]]
+field = 12
+component = 4
+group = "Ordering Provider"
+name = "Middle Name"
+
+[[fields]]
+field = 13
+component = 1
+group = "Enterer's Location"
+name = "Point of Care"
+maxlength = 10
+note = "Location where the order was entered."
+
+[[fields]]
+field = 13
+component = 2
+group = "Enterer's Location"
+name = "Room"
+maxlength = 10
+
+[[fields]]
+field = 13
+component = 4
+group = "Enterer's Location"
+name = "Facility"
+maxlength = 10
+
+[[fields]]
+field = 13
+component = 7
+group = "Enterer's Location"
+name = "Building"
+maxlength = 10
+
+[[fields]]
+field = 13
+component = 8
+group = "Enterer's Location"
+name = "Floor"
+maxlength = 10
+
+[[fields]]
+field = 14
+name = "Call Back Phone Number"
+maxlength = 14
+pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{1,5})?"
+placeholder = "[(999)]999-9999 [X99999]"
+note = "Phone number for callbacks regarding the order."
+
+[[fields]]
+field = 15
+name = "Order Effective Date/Time"
+datatype = "datetime"
+note = "Date/time the order should take effect."
+
+[[fields]]
+field = 16
+component = 2
+name = "Order Control Code Reason"
+note = "Reason for the order control action, such as cancellation reason."

@@ -1,0 +1,157 @@
+[[fields]]
+field = 1
+name = "Set ID - OBR"
+required = true
+note = "Sequence number for this OBR segment within the message, starting at 1."
+
+[[fields]]
+field = 2
+component = 1
+group = "Placer Order Number"
+name = "Entity Identifier"
+maxlength = 75
+note = "Order number assigned by the placer (ordering system). Required in either ORC or OBR."
+
+[[fields]]
+field = 2
+component = 2
+group = "Placer Order Number"
+name = "Namespace ID"
+
+[[fields]]
+field = 3
+component = 1
+group = "Filler Order Number"
+name = "Entity Identifier"
+maxlength = 75
+note = "Order number assigned by the filler (fulfilling system)."
+
+[[fields]]
+field = 3
+component = 2
+group = "Filler Order Number"
+name = "Namespace ID"
+
+[[fields]]
+field = 4
+component = 1
+group = "Universal Service ID"
+name = "Identifier"
+required = true
+note = "Code identifying the ordered service or test."
+
+[[fields]]
+field = 4
+component = 2
+group = "Universal Service ID"
+name = "Text"
+
+[[fields]]
+field = 5
+name = "Priority"
+note = "Order priority."
+
+[[fields]]
+field = 6
+name = "Requested Date/Time"
+datatype = "datetime"
+note = "Requested date/time for the service."
+
+[[fields]]
+field = 7
+name = "Observation Date/Time"
+datatype = "datetime"
+note = "Date/time the specimen was collected or the observation was made."
+
+[[fields]]
+field = 10
+name = "Collection Identifier"
+note = "Identifier for the person who collected the specimen."
+
+[[fields]]
+field = 13
+name = "Relevant Clinical Information"
+maxlength = 250
+note = "Clinical information relevant to the order. Limited to 250 characters."
+
+[[fields]]
+field = 14
+name = "Specimen Received Date/Time"
+datatype = "datetime"
+note = "Date/time the specimen was received by the filling organisation."
+
+[[fields]]
+field = 16
+component = 1
+group = "Ordering Provider"
+name = "ID Number"
+maxlength = 10
+
+[[fields]]
+field = 16
+component = 2
+group = "Ordering Provider"
+name = "Family Name"
+
+[[fields]]
+field = 16
+component = 3
+group = "Ordering Provider"
+name = "Given Name"
+
+[[fields]]
+field = 16
+component = 4
+group = "Ordering Provider"
+name = "Middle Name"
+
+[[fields]]
+field = 18
+name = "Placer Field 1"
+maxlength = 75
+note = "User-defined field for placer use."
+
+[[fields]]
+field = 19
+name = "Placer Field 2"
+maxlength = 75
+note = "User-defined field for placer use."
+
+[[fields]]
+field = 20
+name = "Filler Field 1"
+maxlength = 75
+note = "User-defined field for filler use."
+
+[[fields]]
+field = 21
+name = "Filler Field 2"
+maxlength = 75
+note = "User-defined field for filler use."
+
+[[fields]]
+field = 27
+component = 1
+group = "Quantity/Timing"
+name = "Quantity"
+note = "Quantity ordered."
+
+[[fields]]
+field = 27
+component = 4
+group = "Quantity/Timing"
+name = "Start Date/Time"
+datatype = "datetime"
+
+[[fields]]
+field = 27
+component = 6
+group = "Quantity/Timing"
+name = "Priority"
+
+[[fields]]
+field = 36
+name = "Scheduled Date/Time"
+datatype = "datetime"
+placeholder = "YYYYMMDDHHMMSS"
+note = "Date/time the service is scheduled to occur."

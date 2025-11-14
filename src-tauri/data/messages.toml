@@ -6,9 +6,11 @@ PV1 = "pv1.toml"
 NK1 = "nk1.toml"
 DG1 = "dg1.toml"
 NTE = "nte.toml"
-# ORC = "orc.toml"
-# OBR = "obr.toml"
-# OBX = "obx.toml"
+ORC = "orc.toml"
+OBR = "obr.toml"
+OBX = "obx.toml"
+
+# ADT (Admit/Discharge/Transfer) Messages
 
 [[message.adt_a01]]
 name = "MSH"
@@ -21,3 +23,247 @@ required = true
 [[message.adt_a01]]
 name = "PV1"
 required = true
+[[message.adt_a01]]
+name = "NK1"
+[[message.adt_a01]]
+name = "DG1"
+[[message.adt_a01]]
+name = "NTE"
+
+[[message.adt_a02]]
+name = "MSH"
+required = true
+[[message.adt_a02]]
+name = "EVN"
+[[message.adt_a02]]
+name = "PID"
+required = true
+[[message.adt_a02]]
+name = "PV1"
+required = true
+[[message.adt_a02]]
+name = "NK1"
+[[message.adt_a02]]
+name = "DG1"
+
+[[message.adt_a03]]
+name = "MSH"
+required = true
+[[message.adt_a03]]
+name = "EVN"
+[[message.adt_a03]]
+name = "PID"
+required = true
+[[message.adt_a03]]
+name = "PV1"
+required = true
+[[message.adt_a03]]
+name = "NK1"
+[[message.adt_a03]]
+name = "DG1"
+
+[[message.adt_a04]]
+name = "MSH"
+required = true
+[[message.adt_a04]]
+name = "EVN"
+[[message.adt_a04]]
+name = "PID"
+required = true
+[[message.adt_a04]]
+name = "PV1"
+[[message.adt_a04]]
+name = "NK1"
+[[message.adt_a04]]
+name = "DG1"
+
+[[message.adt_a05]]
+name = "MSH"
+required = true
+[[message.adt_a05]]
+name = "EVN"
+[[message.adt_a05]]
+name = "PID"
+required = true
+[[message.adt_a05]]
+name = "PV1"
+required = true
+[[message.adt_a05]]
+name = "NK1"
+
+[[message.adt_a08]]
+name = "MSH"
+required = true
+[[message.adt_a08]]
+name = "EVN"
+[[message.adt_a08]]
+name = "PID"
+required = true
+[[message.adt_a08]]
+name = "PV1"
+[[message.adt_a08]]
+name = "NK1"
+[[message.adt_a08]]
+name = "DG1"
+
+[[message.adt_a11]]
+name = "MSH"
+required = true
+[[message.adt_a11]]
+name = "EVN"
+[[message.adt_a11]]
+name = "PID"
+required = true
+[[message.adt_a11]]
+name = "PV1"
+required = true
+
+[[message.adt_a12]]
+name = "MSH"
+required = true
+[[message.adt_a12]]
+name = "EVN"
+[[message.adt_a12]]
+name = "PID"
+required = true
+[[message.adt_a12]]
+name = "PV1"
+required = true
+
+[[message.adt_a13]]
+name = "MSH"
+required = true
+[[message.adt_a13]]
+name = "EVN"
+[[message.adt_a13]]
+name = "PID"
+required = true
+[[message.adt_a13]]
+name = "PV1"
+required = true
+
+[[message.adt_a23]]
+name = "MSH"
+required = true
+[[message.adt_a23]]
+name = "EVN"
+[[message.adt_a23]]
+name = "PID"
+required = true
+
+[[message.adt_a34]]
+name = "MSH"
+required = true
+[[message.adt_a34]]
+name = "EVN"
+[[message.adt_a34]]
+name = "PID"
+required = true
+[[message.adt_a34]]
+name = "PV1"
+
+[[message.adt_a40]]
+name = "MSH"
+required = true
+[[message.adt_a40]]
+name = "EVN"
+[[message.adt_a40]]
+name = "PID"
+required = true
+[[message.adt_a40]]
+name = "PV1"
+
+[[message.adt_a49]]
+name = "MSH"
+required = true
+[[message.adt_a49]]
+name = "EVN"
+[[message.adt_a49]]
+name = "PID"
+required = true
+
+[[message.adt_a50]]
+name = "MSH"
+required = true
+[[message.adt_a50]]
+name = "EVN"
+[[message.adt_a50]]
+name = "PID"
+required = true
+[[message.adt_a50]]
+name = "PV1"
+required = true
+
+# ORM (Order Message)
+
+[[message.orm_o01]]
+name = "MSH"
+required = true
+[[message.orm_o01]]
+name = "EVN"
+[[message.orm_o01]]
+name = "PID"
+required = true
+[[message.orm_o01]]
+name = "PV1"
+required = true
+[[message.orm_o01]]
+name = "ORC"
+required = true
+[[message.orm_o01]]
+name = "OBR"
+[[message.orm_o01]]
+name = "DG1"
+[[message.orm_o01]]
+name = "NTE"
+[[message.orm_o01]]
+name = "OBX"
+
+# ORU (Observation Result/Unsolicited)
+
+[[message.oru_r01]]
+name = "MSH"
+required = true
+[[message.oru_r01]]
+name = "PID"
+required = true
+[[message.oru_r01]]
+name = "PV1"
+[[message.oru_r01]]
+name = "ORC"
+[[message.oru_r01]]
+name = "OBR"
+required = true
+[[message.oru_r01]]
+name = "OBX"
+[[message.oru_r01]]
+name = "NTE"
+
+# ORR (Order Response)
+
+[[message.orr_o02]]
+name = "MSH"
+required = true
+[[message.orr_o02]]
+name = "PID"
+required = true
+[[message.orr_o02]]
+name = "ORC"
+required = true
+[[message.orr_o02]]
+name = "OBR"
+
+# DFT (Detailed Financial Transaction)
+
+[[message.dft_p03]]
+name = "MSH"
+required = true
+[[message.dft_p03]]
+name = "EVN"
+[[message.dft_p03]]
+name = "PID"
+required = true
+[[message.dft_p03]]
+name = "PV1"
+[[message.dft_p03]]
+name = "OBR"
