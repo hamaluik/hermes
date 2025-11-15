@@ -1,3 +1,9 @@
+<!--
+  Toolbar Separator
+
+  Visual separator (vertical line) for grouping related toolbar buttons.
+  Used to create distinct sections in the toolbar (e.g., File operations | Settings).
+-->
 <div class="separator"></div>
 
 <style>

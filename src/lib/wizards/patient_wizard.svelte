@@ -1,3 +1,39 @@
+<!--
+  Patient Wizard Component
+
+  Allows users to quickly populate PID (Patient Identification) segment data from sample patients.
+
+  Purpose:
+  The PID segment contains patient demographic information (name, ID, MRN, DOB, gender, etc.).
+  Instead of manually typing these values, this wizard:
+  1. Queries the database for patients matching search criteria
+  2. Lets users select from matching patients
+  3. Populates PID fields with the selected patient's information
+
+  Search Flexibility:
+  Users can search by any combination of:
+  - Patient Name (last name partial match)
+  - Patient ID (exact match)
+  - Medical Record Number (MRN, exact match)
+
+  At least one field must be filled for the search to be valid. This prevents
+  accidental "search all patients" queries that could return thousands of results.
+
+  Form Validation:
+  The searchFormValid derived value ensures:
+  1. Database connection is properly configured
+  2. At least one search field has a non-empty value
+
+  Flow:
+  1. User opens wizard from toolbar
+  2. User fills in database connection (persisted from settings)
+  3. User enters search criteria (name, ID, or MRN)
+  4. User clicks "Search Patients"
+  5. Results display in table
+  6. User selects a patient row
+  7. User clicks "Apply" to update PID segment
+  8. Message is updated via onchange callback
+-->
 <script lang="ts">
   import { message as tauriMessage } from "@tauri-apps/plugin-dialog";
   import {
@@ -42,7 +78,16 @@
   let isSearching: boolean = $state(false);
   let hasSearched: boolean = $state(false);
 
-  // Form is valid if database connection is valid AND at least one search field is filled
+  /**
+   * Search form validation
+   *
+   * Ensures users provide enough information for a meaningful search:
+   * 1. Database connection must be valid (host, port, credentials)
+   * 2. At least ONE search criterion must be provided (name, ID, or MRN)
+   *
+   * This prevents "search all" queries that would return too many results
+   * and helps users narrow down to the specific patient they need.
+   */
   const searchFormValid = $derived(
     dbFormValid &&
       (patientName.trim() !== "" ||
@@ -54,6 +99,19 @@
     show = false;
   };
 
+  /**
+   * Searches for patients in the database
+   *
+   * Passes all search criteria to backend, which builds a SQL query with
+   * appropriate wildcards and filters. Empty strings are ignored by the backend.
+   *
+   * Search behavior:
+   * - Name: Partial match on last name (e.g., "Doe" finds "Doe", "Doerr", etc.)
+   * - ID: Exact match on patient ID
+   * - MRN: Exact match on medical record number
+   *
+   * Clears any previous selection to avoid applying stale patient data.
+   */
   const handleSearch = async (e: Event) => {
     e.preventDefault();
     isSearching = true;
@@ -86,6 +144,14 @@
     selectedPatient = patient;
   };
 
+  /**
+   * Applies the selected patient to the message
+   *
+   * Calls backend to update PID segment with patient demographic information.
+   * Override mode determines whether to merge with or replace existing PID data.
+   * On success, notifies parent via onchange callback and closes the wizard.
+   * On error, shows user-friendly error dialog.
+   */
   const handleApply = async () => {
     if (!selectedPatient || !message) return;
 
@@ -106,7 +172,16 @@
     }
   };
 
-  // Reset wizard state when modal opens (but keep database settings)
+  /**
+   * Reset wizard state when modal opens
+   *
+   * Ensures clean slate for each wizard session. Database connection settings
+   * are preserved (managed in Settings), but search fields and results are cleared.
+   *
+   * Unlike header wizard, this doesn't auto-populate from the message because
+   * patient search requires explicit user input (there's no single "current patient"
+   * to extract from the message).
+   */
   $effect(() => {
     if (show) {
       // Reset search results and selection
@@ -134,8 +209,7 @@
     <form onsubmit={handleSearch}>
       <DatabaseConnection {settings} bind:isValid={dbFormValid} />
       <fieldset>
-        <legend>Patient Search</legend>
-        <!-- TODO: inform the user that at least one field is required, not all -->
+        <legend>Patient Search <span class="field-hint">(at least one field required)</span></legend>
         <label for="patientName">Patient Name</label>
         <label for="patientId">Patient ID</label>
         <label for="patientMrn">Patient MRN</label>
@@ -275,5 +349,12 @@
       color: var(--col-text);
       cursor: pointer;
     }
+  }
+
+  .field-hint {
+    font-size: 0.85em;
+    font-weight: normal;
+    color: var(--col-subtle);
+    font-style: italic;
   }
 </style>

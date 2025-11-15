@@ -1,3 +1,78 @@
+//! Hermes - Desktop application for composing, sending, and receiving HL7 messages.
+//!
+//! This application provides a Tauri-based GUI for HL7 message manipulation, primarily
+//! targeting development and testing workflows. It supports message editing,
+//! syntax highlighting, field descriptions, database wizards, and MLLP network communication.
+//!
+//! # Architecture Overview
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────┐
+//! │  Frontend (Svelte + SvelteKit)                              │
+//! │  - Message editor UI                                        │
+//! │  - Wizard forms (patient, visit, interface)                 │
+//! │  - Send/receive modals                                      │
+//! └────────────────────┬────────────────────────────────────────┘
+//!                      │ Tauri Commands (invoke/events)
+//! ┌────────────────────▼────────────────────────────────────────┐
+//! │  Backend (Rust + Tauri)                                     │
+//! │  ┌──────────────────────────────────────────────────────┐   │
+//! │  │ AppData (Managed State)                              │   │
+//! │  │  - SchemaCache: Cached HL7 schemas                   │   │
+//! │  │  - listen_join: MLLP listener task handle            │   │
+//! │  └──────────────────────────────────────────────────────┘   │
+//! │  ┌──────────────────────────────────────────────────────┐   │
+//! │  │ Commands (Tauri-exposed functions)                   │   │
+//! │  │  - Message editing (data.rs)                         │   │
+//! │  │  - Syntax highlighting (syntax_highlight.rs)         │   │
+//! │  │  - Cursor tracking (locate_cursor.rs)                │   │
+//! │  │  - Field descriptions (field_description.rs)         │   │
+//! │  │  - Schema queries (schema.rs)                        │   │
+//! │  │  - Send/receive (send_receive.rs, listen.rs)         │   │
+//! │  │  - Wizards (wizards/*.rs)                            │   │
+//! │  └──────────────────────────────────────────────────────┘   │
+//! │  ┌──────────────────────────────────────────────────────┐   │
+//! │  │ Schema Module                                        │   │
+//! │  │  - Loads and caches HL7 schema from messages.toml    │   │
+//! │  │  - Provides segment and message metadata             │   │
+//! │  └──────────────────────────────────────────────────────┘   │
+//! │  ┌──────────────────────────────────────────────────────┐   │
+//! │  │ Spec Module                                          │   │
+//! │  │  - HL7 standard specifications                       │   │
+//! │  │  - HL7 system-specific field descriptions          │   │
+//! │  └──────────────────────────────────────────────────────┘   │
+//! └─────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! # Tauri Command-Response Pattern
+//!
+//! The application uses Tauri's command system for frontend-backend communication:
+//!
+//! 1. **Synchronous Commands**: Frontend calls `invoke("command_name", args)`, awaits result
+//!    - Example: `parse_message_segment`, `get_std_description`
+//!
+//! 2. **Event-Driven Commands**: Commands spawn background tasks and emit events
+//!    - Example: `send_message` emits `send-log` and `send-response` events
+//!    - Example: `start_listening` emits `received-message` events
+//!    - Frontend sets up event listeners before invoking the command
+//!
+//! # Plugin Initialization Order
+//!
+//! Plugins are initialized in a specific order to ensure dependencies are available:
+//! 1. **clipboard-manager** - First, as it has no dependencies
+//! 2. **store** - Persistent settings storage, used by other plugins
+//! 3. **fs** - File system access for schema loading
+//! 4. **persisted-scope** - Persists file access permissions across restarts
+//! 5. **dialog** - File dialogs (depends on fs)
+//! 6. **log** - Logging infrastructure, configured with custom formatting
+//! 7. **opener** - URL/file opening (last, as it's auxiliary)
+//!
+//! # Schema Loading
+//!
+//! The HL7 schema is loaded from `messages.toml` during application setup. This schema
+//! defines message types, trigger events, and segment structures. Schema loading happens
+//! before the app finishes initialization to ensure all commands have access to schema data.
+
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
 use tauri::Manager;
@@ -7,11 +82,56 @@ mod commands;
 mod schema;
 mod spec;
 
+/// Application-wide state managed by Tauri.
+///
+/// This state is initialized once during app setup and is accessible to all Tauri commands
+/// via the `State<AppData>` parameter. The state is thread-safe and can be accessed from
+/// multiple async tasks concurrently.
 struct AppData {
+    /// Cached HL7 schema loaded from messages.toml.
+    ///
+    /// Provides fast access to message and segment definitions without repeatedly
+    /// parsing the schema file. Uses a read-write lock internally for thread-safe access.
     schema: SchemaCache,
+
+    /// Handle to the MLLP listener background task.
+    ///
+    /// When `start_listening` is called, a background task is spawned to accept incoming
+    /// HL7 messages. This handle allows the task to be aborted when `stop_listening` is
+    /// called or when a new listener is started. Only one listener can be active at a time.
+    ///
+    /// Wrapped in a Mutex to allow the handle to be taken, replaced, or aborted from
+    /// different async tasks.
     listen_join: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
+/// Main entry point for the Hermes application.
+///
+/// This function initializes the Tauri application with all necessary plugins, sets up
+/// error handling, configures logging, and registers command handlers. It blocks until
+/// the application window is closed by the user.
+///
+/// # Initialization Flow
+///
+/// 1. Install `color_eyre` for enhanced error reporting in the terminal
+/// 2. Configure logging level (Debug in dev, Info in production)
+/// 3. Build Tauri app with plugins in dependency order
+/// 4. Register all command handlers
+/// 5. Load HL7 schema from messages.toml into AppData
+/// 6. Open developer tools in debug builds
+/// 7. Run the app event loop
+///
+/// # Panics
+///
+/// This function will panic if:
+/// * `color_eyre` installation fails (unlikely)
+/// * The Tauri app cannot be built (misconfiguration)
+/// * The app event loop encounters a fatal error
+///
+/// # Schema Loading Errors
+///
+/// If `messages.toml` cannot be loaded or parsed, the app will fail to start with an
+/// error message. This is intentional - the app cannot function without schema data.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     color_eyre::config::HookBuilder::new()
@@ -71,6 +191,8 @@ pub fn run() {
             commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_patient,
             commands::wizards::wizard_search_patients,
+            commands::wizards::wizard_apply_visit,
+            commands::wizards::wizard_search_visits,
         ])
         .setup(|app| {
             let app_data = AppData {

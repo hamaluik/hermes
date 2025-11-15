@@ -1,3 +1,47 @@
+/**
+ * Tabs Component
+ *
+ * Container component for managing tabbed navigation. Child Tab components register
+ * themselves automatically via Svelte's context API, enabling a declarative API where
+ * tabs are defined in markup rather than via props.
+ *
+ * ## Context API Usage
+ *
+ * We provide two contexts to child components:
+ * - "tabs": Writable store of tab metadata (id, label, wizard callback)
+ * - "activeId": Writable store of currently active tab ID
+ *
+ * Child Tab components subscribe to activeId to know when they're active, and push
+ * their metadata into the tabs store. This creates a two-way communication channel
+ * without requiring explicit prop drilling through intermediate components.
+ *
+ * Why use context instead of props? Because tab content can be arbitrarily nested
+ * (e.g., inside conditional blocks, each blocks, etc.), and manually threading
+ * tab registration callbacks through all that structure would be cumbersome and
+ * error-prone.
+ *
+ * ## Add Menu Pattern
+ *
+ * The optional addMenu snippet provides UI for adding new segments to the message.
+ * When provided, a "+" button appears after all tabs. Clicking it reveals a dropdown
+ * (provided by the parent via snippet) showing available segment types.
+ *
+ * The closeMenu callback is passed to the snippet so segment selection can dismiss
+ * the menu automatically. This keeps the implementation of the menu content in the
+ * parent (which knows what segments are available) while the tabs component handles
+ * the show/hide logic.
+ *
+ * ## Active Tab Tracking
+ *
+ * We track whether the active tab ID exists in the current tab list. This handles
+ * edge cases where:
+ * - User edits the raw message and deletes a segment
+ * - The previously active tab no longer exists
+ * - We need to show a fallback message instead of blank content
+ *
+ * The subscription pattern ensures activeTabIsMissing updates whenever either the
+ * tab list or active ID changes.
+ */
 <script lang="ts">
   import { setContext, type Snippet } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
@@ -20,6 +64,13 @@
 
   let showAddMenu = $state(false);
 
+  /**
+   * Context API Setup
+   *
+   * Child Tab components will access these contexts to:
+   * 1. Register themselves in the tabs list
+   * 2. Know when they're the active tab (to show/hide content)
+   */
   setContext("tabs", tabs);
   setContext("activeId", activeId);
 
@@ -27,18 +78,33 @@
     activeId.set(id);
   };
 
+  /**
+   * External Tab Activation
+   *
+   * Exposes a setactive function that parent components can call to programmatically
+   * change tabs (e.g., "tabs follow cursor" feature). The setTimeout avoids selection
+   * issues when tab changes happen during text input events.
+   */
   $effect(() => {
     setactive = (id: string) => {
-      // so we don't get weird selection issues
       setTimeout(() => {
         activeId.set(id);
       }, 0);
     };
   });
 
+  /**
+   * Missing Tab Detection
+   *
+   * Tracks whether the currently active tab actually exists in the tab list. This
+   * can happen when segments are deleted from the raw message - the tab disappears
+   * but activeId still references it.
+   *
+   * We show a fallback message instead of leaving the content area blank, which
+   * would be confusing to users.
+   */
   activeId.subscribe((id) => {
     const tabList = get(tabs);
-    // Only show missing tab message if there are tabs and the active one is missing
     activeTabIsMissing =
       tabList.length > 0 && !tabList.some((tab) => tab.id === id);
   });

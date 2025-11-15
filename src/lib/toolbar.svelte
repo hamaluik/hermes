@@ -1,3 +1,29 @@
+/**
+ * Toolbar Component
+ *
+ * Fixed-position toolbar at the top of the application. Contains action buttons
+ * (New, Open, Save, Settings, etc.) arranged in a horizontal row.
+ *
+ * ## Fixed Positioning with Spacer
+ *
+ * The toolbar uses fixed positioning to stay visible during scrolling. However,
+ * fixed elements don't occupy space in the document flow, which would cause content
+ * to render underneath the toolbar.
+ *
+ * We solve this with a spacer element: a second div that matches the toolbar's
+ * height but uses normal positioning. This spacer pushes content down, creating
+ * space for the fixed toolbar.
+ *
+ * The height is calculated dynamically (via getComputedStyle) rather than hardcoded
+ * because the toolbar height can vary based on:
+ * - Font size settings
+ * - Padding adjustments
+ * - Different icon sizes
+ * - Zoom levels
+ *
+ * The bindable toolbarHeight is exposed so parent components can account for it
+ * in their layout calculations (e.g., viewport height calculations).
+ */
 <script lang="ts">
   import type { Snippet } from "svelte";
 

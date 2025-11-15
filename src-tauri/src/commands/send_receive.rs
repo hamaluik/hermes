@@ -1,3 +1,26 @@
+//! HL7 message sending via MLLP (Minimal Lower Layer Protocol).
+//!
+//! This module implements an MLLP client for sending HL7 messages to remote servers
+//! and receiving acknowledgment responses. The implementation follows an async,
+//! event-driven pattern to provide real-time progress updates to the UI.
+//!
+//! # MLLP Protocol
+//! MLLP is a simple framing protocol for HL7 messages over TCP:
+//! * Start Block (SB): 0x0B (vertical tab)
+//! * HL7 Message content
+//! * End Block (EB): 0x1C (file separator)
+//! * Carriage Return (CR): 0x0D
+//!
+//! The `hl7_mllp_codec` crate handles the framing automatically.
+//!
+//! # Event-Driven Architecture
+//! The send operation emits two types of events to the frontend:
+//! * `send-log` - Progress messages for displaying in the UI
+//! * `send-response` - Status updates and final result
+//!
+//! This allows the frontend to show real-time feedback while the async operation
+//! executes in a background task.
+
 use bytes::BytesMut;
 use core::str;
 use futures::{sink::SinkExt, StreamExt};
@@ -11,25 +34,92 @@ use tauri::{AppHandle, Emitter};
 use tokio::{net::TcpStream, time::timeout};
 use tokio_util::codec::Framed;
 
+/// Request parameters for sending an HL7 message.
+///
+/// Passed from the frontend to the `send_message` command.
 #[derive(Deserialize)]
 pub struct SendRequest {
+    /// Target hostname or IP address
     pub host: String,
+    /// Target port number (typically 2575 for HL7)
     pub port: u16,
+    /// How long to wait for a response before timing out (in seconds)
     pub wait_timeout_seconds: f32,
+    /// The HL7 message to send (may contain placeholder values)
     pub message: String,
 }
 
+/// Response events emitted during the send operation.
+///
+/// These variants are serialized to camelCase JSON and emitted to the frontend
+/// via the `send-response` event channel. The `tag` field becomes "event" and
+/// the `content` field becomes "data" in the serialized output.
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum SendResponse {
+    /// Failed to establish TCP connection
     FailedToConnect(String),
+    /// Failed to send the message over MLLP
     FailedToSend(String),
+    /// Failed to receive a response (network error, not timeout)
     FailedToReceive(String),
+    /// Received response but failed to decode as UTF-8
     FailedToDecode(String),
-    FailedToParse { message: String, error: String },
+    /// Received response but failed to parse as valid HL7
+    FailedToParse {
+        /// The raw response that failed to parse
+        message: String,
+        /// Parse error details
+        error: String,
+    },
+    /// Final response (success case, or timeout with None)
     Final(Option<String>),
 }
 
+/// Send an HL7 message via MLLP and wait for a response.
+///
+/// This command executes asynchronously and emits progress events to the frontend.
+/// It spawns a background task to perform the actual network operations, allowing
+/// the command to return immediately to the frontend.
+///
+/// # Placeholder Transformations
+/// Before sending, the message undergoes automatic transformations for special placeholders:
+///
+/// * **MSH.7 (Timestamp)**: If value is "{auto}" or "{now}", replaced with current timestamp
+///   in HL7 format (YYYYMMDDHHMMSS)
+///
+/// * **MSH.10 (Message Control ID)**: If value is "{auto}" or "{random}", replaced with
+///   a 20-character random alphanumeric string
+///
+/// These placeholders are set by the interface wizard when `overridesegment=true`,
+/// allowing users to compose message templates without worrying about generating
+/// unique control IDs or current timestamps.
+///
+/// # Event Flow
+/// 1. Validate and resolve the target address
+/// 2. Parse the message and apply placeholder transformations
+/// 3. Spawn background task and return immediately
+/// 4. Background task:
+///    - Emit "send-log" with message being sent
+///    - Connect via TCP
+///    - Send message with MLLP framing
+///    - Emit "send-log" awaiting response
+///    - Wait for response with timeout
+///    - Decode and parse response
+///    - Emit "send-response" with final result
+///
+/// # Timeout Behavior
+/// If no response is received within `wait_timeout_seconds`, a timeout log is emitted
+/// and a Final(None) response is sent. This is not considered a fatal error, as some
+/// HL7 systems may not send acknowledgments for certain message types.
+///
+/// # Arguments
+/// * `request` - Send parameters including host, port, timeout, and message
+/// * `app` - Tauri app handle for emitting events to the frontend
+///
+/// # Returns
+/// * `Ok(())` - Background task spawned successfully (does not indicate send success)
+/// * `Err(String)` - Failed to resolve address or parse message (before spawning task)
 #[tauri::command]
 pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), String> {
     let SendRequest {
@@ -50,12 +140,13 @@ pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), St
 
     let mut message: MessageBuilder = (&message).into();
 
-    // some "select" auto transformations for now
+    // Placeholder transformations for auto-generated values
     // TODO: more general {auto} transformations
     let msh = message
         .segment_named_mut("MSH")
         .expect("messages have MSH segments");
 
+    // Transform {auto} or {now} in MSH.7 to current timestamp
     if let Some(timestamp) = msh.field_mut(7) {
         if let Some(value) = timestamp.value_mut() {
             if value == "{auto}" || value == "{now}" {
@@ -67,6 +158,7 @@ pub async fn send_message(request: SendRequest, app: AppHandle) -> Result<(), St
         }
     }
 
+    // Transform {auto} or {random} in MSH.10 to random control ID
     if let Some(control_id) = msh.field_mut(10) {
         if let Some(value) = control_id.value_mut() {
             if value == "{auto}" || value == "{random}" {

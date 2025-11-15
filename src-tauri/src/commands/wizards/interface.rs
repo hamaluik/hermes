@@ -1,3 +1,21 @@
+//! Interface wizard for populating HL7 message MSH segments with interface configuration.
+//!
+//! This wizard provides two main capabilities:
+//! 1. **Query**: Retrieve interface configurations from the database
+//! 2. **Apply**: Populate a message's MSH (and EVN) segments with interface settings
+//!
+//! ## Workflow
+//! The typical workflow is:
+//! 1. User queries interfaces using `wizard_query_interfaces` (filtered by message type)
+//! 2. User selects an interface configuration from the results
+//! 3. User applies the interface to a message using `wizard_apply_interface`
+//! 4. The MSH segment is populated with sending/receiving identifiers and HL7 version
+//!
+//! ## Why Interface Configuration Matters
+//! HL7 interfaces define the communication parameters between two systems. Each interface
+//! specifies the sending/receiving applications and facilities, the HL7 version to use,
+//! and processing mode. This ensures messages are formatted correctly for the receiving system.
+
 use color_eyre::eyre::Context;
 use hl7_parser::{
     builder::{FieldBuilder, MessageBuilder, SegmentBuilder},
@@ -5,20 +23,78 @@ use hl7_parser::{
 };
 use serde::{Deserialize, Serialize};
 
+/// HL7 interface configuration retrieved from the database.
+///
+/// Defines the communication parameters for HL7 message exchange between systems.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Interface {
+    /// Interface name
     pub name: String,
+    /// Provider ID associated with this interface
     pub provider_id: String,
+    /// Sending application identifier (MSH.3) - extracted from SAPP attribute
     pub sending_app: String,
+    /// Sending facility identifier (MSH.4) - extracted from SFAC attribute
     pub sending_fac: String,
+    /// Receiving application identifier (MSH.5) - extracted from RAPP attribute
     pub receiving_app: String,
+    /// Receiving facility identifier (MSH.6) - extracted from RFAC attribute
     pub receiving_fac: String,
+    /// HL7 version literal (MSH.12) - e.g., "2.5.1"
     pub version: String,
+    /// Processing code (MSH.11) - typically 'P' for production or 'T' for training
     pub processing_cd: String,
+    /// Default timezone name for this interface
     pub default_timezone: String,
+    /// Port number for receiving messages on this interface
     pub receive_port: u16,
 }
 
+/// Populate an HL7 message's MSH segment with interface configuration.
+///
+/// This command configures the message header with interface-specific settings and
+/// optionally creates an EVN segment for event-driven messages.
+///
+/// # MSH Fields Populated
+/// * MSH.1 - Field separator (only if overridesegment=true)
+/// * MSH.2 - Encoding characters (only if overridesegment=true)
+/// * MSH.3 - Sending application
+/// * MSH.4 - Sending facility
+/// * MSH.5 - Receiving application
+/// * MSH.6 - Receiving facility
+/// * MSH.7 - Message timestamp (set to "{now}" placeholder if overridesegment=true)
+/// * MSH.9 - Message type and trigger event (e.g., "ADT^A01")
+/// * MSH.10 - Message control ID (set to "{random}" placeholder if overridesegment=true)
+/// * MSH.11 - Processing ID
+/// * MSH.12 - HL7 version
+/// * MSH.15 - Accept acknowledgment type (set to "AL" if overridesegment=true)
+/// * MSH.16 - Application acknowledgment type (set to "NE" if overridesegment=true)
+///
+/// # Special Placeholder Values
+/// When `overridesegment=true`, the command sets placeholders that are later
+/// transformed by the send logic:
+/// * "{now}" - Replaced with current timestamp in send_message command
+/// * "{random}" - Replaced with random message control ID in send_message command
+///
+/// # Automatic Segment Creation
+/// If the message only contains an MSH segment (blank message) and no EVN exists,
+/// an EVN segment is automatically created with:
+/// * EVN.1 - Trigger event code
+/// * EVN.2 - "{auto}" placeholder (transformed during send)
+///
+/// For ADT and ORM messages, PID and PV1 segments are auto-created if missing,
+/// to provide a complete message skeleton. ORM messages additionally get an ORC segment.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+/// * `interface` - Interface configuration to apply
+/// * `messagetype` - Message type code (e.g., "ADT", "ORM")
+/// * `triggerevent` - Trigger event code (e.g., "A01", "O01")
+/// * `overridesegment` - If true, clears MSH and resets to defaults before populating
+///
+/// # Returns
+/// * `Ok(String)` - The modified message with interface configuration
+/// * `Err(String)` - Error if message parsing fails
 #[tauri::command]
 pub fn wizard_apply_interface(
     message: &str,
@@ -97,9 +173,19 @@ pub fn wizard_apply_interface(
     Ok(message.render_with_newlines().to_string())
 }
 
+/// Query interface configurations from the database.
+///
+/// # Arguments
+/// * `db` - Database connection configuration
+/// * `messagetype` - Message type code (e.g., "ADT", "ORM")
+/// * `providerid` - Optional provider ID filter
+///
+/// # Returns
+/// * `Ok(Vec<Interface>)` - List of matching interface configurations
+/// * `Err(String)` - Error for unsupported message types or database failures
 #[tauri::command]
 pub async fn wizard_query_interfaces(
-    _db: super::WizardDatabase,
+    db: super::WizardDatabase,
     messagetype: &str,
     providerid: Option<&str>,
 ) -> Result<Vec<Interface>, String> {

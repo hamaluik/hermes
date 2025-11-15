@@ -1,3 +1,28 @@
+//! HL7 message listener via MLLP (Minimal Lower Layer Protocol).
+//!
+//! This module implements an MLLP server for receiving HL7 messages and sending
+//! acknowledgments (ACK messages). The listener runs as a background task and can
+//! handle multiple concurrent connections.
+//!
+//! # Acknowledgment Generation
+//! The listener automatically generates and sends ACK messages for each received
+//! message, following both original and enhanced acknowledgment modes:
+//!
+//! * **Original Mode**: Simple ACK with AA (Application Accept)
+//! * **Enhanced Mode**: Detected when MSH.15 or MSH.16 are present; uses CA (Commit Accept)
+//!
+//! # Why Two ACK Levels?
+//! Enhanced mode (MSH.15/16) is used for application-level acknowledgments in addition
+//! to lower-layer protocol acknowledgments. The 'C' code indicates "commit" level
+//! acknowledgment, while 'A' is for simple "application" level. This allows the
+//! sending system to know that the message was not just received, but also processed
+//! or committed to storage.
+//!
+//! # Lifecycle Management
+//! Only one listener can be active at a time. Starting a new listener automatically
+//! aborts any existing listener. The listener task handle is stored in AppData state
+//! and can be stopped via the `stop_listening` command.
+
 use core::str;
 use std::net::ToSocketAddrs;
 
@@ -15,6 +40,45 @@ use tokio_util::codec::Framed;
 
 use crate::AppData;
 
+/// Start listening for incoming HL7 messages via MLLP.
+///
+/// This command starts a TCP listener that accepts incoming connections and processes
+/// HL7 messages. For each received message, it automatically generates and sends an
+/// ACK (acknowledgment) message.
+///
+/// # Listener Lifecycle
+/// * If a listener is already running, it will be aborted before starting the new one
+/// * The listener runs in a background task that continues until explicitly stopped
+/// * Each incoming connection is handled sequentially within the task
+/// * Multiple messages can be received over a single connection
+///
+/// # ACK Generation Algorithm
+/// For each received message, the listener:
+/// 1. Extracts MSH fields: sending/receiving apps, facilities, trigger event, control ID
+/// 2. Determines acknowledgment mode based on MSH.15/16 presence
+/// 3. Builds an ACK message by swapping sender/receiver fields
+/// 4. Sets MSA.1 to either "AA" (original mode) or "CA" (enhanced mode)
+/// 5. Copies the original message's control ID into MSA.2
+/// 6. Sends the ACK message back over the same connection
+///
+/// # Version Handling
+/// If the incoming message doesn't specify an HL7 version (MSH.12), the listener
+/// defaults to "2.5.1" for the ACK message. This ensures compatibility with most
+/// modern HL7 systems.
+///
+/// # Event Emission
+/// Received messages are emitted to the frontend via the `received-message` event,
+/// allowing the UI to display incoming messages in real-time.
+///
+/// # Arguments
+/// * `host` - Host to bind to (defaults to "0.0.0.0" for all interfaces)
+/// * `port` - Port number to listen on
+/// * `app` - Tauri app handle for emitting events
+/// * `state` - Application state containing the listener task handle
+///
+/// # Returns
+/// * `Ok(())` - Listener started successfully
+/// * `Err(String)` - Failed to resolve address or bind to port
 #[tauri::command]
 pub async fn start_listening(
     host: Option<&str>,
@@ -32,6 +96,7 @@ pub async fn start_listening(
 
     log::info!("Listening on {addr}");
 
+    // Abort any existing listener before starting a new one
     let mut listen_join = state.listen_join.lock().await;
     if let Some(listener) = listen_join.as_mut() {
         listener.abort();
@@ -126,6 +191,8 @@ pub async fn start_listening(
                 let accept_ack = msh.field(15);
                 let application_ack = msh.field(16);
 
+                // Enhanced acknowledgment mode is indicated by the presence of MSH.15 or MSH.16
+                // Enhanced mode uses 'C' (Commit) level ACKs, original mode uses 'A' (Application) level
                 let is_enhanced_mode = accept_ack.is_some() || application_ack.is_some();
                 let ack_level = if is_enhanced_mode { 'C' } else { 'A' };
 
@@ -172,6 +239,20 @@ pub async fn start_listening(
     Ok(())
 }
 
+/// Stop the currently running MLLP listener.
+///
+/// This command aborts the listener task if one is running. The abort is immediate
+/// and will interrupt any ongoing message reception.
+///
+/// # Graceful Shutdown
+/// The abort is relatively graceful - it terminates the task but does not forcefully
+/// close active TCP connections. Connections may be closed by the OS as the task exits.
+///
+/// # Arguments
+/// * `state` - Application state containing the listener task handle
+///
+/// # Returns
+/// * `Ok(())` - Always succeeds, even if no listener was running
 #[tauri::command]
 pub async fn stop_listening(state: State<'_, AppData>) -> Result<(), String> {
     let mut listen_join = state.listen_join.lock().await;

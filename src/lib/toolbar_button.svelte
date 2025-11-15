@@ -1,3 +1,14 @@
+/**
+ * Toolbar Button Component
+ *
+ * Button for toolbar actions with icon support. Automatically disables when no
+ * onclick handler is provided, which is used for conditionally-enabled actions
+ * like Save (only enabled when there are unsaved changes).
+ *
+ * The button contains a snippet (typically an icon component) rather than text,
+ * providing a compact visual interface. Tooltips (via title attribute) show the
+ * action name on hover.
+ */
 <script lang="ts">
   import type { Snippet } from "svelte";
 

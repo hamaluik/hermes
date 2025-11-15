@@ -1,3 +1,46 @@
+//! Syntax highlighting for HL7 messages.
+//!
+//! This module generates HTML-formatted syntax highlighting for HL7 messages by
+//! analyzing the parsed message structure and applying CSS class names to different
+//! element types. The output is displayed in the frontend message editor.
+//!
+//! # Highlighting Strategy
+//!
+//! The highlighting algorithm works in three phases:
+//!
+//! 1. **Collect Ranges**: Walk the parsed message tree and identify character ranges
+//!    for each element type (segment names, separators, fields, timestamps, etc.)
+//!
+//! 2. **Create Position Mapping**: Build a character-by-character map of the entire
+//!    message, assigning each position to a RangeType. This flattens overlapping
+//!    hierarchies into a linear sequence.
+//!
+//! 3. **Generate HTML**: Traverse the message character-by-character, emitting
+//!    `<span class="...">` tags when the RangeType changes. HTML-escape special
+//!    characters and convert newlines to `<br/>`.
+//!
+//! # CSS Classes
+//!
+//! The generated HTML uses these CSS classes (styled in the frontend):
+//! * `msh` - MSH segment name (special highlighting)
+//! * `seg` - Other segment names
+//! * `seps` - MSH.1 and MSH.2 (field/encoding separators)
+//! * `sep` - Separator characters (|, ^, ~, &)
+//! * `cell` - Regular field/component/subcomponent values
+//! * `temp` - Templated placeholders (e.g., "{now}", "{random}")
+//! * `ts` - Timestamp fields (detected via HL7 spec)
+//! * `err` - Parse errors or unparsed content
+//!
+//! # Special Field Detection
+//!
+//! Timestamp fields are detected using the HL7 standard specification, which knows
+//! which fields are expected to contain timestamps (e.g., MSH.7, EVN.2). This allows
+//! the UI to render these fields with date/time-specific formatting or validation.
+//!
+//! Templated values (placeholders like "{now}" or "{random}") are detected by checking
+//! if the value is wrapped in curly braces. These placeholders are automatically
+//! transformed during message sending (see send_receive.rs).
+
 use hl7_parser::{parser::ParseError, Message};
 use std::{borrow::Cow, ops::Range};
 
@@ -5,6 +48,32 @@ use crate::spec::std_spec::{
     get_version_with_fallback, is_component_a_timestamp, is_field_a_timestamp,
 };
 
+/// Generate HTML syntax highlighting for an HL7 message.
+///
+/// This command parses the message and produces HTML with CSS class annotations
+/// for styling in the frontend. If parsing fails, it highlights the error position
+/// by wrapping unparsed content in an error span.
+///
+/// # Error Handling
+///
+/// * **Successful parse, extra content**: If the message parses but has trailing
+///   content beyond the last segment, the extra content is wrapped in `<span class="err">`
+///
+/// * **Parse failure at position**: Content before the error position is rendered
+///   normally, content from the error onward is wrapped in `<span class="err">`
+///
+/// * **Incomplete input**: Similar to parse failure - the incomplete portion is
+///   marked as an error
+///
+/// This approach ensures users always get visual feedback about what parsed correctly
+/// and what didn't, rather than failing silently.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string (with newlines or \r separators)
+///
+/// # Returns
+/// HTML string with syntax highlighting, safe for insertion into the DOM
+/// (all special characters are HTML-escaped)
 #[tauri::command]
 pub fn syntax_highlight(message: &str) -> String {
     match hl7_parser::parse_message_with_lenient_newlines(message) {
@@ -35,19 +104,34 @@ pub fn syntax_highlight(message: &str) -> String {
     }
 }
 
+/// Type classification for character ranges in an HL7 message.
+///
+/// Each character in the message is assigned to one of these types to determine
+/// its CSS class in the highlighted HTML output.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum RangeType {
+    /// MSH segment identifier (gets special styling)
     #[allow(clippy::upper_case_acronyms)]
     MSH,
+    /// MSH.1 and MSH.2 fields (field separator and encoding characters)
     Separators,
+    /// Segment identifiers other than MSH (e.g., PID, PV1, OBX)
     SegmentName,
+    /// Delimiter characters (|, ^, ~, &) between fields/components
     Separator,
+    /// Regular data cells (field/component/subcomponent values)
     Cell,
+    /// Templated placeholder values like "{now}" or "{random}"
     TemplatedValue,
+    /// Timestamp fields (detected via HL7 spec)
     Timestamp,
 }
 
 impl RangeType {
+    /// Get the CSS class name for this range type.
+    ///
+    /// These classes are defined in the frontend CSS and control the visual
+    /// appearance of each element type.
     fn class(&self) -> &'static str {
         match self {
             RangeType::MSH => "msh",
@@ -61,6 +145,16 @@ impl RangeType {
     }
 }
 
+/// Execute the three-phase highlighting algorithm on a parsed message.
+///
+/// This is the internal entry point for highlighting. It orchestrates the three phases:
+/// collect ranges, create position mapping, and generate HTML.
+///
+/// # Arguments
+/// * `message` - Parsed HL7 message
+///
+/// # Returns
+/// HTML-formatted string with syntax highlighting
 fn do_syntax_highlight(message: &Message) -> String {
     let ranges = collect_ranges(message);
     // ranges will already be sorted by their start position because of the
@@ -69,6 +163,31 @@ fn do_syntax_highlight(message: &Message) -> String {
     generate_html(message, &position_types)
 }
 
+/// Collect all character ranges and their types from a parsed message.
+///
+/// This function walks the message structure (segments → fields → repeats → components
+/// → subcomponents) and builds a list of (Range, RangeType) tuples representing each
+/// element's position and classification.
+///
+/// # Special Cases
+///
+/// * **MSH segment**: The segment name "MSH" gets a special RangeType
+/// * **MSH.1 and MSH.2**: These fields contain separator characters and are classified
+///   as RangeType::Separators rather than Cell
+/// * **Timestamp detection**: Uses the HL7 spec to identify fields that should contain
+///   timestamps, enabling special formatting
+/// * **Templated values**: Detects placeholders like "{now}" by checking for curly braces
+///
+/// # Return Value Order
+///
+/// The returned vector is already sorted by start position because we traverse the
+/// message in document order. This is important for the position mapping phase.
+///
+/// # Arguments
+/// * `message` - Parsed HL7 message
+///
+/// # Returns
+/// Vector of (character range, type) tuples, sorted by start position
 fn collect_ranges(message: &Message) -> Vec<(Range<usize>, RangeType)> {
     let mut ranges = Vec::new();
     let version = get_version_with_fallback(message);
@@ -119,6 +238,29 @@ fn collect_ranges(message: &Message) -> Vec<(Range<usize>, RangeType)> {
     ranges
 }
 
+/// Create a character-by-character map of RangeTypes for the entire message.
+///
+/// This function flattens the list of ranges into a vector where each index represents
+/// a character position in the message, and the value is the RangeType for that position.
+///
+/// # Why a Position Map?
+///
+/// The position map simplifies HTML generation by allowing us to just scan through
+/// the message character-by-character and check `position_types[i]` to determine
+/// what class to use. Without this map, we'd need to binary-search the ranges list
+/// for every character.
+///
+/// # Separator Handling
+///
+/// Positions not covered by any range (i.e., the delimiters between fields) are
+/// assigned `None`, which gets defaulted to `RangeType::Separator` during HTML generation.
+///
+/// # Arguments
+/// * `ranges` - Sorted list of (range, type) tuples
+/// * `message_len` - Total length of the message in bytes
+///
+/// # Returns
+/// Vector where index = character position, value = RangeType (None for separators)
 fn create_position_mapping(
     ranges: Vec<(Range<usize>, RangeType)>,
     message_len: usize,
@@ -134,6 +276,38 @@ fn create_position_mapping(
     position_types
 }
 
+/// Generate HTML with CSS class spans from a message and position type mapping.
+///
+/// This function walks through the message character-by-character, emitting `<span>`
+/// tags when the RangeType changes and closing spans when transitioning to a different type.
+///
+/// # HTML Escaping
+///
+/// Special HTML characters are escaped to prevent XSS and ensure correct rendering:
+/// * `<` → `&lt;`
+/// * `>` → `&gt;`
+/// * `&` → `&amp;`
+/// * `'` → `&apos;`
+/// * `"` → `&quot;`
+/// * `\n` → `<br/>`
+///
+/// # Span Optimization
+///
+/// The algorithm only opens/closes spans when the type changes. This minimizes the
+/// number of span tags in the output, making the HTML more readable and slightly
+/// more performant for the browser to render.
+///
+/// # Memory Allocation
+///
+/// Pre-allocates the output string with 3x the message length as a heuristic, since
+/// HTML markup approximately triples the size due to tags and escaping.
+///
+/// # Arguments
+/// * `message` - Parsed HL7 message
+/// * `position_types` - Position-to-type mapping from `create_position_mapping`
+///
+/// # Returns
+/// HTML string with syntax highlighting spans
 fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> String {
     let raw_message = message.raw_value();
     let mut highlighted = String::with_capacity(raw_message.len() * 3);
@@ -172,6 +346,34 @@ fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> Str
     highlighted
 }
 
+/// HTML-escape special characters in a string.
+///
+/// This function escapes characters that have special meaning in HTML/XML to ensure
+/// they render correctly and don't break the DOM structure.
+///
+/// # Escaped Characters
+///
+/// * `<`, `>`, `&`, `'`, `"` - Standard HTML entities
+/// * `\t`, `\n`, `\r`, ` ` (space) - Numeric entities to preserve whitespace exactly
+///
+/// # Why Escape Whitespace?
+///
+/// The tab/newline/space escaping uses numeric character references because these
+/// characters can act as delimiters in XML/HTML attribute values (specifically xs:list
+/// types). While this function is used for message content (not attributes), the
+/// escaping is comprehensive to handle all edge cases.
+///
+/// # Optimization
+///
+/// Uses copy-on-write (Cow) to avoid allocation if no escaping is needed. Only allocates
+/// a new string if special characters are found.
+///
+/// # Arguments
+/// * `raw` - Input string or string slice
+///
+/// # Returns
+/// * `Cow::Borrowed` - If no escaping was needed
+/// * `Cow::Owned` - If escaping was performed
 fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
     let raw = raw.into();
     let bytes = raw.as_bytes();

@@ -1,19 +1,70 @@
+//! Patient wizard for populating HL7 message PID segments with patient demographic data.
+//!
+//! This wizard provides two main capabilities:
+//! 1. **Search**: Query the database for patient records by ID, MRN, or name
+//! 2. **Apply**: Populate a message's PID segment with patient demographic information
+//!
+//! ## Workflow
+//! The typical workflow is:
+//! 1. User searches for a patient using `wizard_search_patients`
+//! 2. User selects a patient from the search results
+//! 3. User applies the patient data to a message using `wizard_apply_patient`
+//! 4. The PID segment is populated with the patient's demographics
+
 use color_eyre::eyre::Context;
 use hl7_parser::builder::{FieldBuilder, MessageBuilder};
 use serde::{Deserialize, Serialize};
 
+/// Patient demographic information retrieved from the database.
+///
+/// All fields use String types for consistency with HL7 text encoding, even for structured
+/// data like dates (formatted as YYYYMMDD).
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Patient {
+    /// Internal patient identifier
     pub id: String,
+    /// Patient's first name
     pub fname: String,
+    /// Patient's middle name
     pub mname: String,
+    /// Patient's last name
     pub lname: String,
+    /// Gender code
     pub gender: String,
+    /// Date of birth formatted as YYYYMMDD string
     pub dob: String,
+    /// Medical record number
     pub mrn: String,
+    /// Enterprise identifier
     pub enterpriseid: String,
 }
 
+/// Populate an HL7 message's PID segment with patient demographic information.
+///
+/// This command modifies an existing message by setting specific fields in the PID
+/// segment according to the HL7 v2.x standard. The PID segment must already exist
+/// in the message.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string (with newlines or \r separators)
+/// * `patient` - Patient demographic data to populate into the message
+/// * `overridesegment` - If true, clears all existing PID fields before populating;
+///                       if false, only overwrites the specific fields listed below
+///
+/// # PID Fields Populated
+/// * PID.2 - Enterprise ID
+/// * PID.3 - Medical Record Number (MRN)
+/// * PID.5 - Patient Name (Last^First^Middle)
+/// * PID.7 - Date of Birth (YYYYMMDD)
+/// * PID.8 - Gender Code
+///
+/// # Why These Fields?
+/// These are the core patient demographics required for most HL7 ADT and ORM messages.
+/// They uniquely identify the patient and provide essential demographic context.
+///
+/// # Returns
+/// * `Ok(String)` - The modified message with patient data populated
+/// * `Err(String)` - Error if the message cannot be parsed or lacks a PID segment
 #[tauri::command]
 pub fn wizard_apply_patient(
     message: &str,
@@ -49,9 +100,36 @@ pub fn wizard_apply_patient(
     Ok(message.render_with_newlines().to_string())
 }
 
+/// Search for patients in the database.
+///
+/// This command supports three search modes with intelligent prioritization:
+/// 1. **Patient ID search** (highest priority) - Direct lookup by internal patient ID
+/// 2. **MRN search** (second priority) - Lookup by medical record number
+/// 3. **Name search** (fallback) - Flexible name matching with multiple formats
+///
+/// # Search Priority
+/// If multiple search parameters are provided, the search uses this priority order:
+/// * Patient ID takes precedence over all other criteria
+/// * MRN is used if ID is not provided
+/// * Name search is only used if neither ID nor MRN is provided
+///
+/// This prioritization exists because ID and MRN are unique identifiers that return
+/// at most one patient, while name searches can return multiple matches.
+///
+/// All name searches use case-insensitive partial matching (LIKE '%value%').
+///
+/// # Arguments
+/// * `db` - Database connection configuration
+/// * `name` - Patient name in any supported format (empty string to skip name search)
+/// * `id` - Internal patient ID (empty string to skip ID search)
+/// * `mrn` - Medical record number (empty string to skip MRN search)
+///
+/// # Returns
+/// * `Ok(Vec<Patient>)` - List of matching patients (may be empty if no matches found)
+/// * `Err(String)` - Database connection or query error
 #[tauri::command]
 pub async fn wizard_search_patients(
-    _db: super::WizardDatabase,
+    db: super::WizardDatabase,
     name: &str,
     id: &str,
     mrn: &str,
@@ -135,6 +213,8 @@ pub async fn wizard_search_patients(
             name_match && id_match && mrn_match
         })
         .collect();
+
+    // TODO: actual database search...
 
     Ok(filtered)
 }

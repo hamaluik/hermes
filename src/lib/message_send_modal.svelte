@@ -1,3 +1,28 @@
+/**
+ * Message Send Modal
+ *
+ * Modal dialog for sending HL7 messages to a remote MLLP server and receiving responses.
+ * This component provides the UI for configuring connection settings (host/port) and
+ * displays real-time progress during the send operation.
+ *
+ * ## State Machine Flow
+ *
+ * The component progresses through four states (ActionState):
+ * 1. Form: User enters/confirms hostname and port
+ * 2. Sending: Connection in progress, live log updates displayed
+ * 3. Results: Success - displays the received HL7 response message
+ * 4. Error: Failure - displays the error message
+ *
+ * The state machine is one-way: users must close the modal to return to Form state.
+ * This prevents confusion about whether they're looking at old results or starting fresh.
+ *
+ * ## Why Debounced Settings?
+ *
+ * The hostname and port inputs auto-save to persistent settings as the user types.
+ * Debouncing prevents excessive writes to the Tauri store on every keystroke, which
+ * could cause performance issues or wear on storage. The 500ms delay ensures we only
+ * save after the user has paused typing.
+ */
 <script lang="ts">
   import type { Settings } from "../settings";
   import IconSend from "./icons/IconSend.svelte";
@@ -8,6 +33,17 @@
   import Modal from "./components/modal.svelte";
   import ModalHeader from "./components/modal_header.svelte";
 
+  /**
+   * ActionState: Modal State Machine
+   *
+   * - Form: Initial state, shows hostname/port inputs and Send button
+   * - Sending: Active connection, streaming log updates from backend
+   * - Results: Successful response received, displays HL7 message
+   * - Error: Failed connection or timeout, displays error details
+   *
+   * Transitions: Form → (Submit) → Sending → (Success) → Results
+   *                                        → (Failure) → Error
+   */
   type ActionState = "Form" | "Sending" | "Results" | "Error";
 
   let {
@@ -27,6 +63,18 @@
   let response: string | null = $state(null);
   let error: string | null = $state(null);
 
+  /**
+   * Debounced Settings Persistence
+   *
+   * As users type in the hostname/port fields, we save to settings after 500ms of
+   * inactivity. This balances two concerns:
+   * - UX: Settings persist immediately from the user's perspective
+   * - Performance: We don't write to Tauri store on every keystroke (which could
+   *   be dozens of times per second during fast typing)
+   *
+   * The reactive effect ensures any changes to hostname or port trigger the
+   * debounced save, even if changed programmatically.
+   */
   const debounce = (callback: (...args: any[]) => void, wait: number) => {
     let timeoutId: number | undefined = undefined;
 
@@ -50,6 +98,23 @@
     show = false;
   };
 
+  /**
+   * Form Submission: Send Message Flow
+   *
+   * 1. Transition to "Sending" state immediately for UI feedback
+   * 2. Reset log/response/error from any previous send attempt
+   * 3. Call sendMessage() which:
+   *    - Opens TCP connection to host:port
+   *    - Sends message with MLLP framing (VT...FS+CR)
+   *    - Waits for response with timeout
+   *    - Emits progress events that we capture in the log callback
+   * 4. On success: Store response and transition to "Results"
+   * 5. On failure: Store error and transition to "Error"
+   *
+   * The log callback is invoked multiple times during the send operation as the
+   * backend emits progress events (connecting, sending, waiting, receiving). This
+   * provides real-time feedback during potentially slow network operations.
+   */
   const onsubmit = async (event: Event) => {
     event.preventDefault();
     actionState = "Sending";
@@ -77,6 +142,16 @@
     }
   };
 
+  /**
+   * Log Auto-Scroll
+   *
+   * During the "Sending" state, new log entries are appended to the log string.
+   * This effect keeps the log scrolled to the bottom so users always see the
+   * most recent updates without manual scrolling.
+   *
+   * This is important for long-running operations (e.g., slow network, long timeout)
+   * where multiple log entries accumulate and the user needs to see progress.
+   */
   $effect(() => {
     if (!logElement) {
       return;

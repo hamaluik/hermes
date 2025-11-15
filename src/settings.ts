@@ -1,27 +1,70 @@
+/**
+ * Application settings management using Tauri's persistent store plugin.
+ *
+ * Provides a reactive settings system where changes are automatically saved to
+ * disk and available across app restarts. Uses a getter/setter pattern to
+ * intercept property changes and trigger persistence.
+ *
+ * ## Settings Persistence Flow
+ *
+ * 1. At app startup, Settings instance is created
+ * 2. Constructor asynchronously loads settings.json using Tauri store plugin
+ * 3. Store values override the default values defined in private fields
+ * 4. Settings object is made available to components via context or props
+ * 5. When user changes a setting (e.g., sets sendPort = 3000):
+ *    - Setter updates the private field
+ *    - Setter calls store.set() to persist to disk
+ *    - Tauri store plugin auto-saves to AppData/settings.json
+ * 6. On next app launch, saved values are loaded from disk
+ *
+ * ## Why Async Constructor?
+ *
+ * Tauri store loading is asynchronous because it involves IPC with the Rust
+ * backend. The constructor starts the load but doesn't block. Settings are
+ * available immediately with defaults, then updated when the store loads.
+ * This prevents the UI from blocking during startup.
+ *
+ * ## Default Values
+ *
+ * Defaults are chosen to match typical development environments:
+ * - sendHostname: "127.0.0.1" (localhost testing)
+ * - sendPort: 2575 (standard HL7 MLLP port)
+ * - wizardDbPort: 1433 (SQL Server default port)
+ * - tabsFollowCursor: true (better UX for most users)
+ * - editorHeight: 200px (fits typical screen layouts)
+ */
+
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { error as logError } from "@tauri-apps/plugin-log";
 
 export class Settings {
   store: Store | null = null;
 
-  // message editor
+  // Message editor preferences
   private _tabsFollowCursor: boolean = true;
   private _editorHeight: number = 200;
 
-  // send/receive
+  // Send/Receive configuration for MLLP client
   private _sendHostname: string = "127.0.0.1";
   private _sendPort: number = 2575;
   private _sendTransformControlId: boolean = true;
   private _sendTransformTimestamp: boolean = true;
   private _sendWaitTimeoutSeconds: number = 5;
 
-  // wizard database connection
+  // Wizard database connection settings for HL7 system integration
   private _wizardDbHost: string = "";
   private _wizardDbPort: number = 1433;
   private _wizardDbDatabase: string = "";
   private _wizardDbUser: string = "";
   private _wizardDbPassword: string = "";
 
+  /**
+   * Initializes settings by loading from persistent store.
+   *
+   * Loads settings.json with autoSave enabled, meaning every store.set() call
+   * automatically triggers a save to disk. Falls back to defaults if the store
+   * fails to load or if individual settings are not present in the file.
+   */
   constructor() {
     load("settings.json", {
       autoSave: true,
@@ -79,6 +122,13 @@ export class Settings {
       });
   }
 
+  // All getters/setters follow the same pattern:
+  // - Getter returns the private field value (immediate, synchronous)
+  // - Setter updates the private field AND persists to store
+  // - Persistence is async but errors are logged, not thrown
+  // - This ensures settings are immediately available to the UI even if save fails
+
+  /** Whether segment tabs should automatically switch when cursor moves to a different segment */
   get tabsFollowCursor(): boolean {
     return this._tabsFollowCursor;
   }
@@ -93,6 +143,7 @@ export class Settings {
     }
   }
 
+  /** Height of the message editor in pixels (user-resizable) */
   get editorHeight(): number {
     return this._editorHeight;
   }
@@ -107,6 +158,7 @@ export class Settings {
     }
   }
 
+  /** Target hostname/IP for sending HL7 messages via MLLP */
   get sendHostname(): string {
     return this._sendHostname;
   }
@@ -121,6 +173,7 @@ export class Settings {
     }
   }
 
+  /** Target port for sending HL7 messages via MLLP (typically 2575) */
   get sendPort(): number {
     return this._sendPort;
   }
@@ -135,6 +188,10 @@ export class Settings {
     }
   }
 
+  /**
+   * Whether to auto-generate MSH.10 (control ID) when sending messages.
+   * When true, replaces the control ID with a UUID to ensure uniqueness.
+   */
   get sendTransformControlId(): boolean {
     return this._sendTransformControlId;
   }
@@ -149,6 +206,10 @@ export class Settings {
     }
   }
 
+  /**
+   * Whether to auto-update MSH.7 (timestamp) when sending messages.
+   * When true, replaces the timestamp with the current date/time.
+   */
   get sendTransformTimestamp(): boolean {
     return this._sendTransformTimestamp;
   }
@@ -163,6 +224,10 @@ export class Settings {
     }
   }
 
+  /**
+   * Maximum seconds to wait for a response after sending an HL7 message.
+   * If no response is received within this time, the send operation fails.
+   */
   get sendWaitTimeoutSeconds(): number {
     return this._sendWaitTimeoutSeconds;
   }
@@ -177,6 +242,10 @@ export class Settings {
     }
   }
 
+  /**
+   * Database hostname for wizard queries.
+   * Wizards query database to populate message fields with real data.
+   */
   get wizardDbHost(): string {
     return this._wizardDbHost;
   }

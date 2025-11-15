@@ -1,3 +1,46 @@
+/**
+ * Main Page Component - Hermes HL7 Message Editor
+ *
+ * This is the primary UI for the Hermes application, providing a complete environment
+ * for composing, editing, and managing HL7 messages. The component orchestrates several
+ * key subsystems:
+ *
+ * ## Architecture
+ *
+ * ### Tab-Based Segment Editing
+ * Each HL7 segment (MSH, PID, PV1, etc.) gets its own tab, allowing users to focus on
+ * one segment at a time with dedicated form fields. Tabs are dynamically generated based
+ * on the segments present in the message. This separation prevents overwhelming users with
+ * the full complexity of a multi-segment message at once.
+ *
+ * ### Resizable Split-Pane Layout
+ * The UI is split between:
+ * - Top: Tab-based segment forms (flexible height)
+ * - Middle: Resize handle (user can drag to adjust proportions)
+ * - Bottom: Raw HL7 text editor (fixed height, user-adjustable)
+ *
+ * The resize system uses pointer capture to track drags smoothly, even when the cursor
+ * moves outside the handle. Heights are constrained to prevent unusable layouts (too small
+ * to read or too large to see tabs).
+ *
+ * ### Two-Way Synchronization
+ * Changes in the form tabs update the raw message text, and vice versa. This is managed
+ * through reactive effects that parse/render between the two representations. This allows
+ * users to work in whichever mode is most comfortable for their task.
+ *
+ * ### Wizard Integration
+ * Certain segments (MSH, PID, PV1) have wizards that can auto-populate fields from a
+ * connected database. Wizards are accessible via buttons in the tab UI and maintain
+ * their own modal dialogs for the search/selection workflow.
+ *
+ * ### File Management
+ * Messages can be opened from and saved to .hl7 files. The component tracks whether
+ * the current message has unsaved changes to enable/disable the Save button appropriately.
+ *
+ * ### Listening for Incoming Messages
+ * The application can act as an HL7 MLLP server to receive messages. The listening state
+ * and unread message count are tracked here to show notifications in the UI (when enabled).
+ */
 <script lang="ts">
   import MessageEditor from "$lib/message_editor.svelte";
   import CursorDescription from "$lib/cursor_description.svelte";
@@ -39,40 +82,65 @@
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
   import PatientWizard from "$lib/wizards/patient_wizard.svelte";
+  import VisitWizard from "$lib/wizards/visit_wizard.svelte";
 
   let { data }: PageProps = $props();
 
+  // Core message state
   let message: string = $state("");
-  let savedMessage: string = $state("");
+  let savedMessage: string = $state(""); // Tracks last saved version to detect unsaved changes
   let cursorPos: number = $state(0);
   let schemas: SegmentSchemas = $state({});
-  let messageSegments: string[] = $state([]);
+  let messageSegments: string[] = $state([]); // Ordered list of segment names (e.g., ["MSH", "PID", "PV1"])
   let toolbarHeight: string | undefined = $state(undefined);
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
   let showSettings = $state(false);
   let showSend = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
 
+  // Wizard visibility flags - wizards provide database-driven auto-population for specific segments
   let showHeaderWizard = $state(false);
   let showPatientWizard = $state(false);
+  let showVisitWizard = $state(false);
 
   let showListeningModal = $state(false);
 
+  // Listen server state - tracks whether we're actively listening for incoming HL7 messages
+  // and how many received messages haven't been viewed yet
   let listening = $state(false);
   let unreadMessageCount = $state(0);
 
-  // Message editor resize state
+  /**
+   * Message Editor Resize System
+   *
+   * The editor height is user-adjustable via a drag handle between the tabs and editor.
+   * We persist the height to settings so it's remembered across sessions.
+   *
+   * Constraints prevent unusable layouts:
+   * - MIN: 100px ensures the editor is always tall enough to see at least a few lines
+   * - MAX: 60% of viewport ensures tab area remains visible and functional
+   *
+   * The max is dynamic because window resizes could otherwise make the editor consume
+   * the entire viewport, hiding the tabs completely.
+   */
   let editorHeight = $state(data.settings.editorHeight); // Height in pixels
   let isResizing = $state(false);
   let resizeStartY = 0;
   let resizeStartHeight = 0;
   let windowHeight = $state(window.innerHeight);
-  let atMinBound = $state(false);
-  let atMaxBound = $state(false);
+  let atMinBound = $state(false); // Visual feedback when user tries to drag beyond min
+  let atMaxBound = $state(false); // Visual feedback when user tries to drag beyond max
 
-  const MIN_EDITOR_HEIGHT = 100; // 100px minimum
-  const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6); // 60% of viewport
+  const MIN_EDITOR_HEIGHT = 100;
+  const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6);
 
+  /**
+   * Resize Handle: Start
+   *
+   * Uses pointer capture to ensure we receive move/up events even if the cursor
+   * leaves the handle element during dragging. This is critical for smooth UX -
+   * without it, fast mouse movements would "escape" the drag operation.
+   */
   function handleResizeStart(event: PointerEvent) {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -82,19 +150,28 @@
     resizeStartHeight = editorHeight;
   }
 
+  /**
+   * Resize Handle: Move
+   *
+   * The handle sits between tabs (top) and editor (bottom). Dragging UP should
+   * make the editor taller (taking space from tabs), and dragging DOWN should
+   * make it shorter. Since clientY increases downward, we invert the delta.
+   *
+   * Boundary tracking (atMinBound/atMaxBound) provides visual feedback when the
+   * user tries to resize beyond the allowed range, helping them understand why
+   * the resize stopped.
+   */
   function handleResizeMove(event: PointerEvent) {
     if (!isResizing) return;
     event.preventDefault();
 
     const delta = event.clientY - resizeStartY;
-    // Invert delta because handle is at top: dragging up (negative delta) should increase height
     const newHeight = resizeStartHeight - delta;
     const clampedHeight = Math.max(
       MIN_EDITOR_HEIGHT,
       Math.min(MAX_EDITOR_HEIGHT, newHeight),
     );
 
-    // Track if we're at the bounds for visual feedback
     atMinBound =
       clampedHeight === MIN_EDITOR_HEIGHT && newHeight < MIN_EDITOR_HEIGHT;
     atMaxBound =
@@ -103,6 +180,12 @@
     editorHeight = clampedHeight;
   }
 
+  /**
+   * Resize Handle: End
+   *
+   * Persists the new height to settings immediately on release. This ensures
+   * the user's preferred layout is remembered across app restarts.
+   */
   function handleResizeEnd(event: PointerEvent) {
     if (!isResizing) return;
     event.preventDefault();
@@ -113,10 +196,19 @@
     atMinBound = false;
     atMaxBound = false;
 
-    // Save the new height to settings
     data.settings.editorHeight = editorHeight;
   }
 
+  /**
+   * Message Segment Tracking
+   *
+   * Whenever the message changes, we parse it to extract the ordered list of segment
+   * names. This list drives the tab UI - each segment gets its own tab.
+   *
+   * We parse on every change (rather than only on load) because users can edit the
+   * raw message text directly, adding or removing segments. The tab UI needs to stay
+   * in sync with whatever segments are actually present in the message.
+   */
   $effect(() => {
     if (!message) {
       return;
@@ -138,6 +230,15 @@
   onMount(() => {
     message = get(data.message);
 
+    /**
+     * Listen Server Integration
+     *
+     * Sets up event listener for incoming messages from the Rust backend's MLLP server.
+     * Also subscribes to listening state and message stores to track unread count.
+     *
+     * The unread count is derived by counting messages with `unread: true`. This count
+     * would be displayed in the Listen button badge (currently commented out in toolbar).
+     */
     let unlisten: UnlistenFn | undefined = undefined;
     listenToListenResponse(data.listenedMessages).then((_unlisten) => {
       unlisten = _unlisten;
@@ -150,6 +251,7 @@
       unreadMessageCount = value.filter((m) => m.unread).length;
     });
 
+    // Load HL7 schemas from backend - these define the structure of each segment type
     getAllSegmentSchemas()
       .then((_schemas) => {
         console.debug("Schemas loaded:", _schemas);
@@ -160,10 +262,18 @@
         messageDialog(error, { title: "Error Loading Schemas", kind: "error" });
       });
 
-    // Listen for window resize events to update MAX_EDITOR_HEIGHT
+    /**
+     * Window Resize Handling
+     *
+     * When the window shrinks, the max editor height (60% of viewport) also shrinks.
+     * If the editor is currently taller than the new max, we clamp it down to prevent
+     * the editor from consuming more than 60% of the viewport.
+     *
+     * This prevents scenarios where a user resizes on a large monitor, then moves to
+     * a smaller screen and finds the editor takes up the entire window.
+     */
     const handleWindowResize = () => {
       windowHeight = window.innerHeight;
-      // Clamp editor height if it exceeds new max
       if (editorHeight > MAX_EDITOR_HEIGHT) {
         editorHeight = MAX_EDITOR_HEIGHT;
         data.settings.editorHeight = editorHeight;
@@ -177,10 +287,26 @@
     };
   });
 
+  /**
+   * Helper for counting segment repetitions
+   *
+   * HL7 messages can have multiple instances of the same segment (e.g., multiple OBX
+   * segments for different observations). This counts how many times a given segment
+   * appears *before* the specified index, which is used for numbering tab labels.
+   */
   const segmentRepeat = (segment: string, index: number): number => {
     return messageSegments.slice(0, index).filter((s) => s === segment).length;
   };
 
+  /**
+   * Tab Label Generation
+   *
+   * If a segment appears only once, its tab is labeled with just the segment name (e.g., "MSH").
+   * If a segment appears multiple times, tabs are numbered to distinguish them (e.g., "OBX (1)", "OBX (2)").
+   *
+   * This numbering is essential because clicking a tab needs to uniquely identify which
+   * segment instance to display in the form. The count is 1-indexed for user-friendliness.
+   */
   const tabLabel = (index: number): string => {
     const segment = messageSegments[index];
     const count = messageSegments.filter((s) => s === segment).length;
@@ -190,6 +316,22 @@
     return segment;
   };
 
+  /**
+   * File Operations
+   *
+   * Open: Loads an .hl7 file from disk. Resets currentFilePath temporarily to ensure
+   * proper state transitions if the user cancels the dialog.
+   *
+   * Save: Only enabled when there's both a file path AND unsaved changes. Uses $derived
+   * to reactively return undefined (disabling the button) when save isn't applicable.
+   * Updates savedMessage on success to track that we're in sync with disk.
+   *
+   * Save As: Always prompts for a new file path, even if we already have one. Useful
+   * for creating copies or moving messages to different locations.
+   *
+   * All three operations update savedMessage to reflect the persisted state, which is
+   * compared against the current message to determine if unsaved changes exist.
+   */
   async function handleOpenFile() {
     const filePath = await openDialog({
       filters: [
@@ -292,6 +434,33 @@
   <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
   </ToolbarButton>
+  <!--
+    Send/Receive and Listen Toolbar Buttons (DISABLED)
+
+    These toolbar buttons are commented out pending completion of their respective features:
+
+    1. Send/Receive Button:
+       - Opens MessageSendModal to send messages via MLLP
+       - Backend functionality is complete (see send_receive.ts)
+       - Modal UI is complete (see message_send_modal.svelte)
+       - Commented out to simplify initial UI during development
+       - Can be enabled by uncommenting when ready for production use
+
+    2. Listen Button:
+       - Opens ListenModal to manage incoming message server
+       - Backend functionality is complete (see listen.ts)
+       - Modal UI is incomplete (see listen_modal.svelte for details)
+       - Shows notification badge for unread messages
+       - Button state changes based on listening status (pine when active, subtle when inactive)
+
+    To enable these features:
+    1. For Send/Receive: Simply uncomment the block below
+    2. For Listen: First complete the ListenModal UI (add host/port config, message list,
+       message viewing), then uncomment the block
+
+    Both features are currently accessible programmatically (e.g., via Ctrl+Enter for send)
+    but hidden from the toolbar to avoid user confusion about incomplete functionality.
+  -->
   <!-- <ToolbarSeparator /> -->
   <!-- <ToolbarButton -->
   <!--   title="Send/Receive" -->
@@ -351,6 +520,19 @@
           {/each}
         </ul>
       {/snippet}
+      <!--
+        Wizard Integration
+
+        Tabs for MSH, PID, and PV1 segments have wizard buttons that open modal dialogs.
+        These wizards query a connected database to auto-populate segment
+        fields with real patient/visit/interface data, saving users from manual data entry.
+
+        The onWizard callback is conditionally defined based on segment type:
+        - MSH: Header wizard (interface selection, trigger event, etc.)
+        - PID: Patient wizard (patient search and selection)
+        - PV1: Visit wizard (visit search and selection)
+        - Others: undefined (no wizard button shown)
+      -->
       {#each messageSegments as key, index}
         {#if schemas[key]}
           <Tab
@@ -364,7 +546,11 @@
                 ? () => {
                     showPatientWizard = true;
                   }
-                : undefined}
+                : key === "PV1"
+                  ? () => {
+                      showVisitWizard = true;
+                    }
+                  : undefined}
           >
             <SegmentTab
               segment={key}
@@ -409,6 +595,18 @@
       showSend = true;
     }}
   />
+  <!--
+    Tabs Follow Cursor Feature
+
+    When enabled in settings, moving the cursor in the message editor automatically
+    switches to the tab corresponding to the segment at the cursor position.
+
+    This helps users understand the structure of the message: as they navigate through
+    the raw text, the relevant segment form is displayed. It creates a connection between
+    the two representations of the message (raw text vs. structured form).
+
+    The feature is opt-in because some users prefer manual tab control while editing.
+  -->
   <CursorDescription
     {message}
     {cursorPos}
@@ -441,6 +639,14 @@
 />
 <PatientWizard
   bind:show={showPatientWizard}
+  {message}
+  onchange={(m: string) => {
+    message = m;
+  }}
+  settings={data.settings}
+/>
+<VisitWizard
+  bind:show={showVisitWizard}
   {message}
   onchange={(m: string) => {
     message = m;

@@ -1,3 +1,36 @@
+/**
+ * Input Field Component
+ *
+ * Reusable form input for HL7 field values with integrated validation, help text,
+ * and value suggestions. Used throughout segment forms to provide a consistent
+ * editing experience.
+ *
+ * ## Field ID Display
+ *
+ * Shows the HL7 field path (e.g., "MSH-3.1") next to the field label. This helps
+ * users correlate form fields with the raw HL7 message structure. Field IDs are
+ * displayed in a muted color and parentheses to distinguish them from the
+ * user-friendly field name.
+ *
+ * ## Datalist Integration (Value Suggestions)
+ *
+ * When a field has predefined values (e.g., message types, gender codes), we
+ * generate a <datalist> element linked to the input. This provides autocomplete
+ * suggestions as the user types, while still allowing free-form input.
+ *
+ * The datalist ID is derived from the field ID to ensure uniqueness when multiple
+ * instances of the same segment appear in a message (e.g., multiple OBX segments).
+ *
+ * ## Popover Help Text
+ *
+ * If a field has a "note" property, it's rendered in a popover that appears below
+ * the input. The popover is initially hidden and can be shown/hidden via CSS class
+ * manipulation (typically on focus/blur events from the parent component).
+ *
+ * This keeps the UI clean while providing contextual help when needed. The popover
+ * positioning is relative to the input, extending slightly beyond it (3ch on each side)
+ * to ensure visibility for longer help text.
+ */
 <script lang="ts">
   import { fieldId as _fieldId, type Field } from "../../backend/schema";
 
@@ -18,6 +51,8 @@
   } = $props();
 
   let fieldId = $derived(_fieldId(segment, field));
+
+  // Generate unique datalist ID only when the field has predefined values
   let datalistId = $derived.by(() => {
     if (!field.values) {
       return null;

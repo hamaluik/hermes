@@ -1,3 +1,39 @@
+<!--
+  Header Wizard Component
+
+  Allows users to quickly populate MSH (Message Header) segment data from sample interfaces.
+
+  Purpose:
+  The MSH segment contains routing information (sending/receiving application and facility).
+  Instead of manually typing these values, this wizard:
+  1. Queries the database for configured interfaces
+  2. Lets users select from available interfaces
+  3. Populates MSH fields with the selected interface's routing information
+
+  Wizard Pattern:
+  All wizards (Header, Patient, Visit) follow a consistent UX pattern:
+  1. Database connection form (persisted in settings)
+  2. Search criteria form (specific to wizard type)
+  3. Search button (triggers backend query)
+  4. Results display (loading state → results table or no results message)
+  5. Selection (click to select row)
+  6. Apply button (updates message and closes modal)
+  7. Override toggle (whether to merge or replace segment data)
+
+  Auto-Population:
+  When the wizard opens, it attempts to auto-populate message type and trigger event
+  from the current message. This reduces user input when the message already has
+  valid MSH data.
+
+  Flow:
+  1. User opens wizard from toolbar
+  2. Component auto-detects message type (ADT/ORM) and trigger event from existing message
+  3. User clicks "Get Interfaces" to query database
+  4. Results display in table
+  5. User selects an interface row
+  6. User clicks "Apply" to update MSH segment
+  7. Message is updated via onchange callback
+-->
 <script lang="ts">
   import { onMount } from "svelte";
   import { message as tauriMessage } from "@tauri-apps/plugin-dialog";
@@ -43,7 +79,16 @@
   let isSearching: boolean = $state(false);
   let hasSearched: boolean = $state(false);
 
-  // Trigger event options based on message type
+  /**
+   * Trigger event options dynamically filtered by message type
+   *
+   * Different message types support different trigger events:
+   * - ADT (Admit/Discharge/Transfer): A01-A08 events for patient movements
+   * - ORM (Order Message): O01 for orders
+   *
+   * This ensures users only see valid trigger event options for their selected
+   * message type, preventing invalid message configurations.
+   */
   const triggerEventOptions = $derived(
     messageType === "ADT"
       ? [
@@ -69,6 +114,13 @@
     show = false;
   };
 
+  /**
+   * Searches for interfaces in the database
+   *
+   * Queries the database for interfaces matching the selected message type.
+   * Uses database connection settings from persistent user settings.
+   * Clears any previous selection to avoid applying stale interface data.
+   */
   const handleSearch = async (e: Event) => {
     e.preventDefault();
     isSearching = true;
@@ -96,6 +148,14 @@
     selectedInterface = iface;
   };
 
+  /**
+   * Applies the selected interface to the message
+   *
+   * Calls backend to update MSH segment with interface routing information.
+   * Override mode determines whether to merge with or replace existing MSH data.
+   * On success, notifies parent via onchange callback and closes the wizard.
+   * On error, shows user-friendly error dialog.
+   */
   const handleApply = async () => {
     if (!selectedInterface || !message) return;
 
@@ -143,7 +203,17 @@
     }
   });
 
-  // Reset wizard state when modal opens (but keep database settings)
+  /**
+   * Reset wizard state when modal opens
+   *
+   * This effect fires when show becomes true, ensuring the wizard starts fresh
+   * each time it opens. Database connection settings are preserved (managed in Settings),
+   * but search results and selections are cleared to avoid confusion.
+   *
+   * Auto-population: After resetting to defaults, attempts to populate message type
+   * and trigger event from the current message. This provides smart defaults while
+   * still allowing users to override if needed.
+   */
   $effect(() => {
     if (show) {
       // Reset search results and selection

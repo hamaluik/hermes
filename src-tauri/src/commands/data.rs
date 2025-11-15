@@ -1,3 +1,21 @@
+//! HL7 message data manipulation commands.
+//!
+//! This module provides commands for querying and modifying HL7 messages at the
+//! segment level. It enables the frontend to extract structured data from messages
+//! and apply changes back to the message.
+//!
+//! # Workflow for Segment Editing
+//! 1. **Parse**: Extract segment data using `parse_message_segment` (returns field/value map)
+//! 2. **Modify**: Frontend edits the field values
+//! 3. **Render**: Apply changes using `render_message_segment` (returns updated message)
+//!
+//! # Field Identification Format
+//! Fields are identified using dot notation: `SEGMENT.FIELD[.COMPONENT]`
+//! Examples:
+//! * `PID.3` - Patient ID field
+//! * `PID.5.1` - Patient name, last name component
+//! * `MSH.9.1` - Message type code
+
 use std::collections::HashMap;
 
 use color_eyre::eyre::Context;
@@ -7,11 +25,30 @@ use tauri::State;
 
 use crate::AppData;
 
+/// Segment data extracted from an HL7 message.
+///
+/// Maps field identifiers (e.g., "PID.3", "PID.5.1") to their values.
+/// None values indicate the field exists in the schema but is not populated in the message.
 #[derive(Deserialize, Serialize, Debug, Default)]
 pub struct SegmentData {
+    /// Map of field IDs to field values
     fields: HashMap<String, Option<String>>,
 }
 
+/// Get the list of segment names in a message.
+///
+/// This command extracts the segment identifiers in order of appearance.
+/// Used by the frontend to populate segment selection UI.
+///
+/// # Fallback Behavior
+/// If message parsing fails, returns a single-element vector containing "MSH",
+/// since all valid HL7 messages must have an MSH segment.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+///
+/// # Returns
+/// Vector of segment names (e.g., ["MSH", "EVN", "PID", "PV1"])
 #[tauri::command]
 pub fn get_message_segment_names(message: &str) -> Vec<String> {
     let Ok(message) = hl7_parser::parse_message_with_lenient_newlines(message) else {
@@ -23,6 +60,17 @@ pub fn get_message_segment_names(message: &str) -> Vec<String> {
         .collect()
 }
 
+/// Extract the trigger event code from a message.
+///
+/// The trigger event (MSH.9.2) specifies the event that triggered the message,
+/// such as "A01" for patient admission or "A08" for patient update.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+///
+/// # Returns
+/// * `Some(String)` - The trigger event code if present
+/// * `None` - If message parsing fails or MSH.9.2 is not populated
 #[tauri::command]
 pub fn get_message_trigger_event(message: &str) -> Option<String> {
     let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
@@ -31,6 +79,17 @@ pub fn get_message_trigger_event(message: &str) -> Option<String> {
         .map(|value| message.separators.decode(value.raw_value()).to_string())
 }
 
+/// Extract the message type from a message.
+///
+/// The message type (MSH.9.1) specifies the general category of the message,
+/// such as "ADT" (Admission/Discharge/Transfer) or "ORM" (Order).
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+///
+/// # Returns
+/// * `Some(String)` - The message type code if present
+/// * `None` - If message parsing fails or MSH.9.1 is not populated
 #[tauri::command]
 pub fn get_message_type(message: &str) -> Option<String> {
     let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
@@ -39,6 +98,30 @@ pub fn get_message_type(message: &str) -> Option<String> {
         .map(|value| message.separators.decode(value.raw_value()).to_string())
 }
 
+/// Extract structured data from a specific segment in a message.
+///
+/// This command loads the segment schema, queries the message for each field
+/// defined in the schema, and returns a map of field IDs to values.
+///
+/// # Schema-Driven Extraction
+/// The function uses the cached segment schema to determine which fields to extract.
+/// This ensures that all defined fields are included in the result, even if they're
+/// not populated in the message (they'll have None values).
+///
+/// # Why Schema-Driven?
+/// Using the schema as the template ensures the frontend can display all possible
+/// fields for editing, not just the fields that happen to be populated. This is
+/// important for message composition workflows.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+/// * `segment` - Segment identifier (e.g., "PID", "PV1")
+/// * `segment_repeat` - Currently unused; reserved for future support of repeating segments
+/// * `state` - Application state containing the schema cache
+///
+/// # Returns
+/// * `Ok(SegmentData)` - Segment data with field/value mappings
+/// * `Err(String)` - Failed to load schema or parse message
 #[tauri::command]
 pub fn parse_message_segment(
     message: &str,
@@ -80,6 +163,33 @@ pub fn parse_message_segment(
     })
 }
 
+/// Apply modified segment data back to a message.
+///
+/// This command updates the specified segment in the message with the provided
+/// field values. If the segment doesn't exist, it will be created.
+///
+/// # Field vs Component Handling
+/// The function distinguishes between field-level and component-level updates:
+/// * **Field-level** (e.g., "PID.3"): Replaces the entire field value
+/// * **Component-level** (e.g., "PID.5.1"): Updates only the specific component,
+///   preserving other components in the field
+///
+/// For component updates, if the field doesn't exist, it creates an empty field
+/// first, then sets the component. This ensures components can be set independently.
+///
+/// # Segment Creation
+/// If the specified segment doesn't exist in the message, a new segment is appended.
+/// Currently, this doesn't handle segment ordering according to HL7 specifications
+/// (see TODO comment in code).
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+/// * `segment` - Segment identifier to update
+/// * `segment_repeat` - Currently unused; reserved for repeating segment support
+/// * `data` - Segment data with field values to apply
+///
+/// # Returns
+/// The modified message as a string. If message parsing fails, returns the original message unchanged.
 #[tauri::command]
 pub fn render_message_segment(
     message: &str,
@@ -127,8 +237,22 @@ pub fn render_message_segment(
     message.render_with_newlines().to_string()
 }
 
+/// Parse a field identifier string into segment, field, and component numbers.
+///
+/// This helper validates and decomposes field identifiers like "PID.3" or "PID.5.1"
+/// into their numeric components for use with the HL7 parser.
+///
+/// # Format
+/// Expected format: `SEGMENT.FIELD[.COMPONENT]`
+/// * SEGMENT must match the provided segment parameter
+/// * FIELD must be a positive integer (1-based)
+/// * COMPONENT (optional) must be a positive integer (1-based)
+///
+/// # Returns
+/// * `Some((field, component))` - Parsed field and optional component numbers
+/// * `None` - Invalid format or validation failure
 fn parse_field_id(field_id: &str, segment: &str) -> Option<(usize, Option<usize>)> {
-    // split the field_id into segment, field, and component
+    // Split the field_id into segment, field, and component parts
     let parts: Vec<&str> = field_id.split('.').collect();
     if parts.len() < 2 {
         log::warn!("Invalid field_id: {field_id}");
