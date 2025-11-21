@@ -330,6 +330,20 @@
       });
 
     /**
+     * Recent Files Menu Integration
+     *
+     * Sets up the callback to update the native menu when recent files change.
+     * Also initializes the menu with any persisted recent files on startup.
+     */
+    data.settings.onRecentFilesChanged = (files: string[]) => {
+      invoke("update_recent_files_menu", { files });
+    };
+    // Initialize menu with current recent files (if settings have loaded)
+    if (data.settings.recentFiles.length > 0) {
+      invoke("update_recent_files_menu", { files: data.settings.recentFiles });
+    }
+
+    /**
      * File Menu Event Listeners
      *
      * The Tauri backend emits events when File menu items are clicked.
@@ -343,6 +357,8 @@
     let unlistenMenuRedo: UnlistenFn | undefined = undefined;
     let unlistenMenuFind: UnlistenFn | undefined = undefined;
     let unlistenMenuFindReplace: UnlistenFn | undefined = undefined;
+    let unlistenMenuOpenRecent: UnlistenFn | undefined = undefined;
+    let unlistenMenuClearRecent: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -367,6 +383,16 @@
     });
     listen("menu-edit-find-replace", () => handleFind()).then((fn) => {
       unlistenMenuFindReplace = fn;
+    });
+    listen<string>("menu-open-recent", (event) => {
+      handleOpenRecentFile(event.payload);
+    }).then((fn) => {
+      unlistenMenuOpenRecent = fn;
+    });
+    listen("menu-clear-recent", () => {
+      data.settings.clearRecentFiles();
+    }).then((fn) => {
+      unlistenMenuClearRecent = fn;
     });
 
     /**
@@ -398,6 +424,8 @@
       unlistenMenuRedo?.();
       unlistenMenuFind?.();
       unlistenMenuFindReplace?.();
+      unlistenMenuOpenRecent?.();
+      unlistenMenuClearRecent?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -479,11 +507,34 @@
       return;
     }
 
+    await openFileByPath(filePath);
+  }
+
+  /**
+   * Opens a file directly by path (used by Open Recent menu)
+   */
+  async function handleOpenRecentFile(filePath: string) {
+    try {
+      await openFileByPath(filePath);
+    } catch (error) {
+      console.error("Error opening recent file:", error);
+      messageDialog(`Could not open file: ${filePath}`, {
+        title: "Error Opening File",
+        kind: "error",
+      });
+    }
+  }
+
+  /**
+   * Opens a file by its path and adds it to recent files
+   */
+  async function openFileByPath(filePath: string) {
     history.clear();
     currentFilePath = undefined;
     message = await readTextFile(filePath);
     savedMessage = message;
     currentFilePath = filePath;
+    data.settings.addRecentFile(filePath);
   }
 
   let handleSave = $derived.by(() => {
@@ -540,6 +591,7 @@
     })
       .then(() => {
         savedMessage = message;
+        data.settings.addRecentFile(filePath);
       })
       .catch((error) => {
         console.error("Error saving file:", error);

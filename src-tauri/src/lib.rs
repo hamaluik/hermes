@@ -22,6 +22,8 @@
 //! │  │  - listen_join: MLLP listener task handle            │   │
 //! │  │  - Menu item refs: Save, Undo, Redo (for enable/     │   │
 //! │  │    disable sync with frontend)                       │   │
+//! │  │  - recent_files_submenu: Dynamic "Open Recent" menu  │   │
+//! │  │  - recent_files: File paths for menu event lookup    │   │
 //! │  └──────────────────────────────────────────────────────┘   │
 //! │  ┌──────────────────────────────────────────────────────┐   │
 //! │  │ Commands (Tauri-exposed functions)                   │   │
@@ -78,7 +80,9 @@
 
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
-use tauri::menu::{MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::menu::{
+    MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, Submenu, SubmenuBuilder,
+};
 use tauri::{Emitter, Manager, Wry};
 use tokio::sync::Mutex;
 
@@ -124,6 +128,19 @@ pub struct AppData {
     ///
     /// Enabled when there are changes that can be redone.
     pub redo_menu_item: MenuItem<Wry>,
+
+    /// Reference to the "Open Recent" submenu for dynamic population.
+    ///
+    /// The frontend calls `update_recent_files_menu` to rebuild this menu
+    /// with the current list of recent files.
+    pub recent_files_submenu: Submenu<Wry>,
+
+    /// Current list of recent file paths.
+    ///
+    /// Updated via `update_recent_files_menu` and used to look up the file path
+    /// when a recent file menu item is clicked. Stored here because menu event
+    /// handlers need access to the paths to emit the correct event payload.
+    pub recent_files: Mutex<Vec<String>>,
 }
 
 /// Main entry point for the Hermes application.
@@ -209,6 +226,7 @@ pub fn run() {
             commands::set_save_enabled,
             commands::set_undo_enabled,
             commands::set_redo_enabled,
+            commands::update_recent_files_menu,
             commands::wizards::wizard_apply_interface,
             commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_patient,
@@ -223,6 +241,12 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+S")
                 .enabled(false) // Start disabled until there are unsaved changes
                 .build(app)?;
+
+            // Build the "Open Recent" submenu (starts empty, populated by frontend)
+            let recent_files_submenu = SubmenuBuilder::new(app, "Open &Recent")
+                .id("file-open-recent")
+                .enabled(false) // Disabled until populated with files
+                .build()?;
 
             // Build the File menu with standard file operations
             // Note: We borrow save_menu_item here so we can move it into AppData afterwards
@@ -239,6 +263,7 @@ pub fn run() {
                         .accelerator("CmdOrCtrl+O")
                         .build(app)?,
                 )
+                .item(&recent_files_submenu)
                 .separator()
                 .item(&save_menu_item)
                 .item(
@@ -306,12 +331,17 @@ pub fn run() {
                 save_menu_item,
                 undo_menu_item,
                 redo_menu_item,
+                recent_files_submenu,
+                recent_files: Mutex::new(Vec::new()),
             };
             app.manage(app_data);
 
             // Handle menu events by emitting corresponding frontend events
             app.on_menu_event(move |app_handle, event| {
-                let event_name = match event.id().as_ref() {
+                let event_id = event.id().as_ref();
+
+                // Handle standard menu events (emit empty payload)
+                let event_name = match event_id {
                     "file-new" => Some("menu-file-new"),
                     "file-open" => Some("menu-file-open"),
                     "file-save" => Some("menu-file-save"),
@@ -320,11 +350,27 @@ pub fn run() {
                     "edit-redo" => Some("menu-edit-redo"),
                     "edit-find" => Some("menu-edit-find"),
                     "edit-find-replace" => Some("menu-edit-find-replace"),
+                    "recent-clear" => Some("menu-clear-recent"),
                     _ => None,
                 };
 
                 if let Some(name) = event_name {
                     let _ = app_handle.emit(name, ());
+                    return;
+                }
+
+                // Handle recent file menu items (emit file path as payload)
+                if let Some(index_str) = event_id.strip_prefix("recent-file-") {
+                    if let Ok(index) = index_str.parse::<usize>() {
+                        // Look up the file path from stored recent files
+                        if let Some(state) = app_handle.try_state::<AppData>() {
+                            // Use blocking lock since we're in a sync callback
+                            let recent_files = state.recent_files.blocking_lock();
+                            if let Some(file_path) = recent_files.get(index) {
+                                let _ = app_handle.emit("menu-open-recent", file_path.clone());
+                            }
+                        }
+                    }
                 }
             });
 

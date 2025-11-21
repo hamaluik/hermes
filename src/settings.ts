@@ -24,6 +24,17 @@
  * available immediately with defaults, then updated when the store loads.
  * This prevents the UI from blocking during startup.
  *
+ * ## Change Notification Callbacks
+ *
+ * Some settings need to notify external systems when they change. For example,
+ * the recent files list needs to update the native File menu. This is handled
+ * via optional callback properties (e.g., `onRecentFilesChanged`).
+ *
+ * The callback pattern is used instead of events because:
+ * - It's simpler than setting up a full event emitter
+ * - Only one listener is needed (the page component)
+ * - The callback is called both on setter changes AND after initial load
+ *
  * ## Default Values
  *
  * Defaults are chosen to match typical development environments:
@@ -32,6 +43,7 @@
  * - wizardDbPort: 1433 (SQL Server default port)
  * - tabsFollowCursor: true (better UX for most users)
  * - editorHeight: 200px (fits typical screen layouts)
+ * - recentFiles: [] (empty list, populated as user opens files)
  */
 
 import { load, type Store } from "@tauri-apps/plugin-store";
@@ -57,6 +69,12 @@ export class Settings {
   private _wizardDbDatabase: string = "";
   private _wizardDbUser: string = "";
   private _wizardDbPassword: string = "";
+
+  // Recent files list (most recent first, max 10 entries)
+  private _recentFiles: string[] = [];
+
+  // Callback to notify when recent files change (for menu updates)
+  onRecentFilesChanged: ((files: string[]) => void) | null = null;
 
   /**
    * Initializes settings by loading from persistent store.
@@ -85,6 +103,7 @@ export class Settings {
           store.get<string>("wizardDbDatabase"),
           store.get<string>("wizardDbUser"),
           store.get<string>("wizardDbPassword"),
+          store.get<string[]>("recentFiles"),
         ]);
       })
       .then(
@@ -101,6 +120,7 @@ export class Settings {
           wizardDbDatabase,
           wizardDbUser,
           wizardDbPassword,
+          recentFiles,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
@@ -114,6 +134,12 @@ export class Settings {
           this._wizardDbDatabase = wizardDbDatabase ?? "";
           this._wizardDbUser = wizardDbUser ?? "";
           this._wizardDbPassword = wizardDbPassword ?? "";
+          this._recentFiles = recentFiles ?? [];
+
+          // Notify listener that recent files are loaded (for initial menu population)
+          if (this.onRecentFilesChanged) {
+            this.onRecentFilesChanged(this._recentFiles);
+          }
         },
       )
       .catch((error) => {
@@ -314,5 +340,40 @@ export class Settings {
         logError("Failed to save wizardDbPassword setting");
       });
     }
+  }
+
+  /** List of recently opened file paths (most recent first, max 10) */
+  get recentFiles(): string[] {
+    return this._recentFiles;
+  }
+  set recentFiles(value: string[]) {
+    console.debug("Setting recentFiles to:", value);
+    this._recentFiles = value;
+    if (this.store) {
+      this.store.set("recentFiles", value).catch((error) => {
+        console.error("Error saving recentFiles setting:", error);
+        logError("Failed to save recentFiles setting");
+      });
+    }
+    if (this.onRecentFilesChanged) {
+      this.onRecentFilesChanged(value);
+    }
+  }
+
+  /**
+   * Adds a file path to the recent files list.
+   * If the file already exists in the list, it is moved to the front.
+   * The list is limited to 10 entries.
+   */
+  addRecentFile(filePath: string) {
+    // Remove the file if it already exists (to move it to front)
+    const filtered = this._recentFiles.filter((f) => f !== filePath);
+    // Add to front and limit to 10
+    this.recentFiles = [filePath, ...filtered].slice(0, 10);
+  }
+
+  /** Clears the recent files list */
+  clearRecentFiles() {
+    this.recentFiles = [];
   }
 }
