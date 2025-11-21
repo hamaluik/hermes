@@ -31,7 +31,7 @@
 <script lang="ts">
   import type { Settings } from "../settings";
   import IconSave from "./icons/IconSave.svelte";
-  import ToggleSwitch from "./forms/toggle_switch.svelte";
+  import WizardToggle from "./wizards/wizard_toggle.svelte";
   import Modal from "./components/modal.svelte";
   import ModalHeader from "./components/modal_header.svelte";
   import ModalFooter from "./components/modal_footer.svelte";
@@ -68,21 +68,9 @@
   <main>
     <form method="dialog">
       <label for="autoSaveEnabled">Auto-Save</label>
-      <ToggleSwitch
-        id="autoSaveEnabled"
-        checked={autoSaveEnabled}
-        onchange={() => {
-          autoSaveEnabled = !autoSaveEnabled;
-        }}
-      />
+      <WizardToggle id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
       <label for="tabsFollowCursor">Tabs Follow Cursor</label>
-      <ToggleSwitch
-        id="tabsFollowCursor"
-        checked={tabsFollowCursor}
-        onchange={() => {
-          tabsFollowCursor = !tabsFollowCursor;
-        }}
-      />
+      <WizardToggle id="tabsFollowCursor" bind:checked={tabsFollowCursor} />
     </form>
   </main>
   <ModalFooter>
