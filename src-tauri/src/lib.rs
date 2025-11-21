@@ -20,6 +20,8 @@
 //! │  │ AppData (Managed State)                              │   │
 //! │  │  - SchemaCache: Cached HL7 schemas                   │   │
 //! │  │  - listen_join: MLLP listener task handle            │   │
+//! │  │  - Menu item refs: Save, Undo, Redo (for enable/     │   │
+//! │  │    disable sync with frontend)                       │   │
 //! │  └──────────────────────────────────────────────────────┘   │
 //! │  ┌──────────────────────────────────────────────────────┐   │
 //! │  │ Commands (Tauri-exposed functions)                   │   │
@@ -29,6 +31,7 @@
 //! │  │  - Field descriptions (field_description.rs)         │   │
 //! │  │  - Schema queries (schema.rs)                        │   │
 //! │  │  - Send/receive (send_receive.rs, listen.rs)         │   │
+//! │  │  - Menu state (menu.rs)                              │   │
 //! │  │  - Wizards (wizards/*.rs)                            │   │
 //! │  └──────────────────────────────────────────────────────┘   │
 //! │  ┌──────────────────────────────────────────────────────┐   │
@@ -111,6 +114,16 @@ pub struct AppData {
     /// toolbar save button. The menu item is disabled when there are no unsaved
     /// changes or no file is currently open.
     pub save_menu_item: MenuItem<Wry>,
+
+    /// Reference to the Undo menu item for dynamic enable/disable.
+    ///
+    /// Enabled when there are changes that can be undone.
+    pub undo_menu_item: MenuItem<Wry>,
+
+    /// Reference to the Redo menu item for dynamic enable/disable.
+    ///
+    /// Enabled when there are changes that can be redone.
+    pub redo_menu_item: MenuItem<Wry>,
 }
 
 /// Main entry point for the Hermes application.
@@ -194,6 +207,8 @@ pub fn run() {
             commands::start_listening,
             commands::stop_listening,
             commands::set_save_enabled,
+            commands::set_undo_enabled,
+            commands::set_redo_enabled,
             commands::wizards::wizard_apply_interface,
             commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_patient,
@@ -234,17 +249,40 @@ pub fn run() {
                 )
                 .build()?;
 
-            let menu = MenuBuilder::new(app).item(&file_menu).build()?;
+            // Build Edit menu items separately for dynamic enable/disable
+            let undo_menu_item = MenuItemBuilder::new("&Undo")
+                .id("edit-undo")
+                .accelerator("CmdOrCtrl+Z")
+                .enabled(false) // Start disabled until there's history
+                .build(app)?;
+
+            let redo_menu_item = MenuItemBuilder::new("&Redo")
+                .id("edit-redo")
+                .accelerator("CmdOrCtrl+Shift+Z")
+                .enabled(false) // Start disabled until there's redo history
+                .build(app)?;
+
+            let edit_menu = SubmenuBuilder::new(app, "&Edit")
+                .item(&undo_menu_item)
+                .item(&redo_menu_item)
+                .build()?;
+
+            let menu = MenuBuilder::new(app)
+                .item(&file_menu)
+                .item(&edit_menu)
+                .build()?;
 
             app.set_menu(menu)?;
 
-            // Create AppData after menu setup, moving the save_menu_item (not cloning)
-            // so we have a reference to the exact menu item that's in the menu
+            // Create AppData after menu setup, moving menu items (not cloning)
+            // so we have references to the exact menu items that are in the menu
             let app_data = AppData {
                 schema: SchemaCache::new("messages.toml")
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
                 listen_join: Mutex::new(None),
                 save_menu_item,
+                undo_menu_item,
+                redo_menu_item,
             };
             app.manage(app_data);
 
@@ -255,6 +293,8 @@ pub fn run() {
                     "file-open" => Some("menu-file-open"),
                     "file-save" => Some("menu-file-save"),
                     "file-save-as" => Some("menu-file-save-as"),
+                    "edit-undo" => Some("menu-edit-undo"),
+                    "edit-redo" => Some("menu-edit-redo"),
                     _ => None,
                 };
 

@@ -48,7 +48,7 @@
     height,
   }: {
     message?: string;
-    onchange?: (message: string) => void;
+    onchange?: (message: string, coalesce?: boolean) => void;
     oncursorchange?: (cursorPos: number) => void;
     onctrlenter?: () => void;
     readonly?: boolean;
@@ -92,12 +92,22 @@
    * 1. Notifies parent component of the change (for state management)
    * 2. Re-highlights the message to reflect syntax changes
    * 3. Syncs scroll position (in case content height changed)
+   *
+   * The coalesce flag is set based on the input type - regular typing coalesces
+   * into a single undo entry, while paste operations create discrete entries.
    */
   async function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
     let message = target.value;
+
+    // Determine if this is a paste operation (should not coalesce)
+    const inputEvent = event as InputEvent;
+    const isPaste =
+      inputEvent.inputType === "insertFromPaste" ||
+      inputEvent.inputType === "insertFromPasteAsQuotation";
+
     if (onchange) {
-      onchange(message);
+      onchange(message, !isPaste);
     }
 
     const highlighted = await syntaxHighlight(message);

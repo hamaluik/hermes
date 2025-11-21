@@ -28,6 +28,18 @@
   through reactive effects that parse/render between the two representations. This allows
   users to work in whichever mode is most comfortable for their task.
 
+  ### Undo/Redo History
+  All message edits flow through `updateMessage()`, which records state in a history
+  manager before applying changes. This enables undo/redo across all edit sources:
+  - Raw text typing (coalesced into single undo entries)
+  - Form field changes (discrete entries)
+  - Wizard applications (discrete entries)
+  - Segment additions (discrete entries)
+
+  History is cleared on File > New and File > Open to start fresh. The history manager
+  uses Svelte 5 runes for reactive `canUndo`/`canRedo` state that drives toolbar buttons
+  and native Edit menu item states.
+
   ### Wizard Integration
   Certain segments (MSH, PID, PV1) have wizards that can auto-populate fields from a
   connected database. Wizards are accessible via buttons in the tab UI and maintain
@@ -84,8 +96,14 @@
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
   import PatientWizard from "$lib/wizards/patient_wizard.svelte";
   import VisitWizard from "$lib/wizards/visit_wizard.svelte";
+  import { createHistoryManager } from "$lib/history.svelte";
+  import IconUndo from "$lib/icons/IconUndo.svelte";
+  import IconRedo from "$lib/icons/IconRedo.svelte";
 
   let { data }: PageProps = $props();
+
+  // Undo/redo history manager
+  const history = createHistoryManager();
 
   // Core message state
   let message: string = $state("");
@@ -134,6 +152,44 @@
 
   const MIN_EDITOR_HEIGHT = 100;
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6);
+
+  /**
+   * Centralized message update function
+   *
+   * All edits to the message should go through this function to ensure proper
+   * history tracking. The coalesce option is used for rapid changes like typing
+   * to group them into a single undo entry.
+   *
+   * @param newMessage - The new message content
+   * @param options.coalesce - If true, rapid calls will be merged into one history entry
+   */
+  function updateMessage(
+    newMessage: string,
+    options?: { coalesce?: boolean },
+  ) {
+    history.push(message, options?.coalesce ?? false);
+    message = newMessage;
+  }
+
+  /**
+   * Undo the last message change
+   */
+  function handleUndo() {
+    const previous = history.undo(message);
+    if (previous !== null) {
+      message = previous;
+    }
+  }
+
+  /**
+   * Redo a previously undone change
+   */
+  function handleRedo() {
+    const next = history.redo(message);
+    if (next !== null) {
+      message = next;
+    }
+  }
 
   /**
    * Resize Handle: Start
@@ -273,6 +329,8 @@
     let unlistenMenuOpen: UnlistenFn | undefined = undefined;
     let unlistenMenuSave: UnlistenFn | undefined = undefined;
     let unlistenMenuSaveAs: UnlistenFn | undefined = undefined;
+    let unlistenMenuUndo: UnlistenFn | undefined = undefined;
+    let unlistenMenuRedo: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -285,6 +343,12 @@
     });
     listen("menu-file-save-as", () => handleSaveAs()).then((fn) => {
       unlistenMenuSaveAs = fn;
+    });
+    listen("menu-edit-undo", () => handleUndo()).then((fn) => {
+      unlistenMenuUndo = fn;
+    });
+    listen("menu-edit-redo", () => handleRedo()).then((fn) => {
+      unlistenMenuRedo = fn;
     });
 
     /**
@@ -312,6 +376,8 @@
       unlistenMenuOpen?.();
       unlistenMenuSave?.();
       unlistenMenuSaveAs?.();
+      unlistenMenuUndo?.();
+      unlistenMenuRedo?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -365,6 +431,7 @@
    * compared against the current message to determine if unsaved changes exist.
    */
   function handleNew() {
+    history.clear();
     message = "MSH|^~\\&|";
     currentFilePath = undefined;
     const defaultData = generateDefaultData("MSH", schemas["MSH"] ?? {});
@@ -392,6 +459,7 @@
       return;
     }
 
+    history.clear();
     currentFilePath = undefined;
     message = await readTextFile(filePath);
     savedMessage = message;
@@ -420,6 +488,15 @@
   // Sync the Save menu item enabled state with the toolbar save button
   $effect(() => {
     invoke("set_save_enabled", { enabled: handleSave !== undefined });
+  });
+
+  // Sync the Undo/Redo menu item enabled states with the history state
+  $effect(() => {
+    invoke("set_undo_enabled", { enabled: history.canUndo });
+  });
+
+  $effect(() => {
+    invoke("set_redo_enabled", { enabled: history.canRedo });
   });
 
   const handleSaveAs = async () => {
@@ -467,6 +544,13 @@
   </ToolbarButton>
   <ToolbarButton title="Save As" onclick={handleSaveAs}>
     <IconSaveAs />
+  </ToolbarButton>
+  <ToolbarSeparator />
+  <ToolbarButton title="Undo" onclick={history.canUndo ? handleUndo : undefined}>
+    <IconUndo />
+  </ToolbarButton>
+  <ToolbarButton title="Redo" onclick={history.canRedo ? handleRedo : undefined}>
+    <IconRedo />
   </ToolbarButton>
   <!--
     Send/Receive and Listen Toolbar Buttons (DISABLED)
@@ -536,12 +620,12 @@
             <li>
               <button
                 onclick={() => {
-                  message = message + `\n${key}|`;
+                  const newMessageWithSegment = message + `\n${key}|`;
                   const data = generateDefaultData(key, schemas[key] ?? {});
-                  renderMessageSegment(message, key, 0, data).then(
-                    (newMessage) => {
-                      if (newMessage) {
-                        message = newMessage;
+                  renderMessageSegment(newMessageWithSegment, key, 0, data).then(
+                    (renderedMessage) => {
+                      if (renderedMessage) {
+                        updateMessage(renderedMessage);
                       }
                     },
                   );
@@ -592,7 +676,7 @@
               schema={schemas[key]}
               {message}
               onchange={(m) => {
-                message = m;
+                updateMessage(m);
               }}
             />
           </Tab>
@@ -619,8 +703,8 @@
   <MessageEditor
     {message}
     height={editorHeight}
-    onchange={(m) => {
-      message = m;
+    onchange={(m, coalesce) => {
+      updateMessage(m, { coalesce });
     }}
     oncursorchange={(pos) => {
       cursorPos = pos;
@@ -667,7 +751,7 @@
   bind:show={showHeaderWizard}
   {message}
   onchange={(m: string) => {
-    message = m;
+    updateMessage(m);
   }}
   settings={data.settings}
 />
@@ -675,7 +759,7 @@
   bind:show={showPatientWizard}
   {message}
   onchange={(m: string) => {
-    message = m;
+    updateMessage(m);
   }}
   settings={data.settings}
 />
@@ -683,7 +767,7 @@
   bind:show={showVisitWizard}
   {message}
   onchange={(m: string) => {
-    message = m;
+    updateMessage(m);
   }}
   settings={data.settings}
 />
