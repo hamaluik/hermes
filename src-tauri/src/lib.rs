@@ -266,6 +266,16 @@ pub fn run() {
                 .enabled(false) // Start disabled until there's redo history
                 .build(app)?;
 
+            let find_menu_item = MenuItemBuilder::new("&Find...")
+                .id("edit-find")
+                .accelerator("CmdOrCtrl+F")
+                .build(app)?;
+
+            let find_replace_menu_item = MenuItemBuilder::new("Find and &Replace...")
+                .id("edit-find-replace")
+                .accelerator("CmdOrCtrl+H")
+                .build(app)?;
+
             let edit_menu = SubmenuBuilder::new(app, "&Edit")
                 .item(&undo_menu_item)
                 .item(&redo_menu_item)
@@ -273,6 +283,9 @@ pub fn run() {
                 .item(&PredefinedMenuItem::cut(app, None)?)
                 .item(&PredefinedMenuItem::copy(app, None)?)
                 .item(&PredefinedMenuItem::paste(app, None)?)
+                .separator()
+                .item(&find_menu_item)
+                .item(&find_replace_menu_item)
                 .separator()
                 .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
@@ -305,6 +318,8 @@ pub fn run() {
                     "file-save-as" => Some("menu-file-save-as"),
                     "edit-undo" => Some("menu-edit-undo"),
                     "edit-redo" => Some("menu-edit-redo"),
+                    "edit-find" => Some("menu-edit-find"),
+                    "edit-find-replace" => Some("menu-edit-find-replace"),
                     _ => None,
                 };
 

@@ -99,6 +99,8 @@
   import { createHistoryManager } from "$lib/history.svelte";
   import IconUndo from "$lib/icons/IconUndo.svelte";
   import IconRedo from "$lib/icons/IconRedo.svelte";
+  import FindReplaceBar from "$lib/find_replace_bar.svelte";
+  import type { SearchMatch } from "../backend/syntax_highlight";
 
   let { data }: PageProps = $props();
 
@@ -128,6 +130,14 @@
   // and how many received messages haven't been viewed yet
   let listening = $state(false);
   let unreadMessageCount = $state(0);
+
+  // Find/Replace state
+  let showFindBar = $state(false);
+  let searchMatches: SearchMatch[] = $state([]);
+  let currentMatchIndex = $state(0);
+  let getEditorSelection: (() => string) | undefined = $state(undefined);
+  let editorElement: HTMLTextAreaElement | undefined = $state(undefined);
+  let findInitialSelection = $state("");
 
   /**
    * Message Editor Resize System
@@ -331,6 +341,8 @@
     let unlistenMenuSaveAs: UnlistenFn | undefined = undefined;
     let unlistenMenuUndo: UnlistenFn | undefined = undefined;
     let unlistenMenuRedo: UnlistenFn | undefined = undefined;
+    let unlistenMenuFind: UnlistenFn | undefined = undefined;
+    let unlistenMenuFindReplace: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -349,6 +361,12 @@
     });
     listen("menu-edit-redo", () => handleRedo()).then((fn) => {
       unlistenMenuRedo = fn;
+    });
+    listen("menu-edit-find", () => handleFind()).then((fn) => {
+      unlistenMenuFind = fn;
+    });
+    listen("menu-edit-find-replace", () => handleFind()).then((fn) => {
+      unlistenMenuFindReplace = fn;
     });
 
     /**
@@ -378,6 +396,8 @@
       unlistenMenuSaveAs?.();
       unlistenMenuUndo?.();
       unlistenMenuRedo?.();
+      unlistenMenuFind?.();
+      unlistenMenuFindReplace?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -530,6 +550,53 @@
   const handleListen = () => {
     showListeningModal = true;
   };
+
+  /**
+   * Opens the find/replace bar
+   *
+   * If there's a selection in the editor, it's used to pre-populate the search query.
+   */
+  function handleFind() {
+    // Get current selection from editor if available
+    findInitialSelection = getEditorSelection?.() ?? "";
+    showFindBar = true;
+  }
+
+  /**
+   * Handles find/replace match changes by updating state
+   * Does NOT steal focus - that's handled separately by navigation actions
+   */
+  function handleMatchesChange(matches: SearchMatch[], currentIndex: number) {
+    searchMatches = matches;
+    currentMatchIndex = currentIndex;
+  }
+
+  /**
+   * Scrolls to and selects the current match in the editor
+   * Called explicitly when user navigates between matches
+   */
+  function scrollToCurrentMatch() {
+    if (searchMatches.length > 0 && editorElement) {
+      const match = searchMatches[currentMatchIndex];
+      editorElement.setSelectionRange(match.start, match.end);
+    }
+  }
+
+  /**
+   * Handles replace operations from the find bar
+   */
+  function handleFindReplace(newMessage: string) {
+    updateMessage(newMessage);
+  }
+
+  /**
+   * Handles find bar close by returning focus to editor
+   */
+  function handleFindClose() {
+    searchMatches = [];
+    currentMatchIndex = 0;
+    editorElement?.focus();
+  }
 </script>
 
 <Toolbar bind:toolbarHeight>
@@ -700,8 +767,19 @@
     <div class="resize-grip"></div>
   </div>
 
+  <FindReplaceBar
+    bind:show={showFindBar}
+    {message}
+    initialSelection={findInitialSelection}
+    onmatcheschange={handleMatchesChange}
+    onnavigate={scrollToCurrentMatch}
+    onreplace={handleFindReplace}
+    onclose={handleFindClose}
+  />
   <MessageEditor
     {message}
+    {searchMatches}
+    {currentMatchIndex}
     height={editorHeight}
     onchange={(m, coalesce) => {
       updateMessage(m, { coalesce });
@@ -712,6 +790,10 @@
     onctrlenter={() => {
       showSend = true;
     }}
+    getSelection={(fn) => {
+      getEditorSelection = fn;
+    }}
+    bind:editElement={editorElement}
   />
   <!--
     Tabs Follow Cursor Feature

@@ -27,6 +27,16 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /**
+ * Represents a search match range for highlighting in the editor.
+ */
+export interface SearchMatch {
+  /** Start position of the match (byte offset) */
+  start: number;
+  /** End position of the match (byte offset, exclusive) */
+  end: number;
+}
+
+/**
  * Converts an HL7 message to HTML with syntax highlighting spans.
  *
  * The returned HTML contains the same text as the input, but wrapped in span
@@ -34,15 +44,29 @@ import { invoke } from "@tauri-apps/api/core";
  * calling component should render this HTML and apply appropriate CSS styling.
  *
  * @param message - Raw HL7 message string
+ * @param searchMatches - Optional array of search match ranges to highlight
+ * @param currentMatchIndex - Optional index of the currently selected match (0-based)
  * @returns HTML string with syntax highlighting markup
  *
  * @example
  * ```ts
  * const html = await syntaxHighlight("MSH|^~\\&|...");
  * // Returns: '<span class="segment">MSH</span><span class="delimiter">|</span>...'
+ *
+ * // With search matches:
+ * const htmlWithMatches = await syntaxHighlight("MSH|^~\\&|...", [{ start: 0, end: 3 }], 0);
+ * // Returns: '<span class="search-match-current"><span class="msh">MSH</span></span>...'
  * ```
  */
-export async function syntaxHighlight(message: string): Promise<string> {
-  return invoke("syntax_highlight", { message });
+export async function syntaxHighlight(
+  message: string,
+  searchMatches?: SearchMatch[],
+  currentMatchIndex?: number,
+): Promise<string> {
+  return invoke("syntax_highlight", {
+    message,
+    searchMatches: searchMatches ?? null,
+    currentMatchIndex: currentMatchIndex ?? null,
+  });
 }
 

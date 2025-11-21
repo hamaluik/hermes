@@ -199,3 +199,16 @@ input::-webkit-datetime-edit-meridiem-field {
   padding: 0;
   /*-webkit-text-fill-color: var(--col-subtle);*/
 }
+
+/* search match highlighting */
+.search-match {
+  background-color: var(--col-gold);
+  color: var(--col-base);
+  border-radius: 2px;
+}
+
+.search-match-current {
+  background-color: var(--col-iris);
+  color: var(--col-base);
+  border-radius: 2px;
+}

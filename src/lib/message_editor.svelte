@@ -15,21 +15,36 @@
 
   Key Features:
   - Real-time syntax highlighting via backend Tauri command
+  - Search match highlighting integrated with syntax highlighting
   - Tab/Shift+Tab navigation between HL7 fields (using backend cursor tracking)
   - Ctrl/Cmd+Enter shortcut for quick message sending
   - Document-level cursor tracking for cross-component coordination
   - One-click copy-to-clipboard with visual feedback
+  - Exposed selection getter and element binding for parent component integration
+
+  Find/Replace Integration:
+  The editor accepts searchMatches and currentMatchIndex props which are passed to the
+  syntax highlighting backend. The backend wraps matching text in <span class="search-match">
+  or <span class="search-match-current"> tags, which are styled via global.css. This allows
+  search results to be highlighted inline with HL7 syntax highlighting.
+
+  Parent components can access the current text selection via the getSelection callback
+  (used to pre-populate find queries) and the raw textarea element via editElement binding
+  (used to programmatically set selection when navigating between matches).
 
   Flow for New Developers:
   1. User types in textarea → handleInput fires
-  2. handleInput calls backend syntaxHighlight command
-  3. Highlighted HTML is injected into overlay div
+  2. handleInput calls backend syntaxHighlight command with search matches
+  3. Highlighted HTML (including search matches) is injected into overlay div
   4. Scroll synchronization keeps overlay aligned with textarea
   5. Cursor changes trigger document-level events to update field descriptions elsewhere
 -->
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { syntaxHighlight } from "../backend/syntax_highlight";
+  import {
+    syntaxHighlight,
+    type SearchMatch,
+  } from "../backend/syntax_highlight";
   import {
     getRangeOfNextField,
     getRangeOfPreviousField,
@@ -40,20 +55,28 @@
 
   let {
     message,
+    searchMatches,
+    currentMatchIndex,
     onchange,
     oncursorchange,
     onctrlenter,
     readonly,
     placeholder,
     height,
+    getSelection,
+    editElement: editElementBinding = $bindable(),
   }: {
     message?: string;
+    searchMatches?: SearchMatch[];
+    currentMatchIndex?: number;
     onchange?: (message: string, coalesce?: boolean) => void;
     oncursorchange?: (cursorPos: number) => void;
     onctrlenter?: () => void;
     readonly?: boolean;
     placeholder?: string;
     height?: number;
+    getSelection?: (fn: () => string) => void;
+    editElement?: HTMLTextAreaElement;
   } = $props();
 
   let editElement: HTMLElement;
@@ -79,8 +102,30 @@
   $effect(() => {
     if (message) {
       (editElement as HTMLTextAreaElement).value = message;
-      syntaxHighlight(message).then((highlighted) => {
-        highlightElement.innerHTML = highlighted;
+      syntaxHighlight(message, searchMatches, currentMatchIndex).then(
+        (highlighted) => {
+          highlightElement.innerHTML = highlighted;
+        },
+      );
+    }
+  });
+
+  // Bind editElement to parent if requested
+  $effect(() => {
+    if (editElement) {
+      editElementBinding = editElement as HTMLTextAreaElement;
+    }
+  });
+
+  // Provide getSelection callback to parent
+  $effect(() => {
+    if (getSelection && editElement) {
+      getSelection(() => {
+        const textarea = editElement as HTMLTextAreaElement;
+        return textarea.value.slice(
+          textarea.selectionStart,
+          textarea.selectionEnd,
+        );
       });
     }
   });
@@ -110,7 +155,11 @@
       onchange(message, !isPaste);
     }
 
-    const highlighted = await syntaxHighlight(message);
+    const highlighted = await syntaxHighlight(
+      message,
+      searchMatches,
+      currentMatchIndex,
+    );
     highlightElement.innerHTML = highlighted;
 
     handleScroll();

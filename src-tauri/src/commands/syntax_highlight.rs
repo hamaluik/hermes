@@ -30,6 +30,8 @@
 //! * `temp` - Templated placeholders (e.g., "{now}", "{random}")
 //! * `ts` - Timestamp fields (detected via HL7 spec)
 //! * `err` - Parse errors or unparsed content
+//! * `search-match` - Search result matches (find/replace feature)
+//! * `search-match-current` - Currently selected search match
 //!
 //! # Special Field Detection
 //!
@@ -40,6 +42,12 @@
 //! Templated values (placeholders like "{now}" or "{random}") are detected by checking
 //! if the value is wrapped in curly braces. These placeholders are automatically
 //! transformed during message sending (see send_receive.rs).
+//!
+//! # Search Match Highlighting
+//!
+//! The syntax highlighting command accepts optional match ranges to highlight search
+//! results. Matches are highlighted with `search-match` class, and the current match
+//! (if specified) is highlighted with `search-match-current` class for distinction.
 
 use hl7_parser::{parser::ParseError, Message};
 use std::{borrow::Cow, ops::Range};
@@ -47,6 +55,15 @@ use std::{borrow::Cow, ops::Range};
 use crate::spec::std_spec::{
     get_version_with_fallback, is_component_a_timestamp, is_field_a_timestamp,
 };
+
+/// A range representing a search match for highlighting.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct SearchMatch {
+    /// Start position of the match (byte offset)
+    pub start: usize,
+    /// End position of the match (byte offset, exclusive)
+    pub end: usize,
+}
 
 /// Generate HTML syntax highlighting for an HL7 message.
 ///
@@ -70,15 +87,22 @@ use crate::spec::std_spec::{
 ///
 /// # Arguments
 /// * `message` - The HL7 message as a string (with newlines or \r separators)
+/// * `search_matches` - Optional list of search match ranges to highlight
+/// * `current_match_index` - Optional index of the currently selected match (0-based)
 ///
 /// # Returns
 /// HTML string with syntax highlighting, safe for insertion into the DOM
 /// (all special characters are HTML-escaped)
 #[tauri::command]
-pub fn syntax_highlight(message: &str) -> String {
+pub fn syntax_highlight(
+    message: &str,
+    search_matches: Option<Vec<SearchMatch>>,
+    current_match_index: Option<usize>,
+) -> String {
     match hl7_parser::parse_message_with_lenient_newlines(message) {
         Ok(msg) => {
-            let mut highlighted = do_syntax_highlight(&msg);
+            let mut highlighted =
+                do_syntax_highlight(&msg, search_matches.as_deref(), current_match_index);
             if msg.raw_value().len() != message.len() {
                 // the delivered message extends beyond the parsed message
                 // so just append the rest of the message wrapped in an error span
@@ -152,15 +176,21 @@ impl RangeType {
 ///
 /// # Arguments
 /// * `message` - Parsed HL7 message
+/// * `search_matches` - Optional slice of search match ranges to highlight
+/// * `current_match_index` - Optional index of the currently selected match
 ///
 /// # Returns
 /// HTML-formatted string with syntax highlighting
-fn do_syntax_highlight(message: &Message) -> String {
+fn do_syntax_highlight(
+    message: &Message,
+    search_matches: Option<&[SearchMatch]>,
+    current_match_index: Option<usize>,
+) -> String {
     let ranges = collect_ranges(message);
     // ranges will already be sorted by their start position because of the
     // structure of the message
     let position_types = create_position_mapping(ranges, message.raw_value().len());
-    generate_html(message, &position_types)
+    generate_html(message, &position_types, search_matches, current_match_index)
 }
 
 /// Collect all character ranges and their types from a parsed message.
@@ -276,6 +306,28 @@ fn create_position_mapping(
     position_types
 }
 
+/// Determines the search match state for a given position.
+///
+/// Returns a tuple of (is_in_match, is_current_match) indicating whether the position
+/// is within a search match and whether it's the currently selected match.
+fn get_match_state(
+    pos: usize,
+    search_matches: Option<&[SearchMatch]>,
+    current_match_index: Option<usize>,
+) -> (bool, bool) {
+    let Some(matches) = search_matches else {
+        return (false, false);
+    };
+
+    for (i, m) in matches.iter().enumerate() {
+        if pos >= m.start && pos < m.end {
+            let is_current = current_match_index == Some(i);
+            return (true, is_current);
+        }
+    }
+    (false, false)
+}
+
 /// Generate HTML with CSS class spans from a message and position type mapping.
 ///
 /// This function walks through the message character-by-character, emitting `<span>`
@@ -302,20 +354,50 @@ fn create_position_mapping(
 /// Pre-allocates the output string with 3x the message length as a heuristic, since
 /// HTML markup approximately triples the size due to tags and escaping.
 ///
+/// # Search Match Highlighting
+///
+/// When search matches are provided, characters within match ranges are wrapped in
+/// additional `<span class="search-match">` or `<span class="search-match-current">`
+/// tags. The current match (if specified) uses the latter for visual distinction.
+///
 /// # Arguments
 /// * `message` - Parsed HL7 message
 /// * `position_types` - Position-to-type mapping from `create_position_mapping`
+/// * `search_matches` - Optional slice of search match ranges
+/// * `current_match_index` - Optional index of the currently selected match
 ///
 /// # Returns
 /// HTML string with syntax highlighting spans
-fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> String {
+fn generate_html(
+    message: &Message,
+    position_types: &[Option<RangeType>],
+    search_matches: Option<&[SearchMatch]>,
+    current_match_index: Option<usize>,
+) -> String {
     let raw_message = message.raw_value();
     let mut highlighted = String::with_capacity(raw_message.len() * 3);
     let mut current_type = None;
+    let mut current_match_state: (bool, bool) = (false, false);
 
     for (i, c) in raw_message.char_indices() {
         let range_type = position_types[i].unwrap_or(RangeType::Separator);
+        let match_state = get_match_state(i, search_matches, current_match_index);
 
+        // Handle search match span transitions
+        if match_state != current_match_state {
+            // Close previous match span if we were in one
+            if current_match_state.0 {
+                highlighted.push_str("</span>");
+            }
+
+            // If we're transitioning match state, we need to close and reopen the syntax span
+            if current_type.is_some() {
+                highlighted.push_str("</span>");
+                current_type = None;
+            }
+        }
+
+        // Handle syntax type transitions
         if current_type != Some(range_type) {
             if current_type.is_some() {
                 highlighted.push_str("</span>");
@@ -329,6 +411,18 @@ fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> Str
             current_type = Some(range_type);
         }
 
+        // Open new match span if entering a match
+        if match_state != current_match_state && match_state.0 {
+            let match_class = if match_state.1 {
+                "search-match-current"
+            } else {
+                "search-match"
+            };
+            highlighted.push_str(&format!(r#"<span class="{match_class}">"#));
+        }
+
+        current_match_state = match_state;
+
         match c {
             '<' => highlighted.push_str("&lt;"),
             '>' => highlighted.push_str("&gt;"),
@@ -338,6 +432,11 @@ fn generate_html(message: &Message, position_types: &[Option<RangeType>]) -> Str
             '\n' => highlighted.push_str("<br/>"),
             _ => highlighted.push(c),
         }
+    }
+
+    // Close any open match span
+    if current_match_state.0 {
+        highlighted.push_str("</span>");
     }
 
     if current_type.is_some() {
