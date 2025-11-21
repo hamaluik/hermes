@@ -1,9 +1,9 @@
 <!--
   Settings Modal
 
-  Modal dialog for configuring application preferences. Currently provides UI for
-  a single setting (Tabs Follow Cursor), but structured to easily accommodate
-  additional settings in the future.
+  Modal dialog for configuring application preferences. Provides toggles for:
+  - Auto-Save: Automatically save files after changes (also accessible via File menu)
+  - Tabs Follow Cursor: Auto-switch segment tabs when cursor moves in raw editor
 
   ## Save/Cancel Workflow
 
@@ -20,6 +20,13 @@
 
   The Settings object itself handles persistence to Tauri's store, so we don't need
   explicit save-to-disk calls here - just updating the Settings properties is sufficient.
+
+  ## Auto-Save Menu Sync
+
+  When Auto-Save is changed via this modal and saved, the Settings setter triggers
+  the onAutoSaveChanged callback, which updates the File menu's checkable Auto-Save
+  item. This ensures the menu always reflects the current setting state regardless
+  of where it was changed (menu or modal).
 -->
 <script lang="ts">
   import type { Settings } from "../settings";
@@ -39,9 +46,11 @@
 
   // Local staging state for settings changes
   let tabsFollowCursor: boolean = $state(settings.tabsFollowCursor);
+  let autoSaveEnabled: boolean = $state(settings.autoSaveEnabled);
 
   const saveSettings = () => {
     settings.tabsFollowCursor = tabsFollowCursor;
+    settings.autoSaveEnabled = autoSaveEnabled;
   };
 
   const handleSave = () => {
@@ -58,6 +67,14 @@
   <ModalHeader onclose={handleClose}>Settings</ModalHeader>
   <main>
     <form method="dialog">
+      <label for="autoSaveEnabled">Auto-Save</label>
+      <ToggleSwitch
+        id="autoSaveEnabled"
+        checked={autoSaveEnabled}
+        onchange={() => {
+          autoSaveEnabled = !autoSaveEnabled;
+        }}
+      />
       <label for="tabsFollowCursor">Tabs Follow Cursor</label>
       <ToggleSwitch
         id="tabsFollowCursor"

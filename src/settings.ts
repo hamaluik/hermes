@@ -26,9 +26,12 @@
  *
  * ## Change Notification Callbacks
  *
- * Some settings need to notify external systems when they change. For example,
- * the recent files list needs to update the native File menu. This is handled
- * via optional callback properties (e.g., `onRecentFilesChanged`).
+ * Some settings need to notify external systems when they change. For example:
+ * - Recent files list needs to update the native File menu
+ * - Auto-save setting needs to update the File menu's checkable Auto-Save item
+ *
+ * This is handled via optional callback properties (e.g., `onRecentFilesChanged`,
+ * `onAutoSaveChanged`).
  *
  * The callback pattern is used instead of events because:
  * - It's simpler than setting up a full event emitter
@@ -42,6 +45,7 @@
  * - sendPort: 2575 (standard HL7 MLLP port)
  * - wizardDbPort: 1433 (SQL Server default port)
  * - tabsFollowCursor: true (better UX for most users)
+ * - autoSaveEnabled: false (explicit opt-in, matches VS Code default)
  * - editorHeight: 200px (fits typical screen layouts)
  * - recentFiles: [] (empty list, populated as user opens files)
  */
@@ -55,6 +59,10 @@ export class Settings {
   // Message editor preferences
   private _tabsFollowCursor: boolean = true;
   private _editorHeight: number = 200;
+  private _autoSaveEnabled: boolean = false;
+
+  // Callback to notify when auto-save setting changes (for menu updates)
+  onAutoSaveChanged: ((enabled: boolean) => void) | null = null;
 
   // Send/Receive configuration for MLLP client
   private _sendHostname: string = "127.0.0.1";
@@ -93,6 +101,7 @@ export class Settings {
         return Promise.all([
           store.get<boolean>("tabsFollowCursor"),
           store.get<number>("editorHeight"),
+          store.get<boolean>("autoSaveEnabled"),
           store.get<string>("sendHostname"),
           store.get<number>("sendPort"),
           store.get<boolean>("sendTransformControlId"),
@@ -110,6 +119,7 @@ export class Settings {
         ([
           tabsFollowCursor,
           editorHeight,
+          autoSaveEnabled,
           sendHostname,
           sendPort,
           sendTransformControlId,
@@ -124,6 +134,7 @@ export class Settings {
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
+          this._autoSaveEnabled = autoSaveEnabled ?? false;
           this._sendHostname = sendHostname ?? "127.0.0.1";
           this._sendPort = sendPort ?? 2575;
           this._sendTransformControlId = sendTransformControlId ?? true;
@@ -136,9 +147,12 @@ export class Settings {
           this._wizardDbPassword = wizardDbPassword ?? "";
           this._recentFiles = recentFiles ?? [];
 
-          // Notify listener that recent files are loaded (for initial menu population)
+          // Notify listeners that settings are loaded (for initial menu population)
           if (this.onRecentFilesChanged) {
             this.onRecentFilesChanged(this._recentFiles);
+          }
+          if (this.onAutoSaveChanged) {
+            this.onAutoSaveChanged(this._autoSaveEnabled);
           }
         },
       )
@@ -181,6 +195,24 @@ export class Settings {
         console.error("Error saving editorHeight setting:", error);
         logError("Failed to save editorHeight setting");
       });
+    }
+  }
+
+  /** Whether auto-save is enabled (automatically saves open files on changes) */
+  get autoSaveEnabled(): boolean {
+    return this._autoSaveEnabled;
+  }
+  set autoSaveEnabled(value: boolean) {
+    console.debug("Setting autoSaveEnabled to:", value);
+    this._autoSaveEnabled = value;
+    if (this.store) {
+      this.store.set("autoSaveEnabled", value).catch((error) => {
+        console.error("Error saving autoSaveEnabled setting:", error);
+        logError("Failed to save autoSaveEnabled setting");
+      });
+    }
+    if (this.onAutoSaveChanged) {
+      this.onAutoSaveChanged(value);
     }
   }
 

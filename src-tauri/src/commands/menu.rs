@@ -91,6 +91,26 @@ pub fn set_redo_enabled(enabled: bool, state: State<'_, AppData>) -> Result<(), 
         .map_err(|e| format!("Failed to set redo menu enabled state: {e}"))
 }
 
+/// Set the checked state of the Auto-Save menu item.
+///
+/// This command allows the frontend to sync the Auto-Save menu item's checked state
+/// with the auto-save setting. When auto-save is enabled, the menu item shows a checkmark.
+///
+/// # Arguments
+/// * `checked` - Whether the Auto-Save menu item should be checked
+/// * `state` - Application state containing the menu item reference
+///
+/// # Returns
+/// * `Ok(())` - State was updated successfully
+/// * `Err(String)` - Failed to update the menu item state
+#[tauri::command]
+pub fn set_auto_save_checked(checked: bool, state: State<'_, AppData>) -> Result<(), String> {
+    state
+        .auto_save_menu_item
+        .set_checked(checked)
+        .map_err(|e| format!("Failed to set auto-save menu checked state: {e}"))
+}
+
 /// Update the "Open Recent" submenu with the given list of file paths.
 ///
 /// This command clears the existing submenu items and repopulates it with

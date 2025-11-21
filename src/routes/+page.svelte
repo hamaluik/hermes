@@ -344,6 +344,18 @@
     }
 
     /**
+     * Auto-Save Menu Integration
+     *
+     * Syncs the Auto-Save checkable menu item with the settings value.
+     * The callback is invoked both on initial load and when the setting changes.
+     */
+    data.settings.onAutoSaveChanged = (enabled: boolean) => {
+      invoke("set_auto_save_checked", { checked: enabled });
+    };
+    // Initialize menu with current auto-save state
+    invoke("set_auto_save_checked", { checked: data.settings.autoSaveEnabled });
+
+    /**
      * File Menu Event Listeners
      *
      * The Tauri backend emits events when File menu items are clicked.
@@ -353,6 +365,7 @@
     let unlistenMenuOpen: UnlistenFn | undefined = undefined;
     let unlistenMenuSave: UnlistenFn | undefined = undefined;
     let unlistenMenuSaveAs: UnlistenFn | undefined = undefined;
+    let unlistenMenuAutoSave: UnlistenFn | undefined = undefined;
     let unlistenMenuUndo: UnlistenFn | undefined = undefined;
     let unlistenMenuRedo: UnlistenFn | undefined = undefined;
     let unlistenMenuFind: UnlistenFn | undefined = undefined;
@@ -371,6 +384,12 @@
     });
     listen("menu-file-save-as", () => handleSaveAs()).then((fn) => {
       unlistenMenuSaveAs = fn;
+    });
+    listen("menu-file-auto-save", () => {
+      // Toggle the auto-save setting when menu item is clicked
+      data.settings.autoSaveEnabled = !data.settings.autoSaveEnabled;
+    }).then((fn) => {
+      unlistenMenuAutoSave = fn;
     });
     listen("menu-edit-undo", () => handleUndo()).then((fn) => {
       unlistenMenuUndo = fn;
@@ -420,6 +439,7 @@
       unlistenMenuOpen?.();
       unlistenMenuSave?.();
       unlistenMenuSaveAs?.();
+      unlistenMenuAutoSave?.();
       unlistenMenuUndo?.();
       unlistenMenuRedo?.();
       unlistenMenuFind?.();
@@ -568,6 +588,40 @@
 
   $effect(() => {
     invoke("set_redo_enabled", { enabled: history.canRedo });
+  });
+
+  /**
+   * Auto-Save Effect
+   *
+   * When auto-save is enabled and there's an open file with unsaved changes,
+   * automatically save after a short debounce. The debounce (500ms) aligns with
+   * the undo coalescing delay, so saves happen after the user stops typing.
+   */
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    // Access reactive values to track them
+    const autoSaveEnabled = data.settings.autoSaveEnabled;
+    const hasUnsavedChanges = currentFilePath && message !== savedMessage;
+
+    // Clear any existing timer
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+
+    // Only auto-save if enabled, has file path, and has unsaved changes
+    if (autoSaveEnabled && hasUnsavedChanges) {
+      autoSaveTimer = setTimeout(() => {
+        handleSave?.();
+      }, 500); // 500ms debounce to match undo coalescing
+    }
+
+    return () => {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = null;
+      }
+    };
   });
 
   const handleSaveAs = async () => {

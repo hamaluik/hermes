@@ -22,6 +22,7 @@
 //! │  │  - listen_join: MLLP listener task handle            │   │
 //! │  │  - Menu item refs: Save, Undo, Redo (for enable/     │   │
 //! │  │    disable sync with frontend)                       │   │
+//! │  │  - auto_save_menu_item: Checkable Auto-Save toggle   │   │
 //! │  │  - recent_files_submenu: Dynamic "Open Recent" menu  │   │
 //! │  │  - recent_files: File paths for menu event lookup    │   │
 //! │  └──────────────────────────────────────────────────────┘   │
@@ -81,7 +82,8 @@
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
 use tauri::menu::{
-    MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, Submenu, SubmenuBuilder,
+    CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem,
+    Submenu, SubmenuBuilder,
 };
 use tauri::{Emitter, Manager, Wry};
 use tokio::sync::Mutex;
@@ -118,6 +120,12 @@ pub struct AppData {
     /// toolbar save button. The menu item is disabled when there are no unsaved
     /// changes or no file is currently open.
     pub save_menu_item: MenuItem<Wry>,
+
+    /// Reference to the Auto-Save checkable menu item for sync with settings.
+    ///
+    /// The frontend toggles this when the user changes the auto-save setting
+    /// in the settings modal or clicks this menu item.
+    pub auto_save_menu_item: CheckMenuItem<Wry>,
 
     /// Reference to the Undo menu item for dynamic enable/disable.
     ///
@@ -224,6 +232,7 @@ pub fn run() {
             commands::start_listening,
             commands::stop_listening,
             commands::set_save_enabled,
+            commands::set_auto_save_checked,
             commands::set_undo_enabled,
             commands::set_redo_enabled,
             commands::update_recent_files_menu,
@@ -240,6 +249,12 @@ pub fn run() {
                 .id("file-save")
                 .accelerator("CmdOrCtrl+S")
                 .enabled(false) // Start disabled until there are unsaved changes
+                .build(app)?;
+
+            // Build the Auto-Save checkable menu item (initial state synced from settings by frontend)
+            let auto_save_menu_item = CheckMenuItemBuilder::new("Auto-Save")
+                .id("file-auto-save")
+                .checked(false) // Start unchecked, frontend will sync from settings
                 .build(app)?;
 
             // Build the "Open Recent" submenu (starts empty, populated by frontend)
@@ -272,6 +287,8 @@ pub fn run() {
                         .accelerator("CmdOrCtrl+Shift+S")
                         .build(app)?,
                 )
+                .separator()
+                .item(&auto_save_menu_item)
                 .build()?;
 
             // Build Edit menu with two categories of items:
@@ -329,6 +346,7 @@ pub fn run() {
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
                 listen_join: Mutex::new(None),
                 save_menu_item,
+                auto_save_menu_item,
                 undo_menu_item,
                 redo_menu_item,
                 recent_files_submenu,
@@ -346,6 +364,7 @@ pub fn run() {
                     "file-open" => Some("menu-file-open"),
                     "file-save" => Some("menu-file-save"),
                     "file-save-as" => Some("menu-file-save-as"),
+                    "file-auto-save" => Some("menu-file-auto-save"),
                     "edit-undo" => Some("menu-edit-undo"),
                     "edit-redo" => Some("menu-edit-redo"),
                     "edit-find" => Some("menu-edit-find"),
