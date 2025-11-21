@@ -4,6 +4,15 @@ version = "0.1.0"
 description = "An HL7 messaging tool for HL7 system"
 authors = ["Kenton Hamaluik <khamaluik@hamaluik.ca>"]
 edition = "2021"
+license = "Proprietary"
+repository = "https://github.com/khamaluik/hermes"
+homepage = "https://github.com/khamaluik/hermes"
+
+[package.metadata.about]
+# These fields are used by the About dialog (see lib.rs AboutMetadata)
+copyright = "© 2025 Kenton Hamaluik"
+credits = "Kenton Hamaluik"
+website_label = "Visit Website"
 
 [lib]
 name = "hermes_lib"

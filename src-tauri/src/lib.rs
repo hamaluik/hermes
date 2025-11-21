@@ -34,7 +34,7 @@
 //! │  │  - Field descriptions (field_description.rs)         │   │
 //! │  │  - Schema queries (schema.rs)                        │   │
 //! │  │  - Send/receive (send_receive.rs, listen.rs)         │   │
-//! │  │  - Menu state (menu.rs)                              │   │
+//! │  │  - Menu state & help window (menu.rs)                │   │
 //! │  │  - Wizards (wizards/*.rs)                            │   │
 //! │  └──────────────────────────────────────────────────────┘   │
 //! │  ┌──────────────────────────────────────────────────────┐   │
@@ -82,8 +82,8 @@
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
 use tauri::menu::{
-    CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem,
-    Submenu, SubmenuBuilder,
+    AboutMetadata, CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItem, MenuItemBuilder,
+    PredefinedMenuItem, Submenu, SubmenuBuilder,
 };
 use tauri::{Emitter, Manager, Wry};
 use tokio::sync::Mutex;
@@ -236,6 +236,7 @@ pub fn run() {
             commands::set_undo_enabled,
             commands::set_redo_enabled,
             commands::update_recent_files_menu,
+            commands::open_help_window,
             commands::wizards::wizard_apply_interface,
             commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_patient,
@@ -332,9 +333,42 @@ pub fn run() {
                 .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
 
+            // Build the Help menu with documentation and about items
+            let help_menu_item = MenuItemBuilder::new("&Help")
+                .id("help")
+                .accelerator("F1")
+                .build(app)?;
+
+            // About dialog metadata - pulls values from Cargo.toml via env! macros
+            // Platform support:
+            // - macOS: name, version, short_version, copyright, credits, icon
+            // - Windows/Linux: name, version, short_version, authors, comments, copyright, license, website, website_label
+            // Note: [package.metadata.about] fields (copyright, credits, website_label) require
+            // manual sync - only [package] fields have env! macros available.
+            let about_metadata = AboutMetadata {
+                name: Some(env!("CARGO_PKG_NAME").into()),
+                version: Some(env!("CARGO_PKG_VERSION").into()),
+                short_version: None,
+                authors: Some(vec![env!("CARGO_PKG_AUTHORS").into()]), // Windows/Linux only
+                comments: Some(env!("CARGO_PKG_DESCRIPTION").into()),  // Windows/Linux only
+                copyright: Some("© 2025 Kenton Hamaluik".into()), // Sync with Cargo.toml [package.metadata.about]
+                license: Some(env!("CARGO_PKG_LICENSE").into()),       // Windows/Linux only
+                website: Some(env!("CARGO_PKG_HOMEPAGE").into()),      // Windows/Linux only
+                website_label: Some("Visit Website".into()),           // Sync with Cargo.toml [package.metadata.about]
+                credits: Some("Kenton Hamaluik".into()),               // Sync with Cargo.toml [package.metadata.about]
+                ..Default::default()
+            };
+
+            let help_menu = SubmenuBuilder::new(app, "&Help")
+                .item(&help_menu_item)
+                .separator()
+                .item(&PredefinedMenuItem::about(app, Some("About Hermes"), Some(about_metadata))?)
+                .build()?;
+
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
+                .item(&help_menu)
                 .build()?;
 
             app.set_menu(menu)?;
@@ -370,6 +404,7 @@ pub fn run() {
                     "edit-find" => Some("menu-edit-find"),
                     "edit-find-replace" => Some("menu-edit-find-replace"),
                     "recent-clear" => Some("menu-clear-recent"),
+                    "help" => Some("menu-help"),
                     _ => None,
                 };
 

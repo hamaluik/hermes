@@ -1,9 +1,10 @@
 //! Menu control commands.
 //!
 //! This module provides commands for dynamically controlling menu item state
-//! from the frontend. This enables syncing menu item enabled/disabled states
-//! with the corresponding toolbar buttons, and managing dynamic menu content
-//! like the "Open Recent" submenu.
+//! from the frontend, and for opening auxiliary windows. This enables syncing
+//! menu item enabled/disabled states with the corresponding toolbar buttons,
+//! managing dynamic menu content like the "Open Recent" submenu, and launching
+//! separate windows for features like help documentation.
 //!
 //! # Dynamic Menu Updates
 //!
@@ -21,10 +22,19 @@
 //! matches the menu ID (e.g., `recent-file-0`) and looks up the corresponding file path
 //! from `AppData.recent_files`. This lookup uses a blocking lock because `on_menu_event`
 //! is synchronous. The file path is then emitted as the payload of `menu-open-recent`.
+//!
+//! # Help Window
+//!
+//! The `open_help_window` command creates a separate window displaying the help
+//! documentation (`/help.html`). This provides users with reference material without
+//! interrupting their work in the main editor. The window is managed as a singleton—
+//! if already open, subsequent calls focus the existing window rather than creating
+//! duplicates.
 
 use std::path::Path;
 use tauri::menu::{MenuItemBuilder, PredefinedMenuItem};
-use tauri::{AppHandle, State};
+use tauri::webview::WebviewWindowBuilder;
+use tauri::{AppHandle, Manager, State, WebviewUrl};
 
 use crate::AppData;
 
@@ -190,6 +200,37 @@ pub async fn update_recent_files_menu(
     submenu
         .append(&clear_item)
         .map_err(|e| format!("Failed to append clear recent item: {e}"))?;
+
+    Ok(())
+}
+
+/// Open the help window.
+///
+/// Creates a new window displaying the help documentation. If the help window
+/// is already open, this command will focus it instead of creating a duplicate.
+///
+/// # Arguments
+/// * `app` - App handle for creating the webview window
+///
+/// # Returns
+/// * `Ok(())` - Window was opened or focused successfully
+/// * `Err(String)` - Failed to create the window
+#[tauri::command]
+pub async fn open_help_window(app: AppHandle) -> Result<(), String> {
+    // Check if help window already exists
+    if let Some(window) = app.get_webview_window("help") {
+        window
+            .set_focus()
+            .map_err(|e| format!("Failed to focus help window: {e}"))?;
+        return Ok(());
+    }
+
+    // Create new help window
+    WebviewWindowBuilder::new(&app, "help", WebviewUrl::App("/help.html".into()))
+        .title("Hermes Help")
+        .inner_size(900.0, 700.0)
+        .build()
+        .map_err(|e| format!("Failed to create help window: {e}"))?;
 
     Ok(())
 }

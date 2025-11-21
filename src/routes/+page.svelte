@@ -372,6 +372,7 @@
     let unlistenMenuFindReplace: UnlistenFn | undefined = undefined;
     let unlistenMenuOpenRecent: UnlistenFn | undefined = undefined;
     let unlistenMenuClearRecent: UnlistenFn | undefined = undefined;
+    let unlistenMenuHelp: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -413,6 +414,11 @@
     }).then((fn) => {
       unlistenMenuClearRecent = fn;
     });
+    listen("menu-help", () => {
+      invoke("open_help_window");
+    }).then((fn) => {
+      unlistenMenuHelp = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -446,6 +452,7 @@
       unlistenMenuFindReplace?.();
       unlistenMenuOpenRecent?.();
       unlistenMenuClearRecent?.();
+      unlistenMenuHelp?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -769,7 +776,7 @@
   <!--   </NotificationIcon> -->
   <!-- </ToolbarButton> -->
   <ToolbarSpacer />
-  <ToolbarButton title="Help">
+  <ToolbarButton title="Help" onclick={() => invoke("open_help_window")}>
     <IconHelp />
   </ToolbarButton>
   <ToolbarButton
