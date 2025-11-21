@@ -80,7 +80,9 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Application Entry (src-tauri/src/lib.rs)                    │   │
 │  │  • Sets up Tauri application                                 │   │
-│  │  • Registers plugins (clipboard, fs, dialog, store, log)     │   │
+│  │  • Registers plugins (clipboard, fs, dialog, store, log,     │   │
+│  │    persisted-scope, opener)                                  │   │
+│  │  • Builds native File menu with keyboard shortcuts           │   │
 │  │  • Initializes AppData managed state                         │   │
 │  │  • Loads schema cache from messages.toml                     │   │
 │  │  • Registers all Tauri commands                              │   │
@@ -88,8 +90,9 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Managed State (AppData)                                     │   │
-│  │  • schema_cache: Arc<SchemaCache> - HL7 definitions          │   │
+│  │  • schema: SchemaCache - HL7 definitions                     │   │
 │  │  • listen_join: Mutex<Option<JoinHandle>> - Listener handle  │   │
+│  │  • save_menu_item: MenuItem - For dynamic enable/disable     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -102,6 +105,7 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  │  • data.rs - Parse/render HL7 messages                       │   │
 │  │  • send_receive.rs - MLLP client (send messages)             │   │
 │  │  • listen.rs - MLLP server (receive messages)                │   │
+│  │  • menu.rs - Dynamic menu state (enable/disable Save)        │   │
 │  │  • wizards/ - Database query commands                        │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
@@ -367,6 +371,69 @@ pub async fn stop_listening(
     }
     Ok(())
 }
+```
+
+### Native Menu Events
+
+The application provides a native File menu with standard keyboard shortcuts. Menu item clicks
+trigger events that the frontend listens to, ensuring consistent behavior between menu and toolbar.
+
+**Menu Structure:**
+- File → New (Cmd/Ctrl+N)
+- File → Open... (Cmd/Ctrl+O)
+- File → Save (Cmd/Ctrl+S) - dynamically enabled/disabled
+- File → Save As... (Cmd/Ctrl+Shift+S)
+
+**Event Flow:**
+
+1. User clicks menu item or uses keyboard shortcut
+2. Tauri's `on_menu_event` handler emits corresponding event
+3. Frontend listens to events and triggers file operations
+
+```rust
+// Backend - Menu event handling (lib.rs)
+app.on_menu_event(move |app_handle, event| {
+    let event_name = match event.id().as_ref() {
+        "file-new" => Some("menu-file-new"),
+        "file-open" => Some("menu-file-open"),
+        "file-save" => Some("menu-file-save"),
+        "file-save-as" => Some("menu-file-save-as"),
+        _ => None,
+    };
+
+    if let Some(name) = event_name {
+        let _ = app_handle.emit(name, ());
+    }
+});
+```
+
+```typescript
+// Frontend - Menu event listeners (+page.svelte)
+listen("menu-file-new", () => handleNew());
+listen("menu-file-open", () => handleOpenFile());
+listen("menu-file-save", () => handleSave?.());
+listen("menu-file-save-as", () => handleSaveAs());
+```
+
+**Dynamic Menu State:**
+
+The Save menu item's enabled state is synced with the toolbar save button using a dedicated
+command. This ensures users can't invoke Save from the menu when there are no unsaved changes.
+
+```rust
+// Backend - menu.rs
+#[tauri::command]
+pub fn set_save_enabled(enabled: bool, state: State<'_, AppData>) -> Result<(), String> {
+    state.save_menu_item.set_enabled(enabled)
+        .map_err(|e| format!("Failed to set save menu enabled state: {e}"))
+}
+```
+
+```typescript
+// Frontend - Reactive effect syncs menu state with button state
+$effect(() => {
+    invoke("set_save_enabled", { enabled: handleSave !== undefined });
+});
 ```
 
 ## Data Models
@@ -663,15 +730,20 @@ pub fn populate_segment(
 ```rust
 pub struct AppData {
     /// Cached HL7 schemas loaded from messages.toml
-    pub schema_cache: Arc<SchemaCache>,
+    pub schema: SchemaCache,
 
     /// Join handle for the MLLP listener task (if running)
     pub listen_join: Mutex<Option<JoinHandle<()>>>,
+
+    /// Reference to the Save menu item for dynamic enable/disable
+    pub save_menu_item: MenuItem<Wry>,
 }
 ```
 
-- **`schema_cache`**: Shared across all commands via `Arc` for thread-safe access
+- **`schema`**: Cached HL7 definitions for fast lookups during message editing
 - **`listen_join`**: Mutable state behind `Mutex` to start/stop listener
+- **`save_menu_item`**: Reference to the native Save menu item, allowing the frontend to
+  dynamically enable/disable it based on whether there are unsaved changes
 
 ### Frontend State
 

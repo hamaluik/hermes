@@ -1,35 +1,35 @@
-/**
- * Tab Component
- *
- * Individual tab within a Tabs container. Registers itself with the parent via
- * Svelte's context API and conditionally renders its content based on active state.
- *
- * ## Self-Registration Pattern
- *
- * On mount, the tab:
- * 1. Retrieves the "tabs" context (writable store from parent)
- * 2. Adds its own metadata (id, label, wizard callback) to the store
- * 3. If no tab is currently active, activates itself (first tab wins)
- *
- * This allows tabs to be declared in markup without manually managing a tab list
- * in the parent component. The parent just renders whatever tabs exist in its
- * children, and they handle their own registration.
- *
- * ## Cleanup on Unmount
- *
- * When a tab is removed (e.g., user deletes a segment from the message), the
- * cleanup function:
- * 1. Removes the tab from the parent's tab list
- * 2. If this tab was active, activates the first remaining tab
- *
- * This ensures the UI stays in a valid state when tabs disappear dynamically.
- *
- * ## Conditional Rendering
- *
- * Only the active tab renders its content. This is important because tab content
- * can contain expensive computations, large forms, or real-time data subscriptions.
- * Rendering all tabs but hiding inactive ones via CSS would waste resources.
- */
+<!--
+  Tab Component
+
+  Individual tab within a Tabs container. Registers itself with the parent via
+  Svelte's context API and conditionally renders its content based on active state.
+
+  ## Self-Registration Pattern
+
+  On mount, the tab:
+  1. Retrieves the "tabs" context (writable store from parent)
+  2. Adds its own metadata (id, label, wizard callback) to the store
+  3. If no tab is currently active, activates itself (first tab wins)
+
+  This allows tabs to be declared in markup without manually managing a tab list
+  in the parent component. The parent just renders whatever tabs exist in its
+  children, and they handle their own registration.
+
+  ## Cleanup on Unmount
+
+  When a tab is removed (e.g., user deletes a segment from the message), the
+  cleanup function:
+  1. Removes the tab from the parent's tab list
+  2. If this tab was active, activates the first remaining tab
+
+  This ensures the UI stays in a valid state when tabs disappear dynamically.
+
+  ## Conditional Rendering
+
+  Only the active tab renders its content. This is important because tab content
+  can contain expensive computations, large forms, or real-time data subscriptions.
+  Rendering all tabs but hiding inactive ones via CSS would waste resources.
+-->
 <script lang="ts">
   import { getContext, onMount, type Snippet } from "svelte";
   import { get, type Writable } from "svelte/store";

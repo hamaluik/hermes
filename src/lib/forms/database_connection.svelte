@@ -1,34 +1,34 @@
-/**
- * Database Connection Component
- *
- * Form fieldset for configuring SQL Server database connection settings used by
- * the wizard features. Wizards query the database to populate HL7
- * message fields with real patient/visit/interface data.
- *
- * ## Auto-Save Pattern
- *
- * Settings are saved on every input change (oninput handler). This provides immediate
- * persistence without requiring a separate Save button. The user's connection settings
- * are always up-to-date, even if they navigate away from the settings UI.
- *
- * ## Why onMount for Loading?
- *
- * Settings are loaded in onMount rather than initial state declarations to avoid race
- * conditions with the Settings object initialization. The Settings class loads from
- * Tauri's persistent store asynchronously, so accessing properties during component
- * initialization could read stale/default values.
- *
- * ## Validation and isValid Binding
- *
- * The component validates all fields against SQL Server naming rules (e.g., database
- * names must start with letter/underscore, usernames can be domain-qualified like
- * "DOMAIN\user"). The isValid binding allows parent components to conditionally enable
- * actions (like wizard search buttons) based on whether the connection settings are
- * complete and properly formatted.
- *
- * Validation is reactive ($derived) so it updates automatically as the user types,
- * providing immediate feedback on whether their connection settings are valid.
- */
+<!--
+  Database Connection Component
+
+  Form fieldset for configuring SQL Server database connection settings used by
+  the wizard features. Wizards query the database to populate HL7
+  message fields with real patient/visit/interface data.
+
+  ## Auto-Save Pattern
+
+  Settings are saved on every input change (oninput handler). This provides immediate
+  persistence without requiring a separate Save button. The user's connection settings
+  are always up-to-date, even if they navigate away from the settings UI.
+
+  ## Why onMount for Loading?
+
+  Settings are loaded in onMount rather than initial state declarations to avoid race
+  conditions with the Settings object initialization. The Settings class loads from
+  Tauri's persistent store asynchronously, so accessing properties during component
+  initialization could read stale/default values.
+
+  ## Validation and isValid Binding
+
+  The component validates all fields against SQL Server naming rules (e.g., database
+  names must start with letter/underscore, usernames can be domain-qualified like
+  "DOMAIN\user"). The isValid binding allows parent components to conditionally enable
+  actions (like wizard search buttons) based on whether the connection settings are
+  complete and properly formatted.
+
+  Validation is reactive ($derived) so it updates automatically as the user types,
+  providing immediate feedback on whether their connection settings are valid.
+-->
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Settings } from "../../settings";

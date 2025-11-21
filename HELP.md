@@ -331,27 +331,30 @@ segment
 
 ## File Operations
 
+All file operations are available through both the toolbar buttons and the native
+**File** menu with standard keyboard shortcuts (see [Keyboard Shortcuts](#keyboard-shortcuts-reference)).
+
 ### Creating a New Message
 
-Click the **New** button in the toolbar to create a fresh HL7 message. Hermes
-will generate a basic MSH segment with default field separators:
+Click the **New** button in the toolbar (or use **Cmd/Ctrl+N**) to create a fresh
+HL7 message. Hermes will generate a basic MSH segment with default field separators:
 
 ``` MSH|^~\&| ```
 
 ### Opening an Existing Message
 
-1. Click the **Open** button in the toolbar
+1. Click the **Open** button in the toolbar (or use **Cmd/Ctrl+O**)
 2. Browse to and select an `.hl7` file
 3. The message will load into the editor and segment tabs
 
 ### Saving Your Message
 
-**Save:**
-- Click the **Save** button to save to the currently open file
-- The Save button is only enabled when you have an open file and unsaved changes
+**Save** (**Cmd/Ctrl+S**):
+- Click the **Save** button (or use **Cmd/Ctrl+S**) to save to the currently open file
+- The Save button and menu item are only enabled when you have an open file and unsaved changes
 
-**Save As:**
-- Click the **Save As** button to save to a new file location
+**Save As** (**Cmd/Ctrl+Shift+S**):
+- Click the **Save As** button (or use **Cmd/Ctrl+Shift+S**) to save to a new file location
 - Choose a filename and location in the file dialog
 - Your message will be saved as an `.hl7` text file
 
@@ -388,6 +391,17 @@ All settings are saved automatically with a short delay after you change them.
 ---
 
 ## Keyboard Shortcuts Reference
+
+### File Operations
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+N** (Windows/Linux) / **Cmd+N** (Mac) | Create new message |
+| **Ctrl+O** (Windows/Linux) / **Cmd+O** (Mac) | Open file |
+| **Ctrl+S** (Windows/Linux) / **Cmd+S** (Mac) | Save file (when enabled) |
+| **Ctrl+Shift+S** (Windows/Linux) / **Cmd+Shift+S** (Mac) | Save As |
+
+### Message Editor
 
 | Shortcut | Action |
 |----------|--------|

@@ -1,28 +1,28 @@
-/**
- * Notification Icon Component
- *
- * Wraps an icon (typically a toolbar button icon) with an optional notification
- * badge showing a count. Used for features that accumulate items requiring user
- * attention (e.g., unread messages in the Listen feature).
- *
- * ## Badge Positioning
- *
- * The badge is absolutely positioned at the top-right corner of the icon, extending
- * slightly beyond the icon's bounds (-5px offset). This standard notification pattern
- * makes the badge immediately visible without obscuring the icon itself.
- *
- * ## Conditional Display
- *
- * The badge only renders when count > 0. This avoids visual clutter when there are
- * no notifications, and provides clear visual feedback when notifications arrive
- * (the badge suddenly appears).
- *
- * ## Circular Badge
- *
- * The badge is circular (border-radius: 50%, aspect-ratio: 1/1) which is a common
- * notification pattern across platforms. The size (1lh = 1 line-height) ensures
- * it scales proportionally with the UI font size.
- */
+<!--
+  Notification Icon Component
+
+  Wraps an icon (typically a toolbar button icon) with an optional notification
+  badge showing a count. Used for features that accumulate items requiring user
+  attention (e.g., unread messages in the Listen feature).
+
+  ## Badge Positioning
+
+  The badge is absolutely positioned at the top-right corner of the icon, extending
+  slightly beyond the icon's bounds (-5px offset). This standard notification pattern
+  makes the badge immediately visible without obscuring the icon itself.
+
+  ## Conditional Display
+
+  The badge only renders when count > 0. This avoids visual clutter when there are
+  no notifications, and provides clear visual feedback when notifications arrive
+  (the badge suddenly appears).
+
+  ## Circular Badge
+
+  The badge is circular (border-radius: 50%, aspect-ratio: 1/1) which is a common
+  notification pattern across platforms. The size (1lh = 1 line-height) ensures
+  it scales proportionally with the UI font size.
+-->
 <script lang="ts">
   import type { Snippet } from "svelte";
 

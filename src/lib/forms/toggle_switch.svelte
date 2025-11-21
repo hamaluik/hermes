@@ -1,20 +1,20 @@
-/**
- * Toggle Switch Component
- *
- * Styled checkbox input that visually represents on/off state with an animated
- * sliding switch. Provides better visual feedback than standard checkboxes for
- * boolean settings.
- *
- * The component wraps a native checkbox input (hidden via opacity: 0) with a
- * custom styled slider. This approach maintains accessibility (screen readers,
- * keyboard navigation) while providing enhanced visuals.
- *
- * Visual states:
- * - Unchecked: Gray background, circle on left
- * - Checked: Pine (green) background, circle slides right
- * - Disabled: Muted colors, cursor changes to not-allowed
- * - Focused: Blue outline for keyboard navigation
- */
+<!--
+  Toggle Switch Component
+
+  Styled checkbox input that visually represents on/off state with an animated
+  sliding switch. Provides better visual feedback than standard checkboxes for
+  boolean settings.
+
+  The component wraps a native checkbox input (hidden via opacity: 0) with a
+  custom styled slider. This approach maintains accessibility (screen readers,
+  keyboard navigation) while providing enhanced visuals.
+
+  Visual states:
+  - Unchecked: Gray background, circle on left
+  - Checked: Pine (green) background, circle slides right
+  - Disabled: Muted colors, cursor changes to not-allowed
+  - Focused: Blue outline for keyboard navigation
+-->
 <script lang="ts">
   let {
     checked = $bindable(false),

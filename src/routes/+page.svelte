@@ -1,46 +1,46 @@
-/**
- * Main Page Component - Hermes HL7 Message Editor
- *
- * This is the primary UI for the Hermes application, providing a complete environment
- * for composing, editing, and managing HL7 messages. The component orchestrates several
- * key subsystems:
- *
- * ## Architecture
- *
- * ### Tab-Based Segment Editing
- * Each HL7 segment (MSH, PID, PV1, etc.) gets its own tab, allowing users to focus on
- * one segment at a time with dedicated form fields. Tabs are dynamically generated based
- * on the segments present in the message. This separation prevents overwhelming users with
- * the full complexity of a multi-segment message at once.
- *
- * ### Resizable Split-Pane Layout
- * The UI is split between:
- * - Top: Tab-based segment forms (flexible height)
- * - Middle: Resize handle (user can drag to adjust proportions)
- * - Bottom: Raw HL7 text editor (fixed height, user-adjustable)
- *
- * The resize system uses pointer capture to track drags smoothly, even when the cursor
- * moves outside the handle. Heights are constrained to prevent unusable layouts (too small
- * to read or too large to see tabs).
- *
- * ### Two-Way Synchronization
- * Changes in the form tabs update the raw message text, and vice versa. This is managed
- * through reactive effects that parse/render between the two representations. This allows
- * users to work in whichever mode is most comfortable for their task.
- *
- * ### Wizard Integration
- * Certain segments (MSH, PID, PV1) have wizards that can auto-populate fields from a
- * connected database. Wizards are accessible via buttons in the tab UI and maintain
- * their own modal dialogs for the search/selection workflow.
- *
- * ### File Management
- * Messages can be opened from and saved to .hl7 files. The component tracks whether
- * the current message has unsaved changes to enable/disable the Save button appropriately.
- *
- * ### Listening for Incoming Messages
- * The application can act as an HL7 MLLP server to receive messages. The listening state
- * and unread message count are tracked here to show notifications in the UI (when enabled).
- */
+<!--
+  Main Page Component - Hermes HL7 Message Editor
+
+  This is the primary UI for the Hermes application, providing a complete environment
+  for composing, editing, and managing HL7 messages. The component orchestrates several
+  key subsystems:
+
+  ## Architecture
+
+  ### Tab-Based Segment Editing
+  Each HL7 segment (MSH, PID, PV1, etc.) gets its own tab, allowing users to focus on
+  one segment at a time with dedicated form fields. Tabs are dynamically generated based
+  on the segments present in the message. This separation prevents overwhelming users with
+  the full complexity of a multi-segment message at once.
+
+  ### Resizable Split-Pane Layout
+  The UI is split between:
+  - Top: Tab-based segment forms (flexible height)
+  - Middle: Resize handle (user can drag to adjust proportions)
+  - Bottom: Raw HL7 text editor (fixed height, user-adjustable)
+
+  The resize system uses pointer capture to track drags smoothly, even when the cursor
+  moves outside the handle. Heights are constrained to prevent unusable layouts (too small
+  to read or too large to see tabs).
+
+  ### Two-Way Synchronization
+  Changes in the form tabs update the raw message text, and vice versa. This is managed
+  through reactive effects that parse/render between the two representations. This allows
+  users to work in whichever mode is most comfortable for their task.
+
+  ### Wizard Integration
+  Certain segments (MSH, PID, PV1) have wizards that can auto-populate fields from a
+  connected database. Wizards are accessible via buttons in the tab UI and maintain
+  their own modal dialogs for the search/selection workflow.
+
+  ### File Management
+  Messages can be opened from and saved to .hl7 files. The component tracks whether
+  the current message has unsaved changes to enable/disable the Save button appropriately.
+
+  ### Listening for Incoming Messages
+  The application can act as an HL7 MLLP server to receive messages. The listening state
+  and unread message count are tracked here to show notifications in the UI (when enabled).
+-->
 <script lang="ts">
   import MessageEditor from "$lib/message_editor.svelte";
   import CursorDescription from "$lib/cursor_description.svelte";
@@ -79,7 +79,8 @@
   import ListenModal from "$lib/listen_modal.svelte";
   import NotificationIcon from "$lib/notification_icon.svelte";
   import { listenToListenResponse } from "../backend/listen";
-  import type { UnlistenFn } from "@tauri-apps/api/event";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { invoke } from "@tauri-apps/api/core";
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
   import PatientWizard from "$lib/wizards/patient_wizard.svelte";
   import VisitWizard from "$lib/wizards/visit_wizard.svelte";
@@ -263,6 +264,30 @@
       });
 
     /**
+     * File Menu Event Listeners
+     *
+     * The Tauri backend emits events when File menu items are clicked.
+     * We listen for these events and trigger the corresponding file operations.
+     */
+    let unlistenMenuNew: UnlistenFn | undefined = undefined;
+    let unlistenMenuOpen: UnlistenFn | undefined = undefined;
+    let unlistenMenuSave: UnlistenFn | undefined = undefined;
+    let unlistenMenuSaveAs: UnlistenFn | undefined = undefined;
+
+    listen("menu-file-new", () => handleNew()).then((fn) => {
+      unlistenMenuNew = fn;
+    });
+    listen("menu-file-open", () => handleOpenFile()).then((fn) => {
+      unlistenMenuOpen = fn;
+    });
+    listen("menu-file-save", () => handleSave?.()).then((fn) => {
+      unlistenMenuSave = fn;
+    });
+    listen("menu-file-save-as", () => handleSaveAs()).then((fn) => {
+      unlistenMenuSaveAs = fn;
+    });
+
+    /**
      * Window Resize Handling
      *
      * When the window shrinks, the max editor height (60% of viewport) also shrinks.
@@ -283,6 +308,10 @@
 
     return () => {
       unlisten?.();
+      unlistenMenuNew?.();
+      unlistenMenuOpen?.();
+      unlistenMenuSave?.();
+      unlistenMenuSaveAs?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -319,6 +348,9 @@
   /**
    * File Operations
    *
+   * New: Creates a fresh message with a minimal MSH segment and default data.
+   * Clears the current file path since this is a new unsaved message.
+   *
    * Open: Loads an .hl7 file from disk. Resets currentFilePath temporarily to ensure
    * proper state transitions if the user cancels the dialog.
    *
@@ -332,6 +364,18 @@
    * All three operations update savedMessage to reflect the persisted state, which is
    * compared against the current message to determine if unsaved changes exist.
    */
+  function handleNew() {
+    message = "MSH|^~\\&|";
+    currentFilePath = undefined;
+    const defaultData = generateDefaultData("MSH", schemas["MSH"] ?? {});
+    renderMessageSegment(message, "MSH", 0, defaultData).then((newMessage) => {
+      if (newMessage) {
+        message = newMessage;
+        savedMessage = message;
+      }
+    });
+  }
+
   async function handleOpenFile() {
     const filePath = await openDialog({
       filters: [
@@ -373,6 +417,11 @@
     };
   });
 
+  // Sync the Save menu item enabled state with the toolbar save button
+  $effect(() => {
+    invoke("set_save_enabled", { enabled: handleSave !== undefined });
+  });
+
   const handleSaveAs = async () => {
     const filePath = await saveDialog({
       filters: [
@@ -407,22 +456,7 @@
 </script>
 
 <Toolbar bind:toolbarHeight>
-  <ToolbarButton
-    title="New"
-    onclick={() => {
-      message = "MSH|^~\\&|";
-      currentFilePath = undefined;
-      const defaultData = generateDefaultData("MSH", schemas["MSH"] ?? {});
-      renderMessageSegment(message, "MSH", 0, defaultData).then(
-        (newMessage) => {
-          if (newMessage) {
-            message = newMessage;
-            savedMessage = message;
-          }
-        },
-      );
-    }}
-  >
+  <ToolbarButton title="New" onclick={handleNew}>
     <IconNew />
   </ToolbarButton>
   <ToolbarButton title="Open" onclick={handleOpenFile}>

@@ -75,7 +75,8 @@
 
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
-use tauri::Manager;
+use tauri::menu::{MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder};
+use tauri::{Emitter, Manager, Wry};
 use tokio::sync::Mutex;
 
 mod commands;
@@ -87,7 +88,7 @@ mod spec;
 /// This state is initialized once during app setup and is accessible to all Tauri commands
 /// via the `State<AppData>` parameter. The state is thread-safe and can be accessed from
 /// multiple async tasks concurrently.
-struct AppData {
+pub struct AppData {
     /// Cached HL7 schema loaded from messages.toml.
     ///
     /// Provides fast access to message and segment definitions without repeatedly
@@ -103,6 +104,13 @@ struct AppData {
     /// Wrapped in a Mutex to allow the handle to be taken, replaced, or aborted from
     /// different async tasks.
     listen_join: Mutex<Option<tokio::task::JoinHandle<()>>>,
+
+    /// Reference to the Save menu item for dynamic enable/disable.
+    ///
+    /// This allows the frontend to sync the menu item's enabled state with the
+    /// toolbar save button. The menu item is disabled when there are no unsaved
+    /// changes or no file is currently open.
+    pub save_menu_item: MenuItem<Wry>,
 }
 
 /// Main entry point for the Hermes application.
@@ -145,8 +153,6 @@ pub fn run() {
         log::LevelFilter::Info
     };
 
-    // TODO: file menu
-
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -187,6 +193,7 @@ pub fn run() {
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
+            commands::set_save_enabled,
             commands::wizards::wizard_apply_interface,
             commands::wizards::wizard_query_interfaces,
             commands::wizards::wizard_apply_patient,
@@ -195,12 +202,66 @@ pub fn run() {
             commands::wizards::wizard_search_visits,
         ])
         .setup(|app| {
+            // Build the Save menu item separately so we can store a reference for dynamic enable/disable
+            let save_menu_item = MenuItemBuilder::new("&Save")
+                .id("file-save")
+                .accelerator("CmdOrCtrl+S")
+                .enabled(false) // Start disabled until there are unsaved changes
+                .build(app)?;
+
+            // Build the File menu with standard file operations
+            // Note: We borrow save_menu_item here so we can move it into AppData afterwards
+            let file_menu = SubmenuBuilder::new(app, "&File")
+                .item(
+                    &MenuItemBuilder::new("&New")
+                        .id("file-new")
+                        .accelerator("CmdOrCtrl+N")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::new("&Open...")
+                        .id("file-open")
+                        .accelerator("CmdOrCtrl+O")
+                        .build(app)?,
+                )
+                .separator()
+                .item(&save_menu_item)
+                .item(
+                    &MenuItemBuilder::new("Save &As...")
+                        .id("file-save-as")
+                        .accelerator("CmdOrCtrl+Shift+S")
+                        .build(app)?,
+                )
+                .build()?;
+
+            let menu = MenuBuilder::new(app).item(&file_menu).build()?;
+
+            app.set_menu(menu)?;
+
+            // Create AppData after menu setup, moving the save_menu_item (not cloning)
+            // so we have a reference to the exact menu item that's in the menu
             let app_data = AppData {
                 schema: SchemaCache::new("messages.toml")
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
                 listen_join: Mutex::new(None),
+                save_menu_item,
             };
             app.manage(app_data);
+
+            // Handle menu events by emitting corresponding frontend events
+            app.on_menu_event(move |app_handle, event| {
+                let event_name = match event.id().as_ref() {
+                    "file-new" => Some("menu-file-new"),
+                    "file-open" => Some("menu-file-open"),
+                    "file-save" => Some("menu-file-save"),
+                    "file-save-as" => Some("menu-file-save-as"),
+                    _ => None,
+                };
+
+                if let Some(name) = event_name {
+                    let _ = app_handle.emit(name, ());
+                }
+            });
 
             // Open devtools automatically in dev mode
             #[cfg(debug_assertions)]

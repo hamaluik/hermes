@@ -52,6 +52,7 @@ The application bridges the gap between manual HL7 message creation and automate
 - SQL Server connection with configurable credentials
 
 ### File Management
+- Native File menu with standard keyboard shortcuts (Cmd/Ctrl+N, O, S)
 - Open and save `.hl7` message files
 - Track current file for quick saves
 - Create new messages with default MSH segment
@@ -302,6 +303,8 @@ hermes/
 - `tauri-plugin-dialog`: File dialogs
 - `tauri-plugin-store`: Persistent settings
 - `tauri-plugin-log`: Application logging
+- `tauri-plugin-persisted-scope`: Persists file access permissions across restarts
+- `tauri-plugin-opener`: URL/file opening
 
 ## User Documentation
 

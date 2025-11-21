@@ -1,47 +1,47 @@
-/**
- * Tabs Component
- *
- * Container component for managing tabbed navigation. Child Tab components register
- * themselves automatically via Svelte's context API, enabling a declarative API where
- * tabs are defined in markup rather than via props.
- *
- * ## Context API Usage
- *
- * We provide two contexts to child components:
- * - "tabs": Writable store of tab metadata (id, label, wizard callback)
- * - "activeId": Writable store of currently active tab ID
- *
- * Child Tab components subscribe to activeId to know when they're active, and push
- * their metadata into the tabs store. This creates a two-way communication channel
- * without requiring explicit prop drilling through intermediate components.
- *
- * Why use context instead of props? Because tab content can be arbitrarily nested
- * (e.g., inside conditional blocks, each blocks, etc.), and manually threading
- * tab registration callbacks through all that structure would be cumbersome and
- * error-prone.
- *
- * ## Add Menu Pattern
- *
- * The optional addMenu snippet provides UI for adding new segments to the message.
- * When provided, a "+" button appears after all tabs. Clicking it reveals a dropdown
- * (provided by the parent via snippet) showing available segment types.
- *
- * The closeMenu callback is passed to the snippet so segment selection can dismiss
- * the menu automatically. This keeps the implementation of the menu content in the
- * parent (which knows what segments are available) while the tabs component handles
- * the show/hide logic.
- *
- * ## Active Tab Tracking
- *
- * We track whether the active tab ID exists in the current tab list. This handles
- * edge cases where:
- * - User edits the raw message and deletes a segment
- * - The previously active tab no longer exists
- * - We need to show a fallback message instead of blank content
- *
- * The subscription pattern ensures activeTabIsMissing updates whenever either the
- * tab list or active ID changes.
- */
+<!--
+  Tabs Component
+
+  Container component for managing tabbed navigation. Child Tab components register
+  themselves automatically via Svelte's context API, enabling a declarative API where
+  tabs are defined in markup rather than via props.
+
+  ## Context API Usage
+
+  We provide two contexts to child components:
+  - "tabs": Writable store of tab metadata (id, label, wizard callback)
+  - "activeId": Writable store of currently active tab ID
+
+  Child Tab components subscribe to activeId to know when they're active, and push
+  their metadata into the tabs store. This creates a two-way communication channel
+  without requiring explicit prop drilling through intermediate components.
+
+  Why use context instead of props? Because tab content can be arbitrarily nested
+  (e.g., inside conditional blocks, each blocks, etc.), and manually threading
+  tab registration callbacks through all that structure would be cumbersome and
+  error-prone.
+
+  ## Add Menu Pattern
+
+  The optional addMenu snippet provides UI for adding new segments to the message.
+  When provided, a "+" button appears after all tabs. Clicking it reveals a dropdown
+  (provided by the parent via snippet) showing available segment types.
+
+  The closeMenu callback is passed to the snippet so segment selection can dismiss
+  the menu automatically. This keeps the implementation of the menu content in the
+  parent (which knows what segments are available) while the tabs component handles
+  the show/hide logic.
+
+  ## Active Tab Tracking
+
+  We track whether the active tab ID exists in the current tab list. This handles
+  edge cases where:
+  - User edits the raw message and deletes a segment
+  - The previously active tab no longer exists
+  - We need to show a fallback message instead of blank content
+
+  The subscription pattern ensures activeTabIsMissing updates whenever either the
+  tab list or active ID changes.
+-->
 <script lang="ts">
   import { setContext, type Snippet } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
