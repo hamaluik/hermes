@@ -365,9 +365,22 @@ pub fn run() {
                 .item(&PredefinedMenuItem::about(app, Some("About Hermes"), Some(about_metadata))?)
                 .build()?;
 
+            // Build the Window menu with standard window operations.
+            // This provides Cmd+W (close) and Cmd+M (minimize) shortcuts that macOS users expect.
+            // Using PredefinedMenuItem types ensures proper platform integration without
+            // requiring frontend event handling—these actions work natively.
+            // Note: close_window is unsupported on Linux but works on macOS and Windows.
+            let window_menu = SubmenuBuilder::new(app, "&Window")
+                .item(&PredefinedMenuItem::minimize(app, None)?)
+                .item(&PredefinedMenuItem::maximize(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .build()?;
+
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
+                .item(&window_menu)
                 .item(&help_menu)
                 .build()?;
 
