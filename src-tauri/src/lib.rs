@@ -78,7 +78,7 @@
 
 use color_eyre::eyre::Context;
 use schema::cache::SchemaCache;
-use tauri::menu::{MenuBuilder, MenuItem, MenuItemBuilder, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Manager, Wry};
 use tokio::sync::Mutex;
 
@@ -249,7 +249,11 @@ pub fn run() {
                 )
                 .build()?;
 
-            // Build Edit menu items separately for dynamic enable/disable
+            // Build Edit menu with two categories of items:
+            // 1. Custom items (Undo/Redo) - require frontend event handling and dynamic enable/disable
+            //    based on history state. We keep references to these in AppData.
+            // 2. Predefined items (Cut/Copy/Paste/Select All) - handled natively by the webview,
+            //    no frontend code needed. These work automatically with any focused text input.
             let undo_menu_item = MenuItemBuilder::new("&Undo")
                 .id("edit-undo")
                 .accelerator("CmdOrCtrl+Z")
@@ -265,6 +269,12 @@ pub fn run() {
             let edit_menu = SubmenuBuilder::new(app, "&Edit")
                 .item(&undo_menu_item)
                 .item(&redo_menu_item)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, None)?)
+                .item(&PredefinedMenuItem::copy(app, None)?)
+                .item(&PredefinedMenuItem::paste(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
 
             let menu = MenuBuilder::new(app)
