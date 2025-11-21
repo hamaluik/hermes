@@ -917,6 +917,7 @@
     {message}
     {cursorPos}
     segmentSchemas={schemas}
+    {currentFilePath}
     oncursorlocated={(loc) => {
       if (!data.settings.tabsFollowCursor) {
         return;

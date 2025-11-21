@@ -1,24 +1,24 @@
 <!--
-  Cursor Description Component
+  Status Bar Component
 
-  Displays contextual information about the current cursor position in an HL7 message.
+  Displays contextual information at the bottom of the application window.
 
-  Purpose:
-  When editing HL7 messages, users need to know what field they're currently editing.
-  This component shows:
-  1. The HL7 path (e.g., "PID.5.1" for Patient Name - Family Name)
-  2. The human-readable field name (e.g., "Patient Name → Family Name")
-  3. The field specification/description from HL7 definitions
+  Content (left to right):
+  1. HL7 cursor position - path (e.g., "PID.5.1"), field name, and specification
+  2. Current file path - full path to the open file, truncated from the left if needed
 
-  Flow:
-  1. Parent component passes message text and cursor position
-  2. Component calls backend locateCursor() to parse HL7 structure and determine position
-  3. Looks up field metadata from segment schemas
-  4. Calls backend loadSpec() to fetch human-readable description
-  5. Renders all three pieces of information inline
+  HL7 Cursor Flow:
+  1. Parent passes message text and cursor position
+  2. Backend locateCursor() parses HL7 structure to determine position
+  3. Field metadata looked up from segment schemas
+  4. Backend loadSpec() fetches human-readable description
+  5. All three pieces rendered on the left side
 
-  This provides real-time contextual help as users navigate through message fields,
-  reducing the need to reference external HL7 documentation.
+  File Path Display:
+  - Only shown when a file is open (currentFilePath is defined)
+  - Truncates from the left to keep the filename visible when space is limited
+  - Gradient fade on left edge indicates hidden content
+  - Full path available in tooltip on hover
 -->
 <script lang="ts">
   import { locateCursor, type LocatedCursor } from "../backend/cursor";
@@ -29,11 +29,13 @@
     cursorPos,
     oncursorlocated,
     segmentSchemas,
+    currentFilePath,
   }: {
     message?: string;
     cursorPos?: number;
     segmentSchemas?: SegmentSchemas;
     oncursorlocated?: (locatedCursor: LocatedCursor | null) => void;
+    currentFilePath?: string;
   } = $props();
 
   let _path = $state("");
@@ -126,18 +128,25 @@
 </script>
 
 <div class="cursor-description">
-  {#if _path}
-    <p>
-      {#if _path}
-        <span class="path">{_path}</span>
-      {/if}
-      {#if _fieldName}
-        <span class="field-name">{_fieldName}</span>
-      {/if}
-      {#if _spec}
-        <span class="spec">({_spec})</span>
-      {/if}
-    </p>
+  <div class="hl7-info">
+    {#if _path}
+      <p>
+        {#if _path}
+          <span class="path">{_path}</span>
+        {/if}
+        {#if _fieldName}
+          <span class="field-name">{_fieldName}</span>
+        {/if}
+        {#if _spec}
+          <span class="spec">({_spec})</span>
+        {/if}
+      </p>
+    {/if}
+  </div>
+  {#if currentFilePath}
+    <div class="file-path" title={currentFilePath}>
+      <span>{currentFilePath}</span>
+    </div>
   {/if}
 </div>
 
@@ -147,9 +156,13 @@
     color: var(--col-text);
 
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2ch;
+  }
+  .hl7-info {
+    flex-shrink: 0;
 
     p {
       display: inline-flex;
@@ -169,5 +182,31 @@
   .spec {
     font-size: smaller;
     color: var(--col-subtle);
+  }
+  .file-path {
+    font-size: small;
+    color: var(--col-subtle);
+    overflow: hidden;
+    min-width: 0;
+    flex-shrink: 1;
+    display: flex;
+    justify-content: flex-end;
+    position: relative;
+
+    span {
+      white-space: nowrap;
+    }
+
+    /* Gradient fade on left edge to indicate truncation */
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2ch;
+      background: linear-gradient(to right, var(--col-surface), transparent);
+      pointer-events: none;
+    }
   }
 </style>
