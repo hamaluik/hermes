@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::Context;
 use hl7_parser::builder::{FieldBuilder, MessageBuilder, SegmentBuilder};
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -321,4 +322,68 @@ fn parse_field_id(field_id: &str, segment: &str) -> Option<(usize, Option<usize>
     };
 
     Some((field, component))
+}
+
+/// Result of generating a new control ID.
+///
+/// Contains both the modified message and the range where the control ID was inserted,
+/// allowing the frontend to select the new value in the editor.
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GenerateControlIdResult {
+    /// The modified message with the new control ID
+    pub message: String,
+    /// Character range of the control ID field (MSH.10) for editor selection
+    pub range: CursorRange,
+}
+
+/// Generate a new control ID and insert it into MSH.10.
+///
+/// This command generates a random 20-character alphanumeric control ID and
+/// replaces the value in MSH.10. The control ID uniquely identifies each message
+/// and is used by receiving systems to detect duplicates.
+///
+/// # Use Case
+/// When resending a message or creating a new message from a template, users need
+/// to generate a fresh control ID. This tool automates that process without requiring
+/// manual ID creation.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+///
+/// # Returns
+/// * `Ok(GenerateControlIdResult)` - Modified message and range of MSH.10
+/// * `Err(String)` - If message parsing fails
+#[tauri::command]
+pub fn generate_control_id(message: &str) -> Result<GenerateControlIdResult, String> {
+    let parsed = hl7_parser::parse_message_with_lenient_newlines(message)
+        .map_err(|e| format!("Failed to parse message: {e}"))?;
+
+    // Generate a 20-character alphanumeric control ID
+    let new_control_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
+
+    // Convert to builder and update MSH.10
+    let mut builder: MessageBuilder = (&parsed).into();
+    let msh = builder
+        .segment_named_mut("MSH")
+        .ok_or("Message has no MSH segment")?;
+    msh.set_field_value(10, &new_control_id);
+
+    // Render the updated message
+    let rendered = builder.render_with_newlines().to_string();
+
+    // Find the range of MSH.10 in the rendered message
+    let new_parsed = hl7_parser::parse_message_with_lenient_newlines(&rendered)
+        .map_err(|e| format!("Failed to parse updated message: {e}"))?;
+    let range = new_parsed
+        .query("MSH.10")
+        .map(|r| r.range())
+        .ok_or("Could not find MSH.10 in updated message")?;
+
+    Ok(GenerateControlIdResult {
+        message: rendered,
+        range: CursorRange {
+            start: range.start,
+            end: range.end,
+        },
+    })
 }

@@ -25,7 +25,7 @@
 //! Tab/Shift-Tab navigation by finding the next/previous "cell" in the message.
 //! A "cell" is the smallest navigable unit: a field, component, or subcomponent.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::ops::Range;
 
 /// Structured representation of a cursor's position within an HL7 message.
@@ -111,7 +111,7 @@ pub fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
 /// Character range within the message (start/end offsets).
 ///
 /// Used to communicate field boundaries to the frontend for navigation and selection.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CursorRange {
     /// Starting character offset (inclusive)
     pub start: usize,

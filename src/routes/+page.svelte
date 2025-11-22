@@ -67,6 +67,7 @@
     save as saveDialog,
   } from "@tauri-apps/plugin-dialog";
   import {
+    generateControlId,
     generateDefaultData,
     getMessageSegmentNames,
     renderMessageSegment,
@@ -454,6 +455,7 @@
     let unlistenMenuHelp: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsSend: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsListen: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsGenerateControlId: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
     let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
@@ -532,6 +534,23 @@
     }).then((fn) => {
       unlistenMenuToolsListen = fn;
     });
+    listen("menu-tools-generate-control-id", async () => {
+      try {
+        const result = await generateControlId(message);
+        updateMessage(result.message);
+        // Select the new control ID in the editor
+        setTimeout(() => {
+          if (editorElement) {
+            editorElement.focus();
+            editorElement.setSelectionRange(result.range.start, result.range.end);
+          }
+        }, 0);
+      } catch (error) {
+        console.error("Failed to generate control ID:", error);
+      }
+    }).then((fn) => {
+      unlistenMenuToolsGenerateControlId = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -572,6 +591,7 @@
       unlistenMenuHelp?.();
       unlistenMenuToolsSend?.();
       unlistenMenuToolsListen?.();
+      unlistenMenuToolsGenerateControlId?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });

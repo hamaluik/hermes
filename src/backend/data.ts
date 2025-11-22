@@ -163,6 +163,35 @@ export async function renderMessageSegment(
 }
 
 /**
+ * Result of generating a new control ID.
+ */
+export interface GenerateControlIdResult {
+  /** The modified message with the new control ID */
+  message: string;
+  /** Character range of the control ID field (MSH.10) for editor selection */
+  range: { start: number; end: number };
+}
+
+/**
+ * Generates a new control ID and inserts it into MSH.10.
+ *
+ * Creates a random 20-character alphanumeric control ID and replaces the
+ * value in MSH.10. The control ID uniquely identifies each message and is
+ * used by receiving systems to detect duplicates.
+ *
+ * Use this when resending a message or creating a new message from a template,
+ * as the control ID should be unique for each message sent.
+ *
+ * @param message - Raw HL7 message string
+ * @returns Modified message and the range of the new control ID
+ */
+export async function generateControlId(
+  message: string,
+): Promise<GenerateControlIdResult> {
+  return await invoke("generate_control_id", { message });
+}
+
+/**
  * Creates a SegmentData structure with all fields set to null.
  *
  * Used to initialize the form when creating a new segment from scratch or when

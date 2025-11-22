@@ -229,6 +229,7 @@ pub fn run() {
             commands::get_field_range,
             commands::parse_message_segment,
             commands::render_message_segment,
+            commands::generate_control_id,
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
@@ -414,6 +415,13 @@ pub fn run() {
                         .accelerator("CmdOrCtrl+L")
                         .build(app)?,
                 )
+                .separator()
+                .item(
+                    &MenuItemBuilder::new("&Generate Control ID")
+                        .id("tools-generate-control-id")
+                        .accelerator("CmdOrCtrl+G")
+                        .build(app)?,
+                )
                 .build()?;
 
             // Build the Window menu with standard window operations.
@@ -475,6 +483,7 @@ pub fn run() {
                     "view-reset-zoom" => Some("menu-view-reset-zoom"),
                     "tools-send" => Some("menu-tools-send"),
                     "tools-listen" => Some("menu-tools-listen"),
+                    "tools-generate-control-id" => Some("menu-tools-generate-control-id"),
                     "recent-clear" => Some("menu-clear-recent"),
                     "help" => Some("menu-help"),
                     _ => None,
