@@ -50,6 +50,17 @@
   let error: string | null = $state(null);
 
   /**
+   * Validation patterns matching database wizard inputs.
+   * Host: Standard hostname/IP format (with optional port :1433 or instance \\SQLEXPRESS)
+   * Port: Standard TCP port range (1-65535)
+   */
+  const hostPattern = /^[a-zA-Z0-9]([a-zA-Z0-9\-\.:]*[a-zA-Z0-9])?$/;
+  const isHostValid = $derived(
+    hostname.length >= 1 && hostname.length <= 255 && hostPattern.test(hostname),
+  );
+  const isPortValid = $derived(port >= 1 && port <= 65535);
+
+  /**
    * Debounced settings persistence.
    * Saves hostname/port/timeout to settings after 500ms of inactivity.
    */
@@ -113,9 +124,8 @@
   // Determine if Send button should be disabled
   let canSend: boolean = $derived(
     sendState !== "sending" &&
-      hostname.trim() !== "" &&
-      port > 0 &&
-      port <= 65535 &&
+      isHostValid &&
+      isPortValid &&
       message.trim() !== "",
   );
 </script>
@@ -132,6 +142,11 @@
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"
+        minlength={1}
+        maxlength={255}
+        pattern="^[a-zA-Z0-9]([a-zA-Z0-9\-\.:]*[a-zA-Z0-9])?$"
+        required
+        class:invalid={hostname.length > 0 && !isHostValid}
       />
     </div>
 
@@ -144,6 +159,8 @@
         min="1"
         max="65535"
         placeholder="2575"
+        required
+        class:invalid={!isPortValid}
       />
     </div>
 
@@ -252,6 +269,14 @@
         outline: none;
         border-color: var(--col-iris);
       }
+
+      &.invalid {
+        border-color: var(--col-love);
+      }
+
+      &.invalid:focus {
+        border-color: var(--col-love);
+      }
     }
 
     input[type="number"] {
@@ -286,7 +311,7 @@
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
     background: var(--col-pine);
-    color: var(--col-text);
+    color: var(--col-base);
     border: none;
     border-radius: 4px;
     font-size: 0.875rem;
@@ -308,6 +333,16 @@
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+  }
+
+  :global(html[data-theme="dark"]) .send-button {
+    color: var(--col-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme="auto"]) .send-button {
+      color: var(--col-text);
     }
   }
 

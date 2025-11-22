@@ -53,7 +53,7 @@
     top: -5px;
     right: -5px;
     background-color: var(--col-love);
-    color: var(--col-text);
+    color: var(--col-base);
     border-radius: 50%;
     aspect-ratio: 1 / 1;
     height: 1lh;
@@ -62,5 +62,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  :global(html[data-theme="dark"]) .notification-count {
+    color: var(--col-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme="auto"]) .notification-count {
+      color: var(--col-text);
+    }
   }
 </style>

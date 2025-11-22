@@ -47,6 +47,12 @@
   let isStarting: boolean = $state(false);
   let error: string | null = $state(null);
 
+  /**
+   * Port validation matching database wizard inputs.
+   * Port: Standard TCP port range (1-65535)
+   */
+  const isPortValid = $derived(port >= 1 && port <= 65535);
+
   // Derived state
   let isListening: boolean = $state(false);
   let messageList: ListenedMessage[] = $state([]);
@@ -186,7 +192,7 @@
 
   // Determine button state
   let canStart: boolean = $derived(
-    !isListening && !isStarting && port > 0 && port <= 65535,
+    !isListening && !isStarting && isPortValid,
   );
 </script>
 
@@ -201,7 +207,9 @@
         min="1"
         max="65535"
         placeholder="2575"
+        required
         disabled={isListening}
+        class:invalid={!isPortValid}
       />
     </div>
 
@@ -360,6 +368,14 @@
       &:disabled {
         opacity: 0.5;
       }
+
+      &.invalid {
+        border-color: var(--col-love);
+      }
+
+      &.invalid:focus {
+        border-color: var(--col-love);
+      }
     }
 
     input[type="number"] {
@@ -392,7 +408,7 @@
 
     &.start {
       background: var(--col-pine);
-      color: var(--col-text);
+      color: var(--col-base);
 
       &:hover:not(:disabled) {
         background: var(--col-gold);
@@ -415,6 +431,16 @@
     }
   }
 
+  :global(html[data-theme="dark"]) .listen-button.start {
+    color: var(--col-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme="auto"]) .listen-button.start {
+      color: var(--col-text);
+    }
+  }
+
   .status {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
@@ -422,13 +448,23 @@
 
     &.active {
       background: var(--col-pine);
-      color: var(--col-text);
+      color: var(--col-base);
       opacity: 0.8;
     }
 
     &.error {
       background: var(--col-love);
       color: var(--col-base);
+    }
+  }
+
+  :global(html[data-theme="dark"]) .status.active {
+    color: var(--col-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme="auto"]) .status.active {
+      color: var(--col-text);
     }
   }
 

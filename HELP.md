@@ -164,8 +164,7 @@ easier to read:
 
 - **Tab**: Jump to the next field in the message
 - **Shift+Tab**: Jump to the previous field in the message
-- **Ctrl+Enter** (Windows/Linux) or **Cmd+Enter** (Mac): Quick send shortcut
-  (when enabled)
+- **Ctrl+Enter** (Windows/Linux) or **Cmd+Enter** (Mac): Open Communication Drawer (Send tab)
 
 ### Copy to Clipboard
 
@@ -365,6 +364,95 @@ Save button to work without prompting you for a location each time.
 
 ---
 
+## Communication
+
+Hermes can send and receive HL7 messages over the network using the MLLP
+(Minimal Lower Layer Protocol) standard, which is how most healthcare systems
+exchange HL7 v2.x messages. The Communication Drawer provides a convenient,
+non-blocking interface for both operations.
+
+### Opening the Communication Drawer
+
+Click the **Communication** button in the toolbar to open the drawer. The button
+shows the current state:
+
+- **Gray**: Not listening, drawer closed
+- **Green**: Listen server is active
+- **Purple**: Drawer is open
+
+A red badge appears on the button when there are unread received messages.
+
+### Send Tab
+
+The Send tab lets you send the current message to a remote MLLP server and view
+the response.
+
+**Configuration:**
+
+- **Host**: The server address to send to (IP address or hostname)
+- **Port**: The MLLP port number (commonly 2575, but varies by system)
+- **Timeout**: How long to wait for a response (in seconds)
+
+These settings are saved automatically and persist across sessions.
+
+**Sending a Message:**
+
+1. Configure the host, port, and timeout
+2. Click **Send**
+3. The status area shows connection progress
+4. If successful, the response appears in the Response panel with syntax
+   highlighting
+
+**Understanding Responses:**
+
+Most receiving systems respond with an ACK (acknowledgment) message. Common ACK
+codes in MSA-1:
+
+- **AA**: Application Accept - message was processed successfully
+- **AE**: Application Error - message had errors but was understood
+- **AR**: Application Reject - message was rejected
+
+### Listen Tab
+
+The Listen tab runs an MLLP server to receive incoming HL7 messages from other
+systems.
+
+**Starting the Server:**
+
+1. Enter the **Port** to listen on (commonly 2575)
+2. Click **Start Listening**
+3. The status shows "Listening on port X" when active
+
+Click **Stop Listening** to shut down the server.
+
+**Viewing Received Messages:**
+
+Received messages appear in the center list with:
+
+- **●** (filled circle): Unread message
+- **○** (empty circle): Read message
+- **Message type**: Extracted from MSH-9 (e.g., "ADT^A01")
+- **Time**: When the message was received
+
+Click a message to view it in the right panel with syntax highlighting.
+
+**Loading Messages to Editor:**
+
+Click **Load to Editor** to copy a received message into the main editor. This
+is useful for modifying and resending messages during testing.
+
+### Understanding MLLP
+
+MLLP wraps HL7 messages with special characters to mark the start and end:
+
+- **Start Block**: `0x0B` (vertical tab character)
+- **End Block**: `0x1C` (file separator) followed by `0x0D` (carriage return)
+
+Hermes handles this framing automatically. You just work with the HL7 message
+content.
+
+---
+
 ## Settings
 
 Access settings by clicking the **Settings** button in the toolbar.
@@ -407,6 +495,13 @@ All settings are saved automatically with a short delay after you change them.
 |----------|--------|
 | **Tab** | Jump to next field in message editor |
 | **Shift+Tab** | Jump to previous field in message editor |
+| **Ctrl+Enter** (Windows/Linux) / **Cmd+Enter** (Mac) | Open Communication Drawer (Send tab) |
+
+### Help
+
+| Shortcut | Action |
+|----------|--------|
+| **F1** | Open Help window |
 
 ---
 
@@ -482,3 +577,15 @@ All settings are saved automatically with a short delay after you change them.
 **Tabs not following cursor:**
 - Check Settings → "Tabs Follow Cursor" is enabled
 - Ensure you're clicking within valid segment boundaries
+
+**Communication errors:**
+- **Connection refused**: Check that the remote system is running and listening
+  on the specified port
+- **Timeout**: The server may be slow to respond. Try increasing the timeout in
+  the Send tab.
+- **Host not found**: Verify the hostname is correct and DNS is resolving
+  properly
+- **Port already in use**: When starting the Listen server, another application
+  may be using the port. Try a different port.
+- **Firewall blocking**: Ensure your firewall allows connections on the MLLP
+  port (typically 2575)

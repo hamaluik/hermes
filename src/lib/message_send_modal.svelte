@@ -287,7 +287,7 @@
 
         button.submit {
           background: var(--col-pine);
-          color: var(--col-text);
+          color: var(--col-base);
           border: none;
           border-radius: 4px;
           padding: 0.5em 1ch;
@@ -345,6 +345,16 @@
 
     &.results {
       min-width: min(80vw, calc(80ch + 2rem));
+    }
+  }
+
+  :global(html[data-theme="dark"]) button.submit {
+    color: var(--col-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme="auto"]) button.submit {
+      color: var(--col-text);
     }
   }
 </style>
