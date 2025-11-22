@@ -136,6 +136,10 @@ body {
   color: var(--col-text);
   background-color: var(--col-base);
   overscroll-behavior: none;
+  /* Disable text selection globally to feel more like a native app.
+     Re-enabled for inputs/textareas below where selection is expected. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* view transitions */
@@ -168,13 +172,17 @@ fieldset {
   border-radius: 4px;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   padding: 0.5em;
   background-color: var(--col-surface);
   border: 1px solid var(--col-muted);
   color: var(--col-text);
   border-radius: 4px;
+  /* Re-enable text selection for form elements where users expect to select/copy text */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 input[type="number"] {
