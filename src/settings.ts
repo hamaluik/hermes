@@ -74,8 +74,14 @@ export class Settings {
   private _editorHeight: number = 200;
   private _autoSaveEnabled: boolean = false;
 
+  // Zoom level as a scale factor (1.0 = 100%)
+  private _zoomLevel: number = 1.0;
+
   // Callback to notify when auto-save setting changes (for menu updates)
   onAutoSaveChanged: ((enabled: boolean) => void) | null = null;
+
+  // Callback to notify when zoom level changes (for applying zoom to webview)
+  onZoomChanged: ((zoomLevel: number) => void) | null = null;
 
   // Theme setting: "light", "dark", or "auto" (follows system preference)
   private _themeSetting: "light" | "dark" | "auto" = "auto";
@@ -163,6 +169,7 @@ export class Settings {
           store.get<number>("commDrawerHeight"),
           store.get<"send" | "listen">("commDrawerTab"),
           store.get<number>("listenPort"),
+          store.get<number>("zoomLevel"),
         ]);
       })
       .then(
@@ -186,6 +193,7 @@ export class Settings {
           commDrawerHeight,
           commDrawerTab,
           listenPort,
+          zoomLevel,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
@@ -206,6 +214,7 @@ export class Settings {
           this._commDrawerHeight = commDrawerHeight ?? 300;
           this._commDrawerTab = commDrawerTab ?? "send";
           this._listenPort = listenPort ?? 2575;
+          this._zoomLevel = zoomLevel ?? 1.0;
 
           // Notify listeners that settings are loaded (for initial menu population)
           if (this.onRecentFilesChanged) {
@@ -226,6 +235,9 @@ export class Settings {
           }
           if (this.onListenSettingsChanged) {
             this.onListenSettingsChanged(this._listenPort);
+          }
+          if (this.onZoomChanged) {
+            this.onZoomChanged(this._zoomLevel);
           }
         },
       )
@@ -557,6 +569,24 @@ export class Settings {
         console.error("Error saving listenPort setting:", error);
         logError("Failed to save listenPort setting");
       });
+    }
+  }
+
+  /** Zoom level as a scale factor (1.0 = 100%, 1.5 = 150%, etc.) */
+  get zoomLevel(): number {
+    return this._zoomLevel;
+  }
+  set zoomLevel(value: number) {
+    console.debug("Setting zoomLevel to:", value);
+    this._zoomLevel = value;
+    if (this.store) {
+      this.store.set("zoomLevel", value).catch((error) => {
+        console.error("Error saving zoomLevel setting:", error);
+        logError("Failed to save zoomLevel setting");
+      });
+    }
+    if (this.onZoomChanged) {
+      this.onZoomChanged(value);
     }
   }
 }

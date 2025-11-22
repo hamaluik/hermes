@@ -91,6 +91,7 @@
   import CommunicationDrawer from "$lib/communication_drawer.svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
   import PatientWizard from "$lib/wizards/patient_wizard.svelte";
   import VisitWizard from "$lib/wizards/visit_wizard.svelte";
@@ -369,6 +370,59 @@
     applyTheme(data.settings.themeSetting);
 
     /**
+     * Zoom Level Management
+     *
+     * Uses browser-style non-linear zoom increments for natural scaling.
+     * Zoom level is persisted to settings and restored on app startup.
+     * The webview's setZoom API takes a scale factor (1.0 = 100%).
+     */
+    const ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0];
+
+    const applyZoom = async (zoomLevel: number) => {
+      try {
+        await getCurrentWebview().setZoom(zoomLevel);
+      } catch (error) {
+        console.error("Failed to apply zoom level:", error);
+      }
+    };
+
+    const handleZoomIn = () => {
+      const currentIndex = ZOOM_LEVELS.findIndex(
+        (z) => z >= data.settings.zoomLevel,
+      );
+      if (currentIndex < ZOOM_LEVELS.length - 1) {
+        const newZoom = ZOOM_LEVELS[currentIndex + 1];
+        data.settings.zoomLevel = newZoom;
+        applyZoom(newZoom);
+      }
+    };
+
+    const handleZoomOut = () => {
+      const currentIndex = ZOOM_LEVELS.findIndex(
+        (z) => z >= data.settings.zoomLevel,
+      );
+      if (currentIndex > 0) {
+        const newZoom = ZOOM_LEVELS[currentIndex - 1];
+        data.settings.zoomLevel = newZoom;
+        applyZoom(newZoom);
+      } else if (currentIndex === -1 && data.settings.zoomLevel > ZOOM_LEVELS[0]) {
+        // Current zoom is above max in our list, go to the highest level
+        const newZoom = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+        data.settings.zoomLevel = newZoom;
+        applyZoom(newZoom);
+      }
+    };
+
+    const handleResetZoom = () => {
+      data.settings.zoomLevel = 1.0;
+      applyZoom(1.0);
+    };
+
+    data.settings.onZoomChanged = applyZoom;
+    // Initialize with current zoom setting
+    applyZoom(data.settings.zoomLevel);
+
+    /**
      * Menu Event Listeners
      *
      * The Tauri backend emits events when native menu items are clicked.
@@ -377,6 +431,7 @@
      * Organized by menu:
      * - File: New, Open, Save, Save As, Auto-Save, Open Recent, Clear Recent
      * - Edit: Undo, Redo, Find, Find and Replace
+     * - View: Zoom In, Zoom Out, Reset Zoom
      * - Tools: Send Message, Listen for Messages
      * - Help: Help window
      */
@@ -394,6 +449,9 @@
     let unlistenMenuHelp: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsSend: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsListen: UnlistenFn | undefined = undefined;
+    let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
+    let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
+    let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -424,6 +482,16 @@
     });
     listen("menu-edit-find-replace", () => handleFind()).then((fn) => {
       unlistenMenuFindReplace = fn;
+    });
+    // View menu: Zoom controls
+    listen("menu-view-zoom-in", () => handleZoomIn()).then((fn) => {
+      unlistenMenuZoomIn = fn;
+    });
+    listen("menu-view-zoom-out", () => handleZoomOut()).then((fn) => {
+      unlistenMenuZoomOut = fn;
+    });
+    listen("menu-view-reset-zoom", () => handleResetZoom()).then((fn) => {
+      unlistenMenuResetZoom = fn;
     });
     listen<string>("menu-open-recent", (event) => {
       handleOpenRecentFile(event.payload);
@@ -485,6 +553,9 @@
       unlistenMenuRedo?.();
       unlistenMenuFind?.();
       unlistenMenuFindReplace?.();
+      unlistenMenuZoomIn?.();
+      unlistenMenuZoomOut?.();
+      unlistenMenuResetZoom?.();
       unlistenMenuOpenRecent?.();
       unlistenMenuClearRecent?.();
       unlistenMenuHelp?.();

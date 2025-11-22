@@ -365,6 +365,30 @@ pub fn run() {
                 .item(&PredefinedMenuItem::about(app, Some("About Hermes"), Some(about_metadata))?)
                 .build()?;
 
+            // Build the View menu for zoom controls.
+            // Uses standard keyboard shortcuts (Cmd+/Ctrl+ +/-/0) that users expect from
+            // browsers and desktop applications. Zoom levels are persisted to settings.
+            let view_menu = SubmenuBuilder::new(app, "&View")
+                .item(
+                    &MenuItemBuilder::new("Zoom &In")
+                        .id("view-zoom-in")
+                        .accelerator("CmdOrCtrl+=")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::new("Zoom &Out")
+                        .id("view-zoom-out")
+                        .accelerator("CmdOrCtrl+-")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::new("&Reset Zoom")
+                        .id("view-reset-zoom")
+                        .accelerator("CmdOrCtrl+0")
+                        .build(app)?,
+                )
+                .build()?;
+
             // Build the Tools menu for HL7 communication operations.
             // Provides keyboard shortcuts (Cmd+T, Cmd+L) to quickly access send/listen
             // functionality without using the mouse. This is particularly useful during
@@ -400,6 +424,7 @@ pub fn run() {
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
+                .item(&view_menu)
                 .item(&tools_menu)
                 .item(&window_menu)
                 .item(&help_menu)
@@ -437,6 +462,9 @@ pub fn run() {
                     "edit-redo" => Some("menu-edit-redo"),
                     "edit-find" => Some("menu-edit-find"),
                     "edit-find-replace" => Some("menu-edit-find-replace"),
+                    "view-zoom-in" => Some("menu-view-zoom-in"),
+                    "view-zoom-out" => Some("menu-view-zoom-out"),
+                    "view-reset-zoom" => Some("menu-view-reset-zoom"),
                     "tools-send" => Some("menu-tools-send"),
                     "tools-listen" => Some("menu-tools-listen"),
                     "recent-clear" => Some("menu-clear-recent"),
