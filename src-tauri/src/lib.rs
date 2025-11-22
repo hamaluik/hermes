@@ -226,6 +226,7 @@ pub fn run() {
             commands::get_message_segment_names,
             commands::get_message_trigger_event,
             commands::get_message_type,
+            commands::get_field_range,
             commands::parse_message_segment,
             commands::render_message_segment,
             commands::send_message,
@@ -319,6 +320,11 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+H")
                 .build(app)?;
 
+            let jump_to_field_menu_item = MenuItemBuilder::new("&Jump to Field...")
+                .id("edit-jump-to-field")
+                .accelerator("CmdOrCtrl+J")
+                .build(app)?;
+
             let edit_menu = SubmenuBuilder::new(app, "&Edit")
                 .item(&undo_menu_item)
                 .item(&redo_menu_item)
@@ -329,6 +335,7 @@ pub fn run() {
                 .separator()
                 .item(&find_menu_item)
                 .item(&find_replace_menu_item)
+                .item(&jump_to_field_menu_item)
                 .separator()
                 .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
@@ -462,6 +469,7 @@ pub fn run() {
                     "edit-redo" => Some("menu-edit-redo"),
                     "edit-find" => Some("menu-edit-find"),
                     "edit-find-replace" => Some("menu-edit-find-replace"),
+                    "edit-jump-to-field" => Some("menu-edit-jump-to-field"),
                     "view-zoom-in" => Some("menu-view-zoom-in"),
                     "view-zoom-out" => Some("menu-view-zoom-out"),
                     "view-reset-zoom" => Some("menu-view-reset-zoom"),

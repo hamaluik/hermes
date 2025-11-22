@@ -114,9 +114,9 @@ pub fn locate_cursor(message: &str, cursor: usize) -> Option<CursorLocation> {
 #[derive(Serialize)]
 pub struct CursorRange {
     /// Starting character offset (inclusive)
-    start: usize,
+    pub start: usize,
     /// Ending character offset (exclusive)
-    end: usize,
+    pub end: usize,
 }
 
 /// Flatten an HL7 message into a linear sequence of navigable "cells".

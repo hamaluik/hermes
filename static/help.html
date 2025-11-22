@@ -396,6 +396,7 @@
         </ul>
       </li>
       <li><a href="#find-replace">Find &amp; Replace</a></li>
+      <li><a href="#jump-to-field">Jump to Field</a></li>
       <li><a href="#file-operations">File Operations</a></li>
       <li>
         <a href="#communication">Communication</a>
@@ -933,6 +934,58 @@
       <p>Press <kbd>Escape</kbd> or click the <strong>×</strong> button to close the Find bar.</p>
     </section>
 
+    <!-- Jump to Field -->
+    <section id="jump-to-field">
+      <h2>Jump to Field</h2>
+      <p>
+        Jump to Field lets you navigate directly to any HL7 field by entering its path. This is
+        faster than scrolling or searching when you know exactly which field you need.
+      </p>
+
+      <h3>Opening Jump to Field</h3>
+      <ul>
+        <li>Press <kbd>Cmd</kbd>+<kbd>J</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>J</kbd> (Windows/Linux)</li>
+        <li>Or use the <strong>Edit</strong> menu → <strong>Jump to Field</strong></li>
+      </ul>
+
+      <h3>Field Path Syntax</h3>
+      <p>
+        Enter the field path using HL7 dot notation. The field will be selected in the message editor.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Pattern</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>PID.5</code></td><td>Fifth field of the PID segment</td></tr>
+          <tr><td><code>PID.5.1</code></td><td>First component of that field (last name)</td></tr>
+          <tr><td><code>PID[2].5</code></td><td>Fifth field of the <em>second</em> PID segment</td></tr>
+          <tr><td><code>MSH.9.1</code></td><td>Message type (e.g., "ADT")</td></tr>
+          <tr><td><code>MSH.9.2</code></td><td>Trigger event (e.g., "A01")</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip">
+        <strong>Common Fields</strong>
+        <p>
+          Here are some frequently used field paths:
+        </p>
+        <ul>
+          <li><code>PID.3</code> — Patient ID (MRN)</li>
+          <li><code>PID.5</code> — Patient Name</li>
+          <li><code>PV1.2</code> — Patient Class</li>
+          <li><code>PV1.3</code> — Assigned Patient Location</li>
+          <li><code>OBR.4</code> — Universal Service Identifier</li>
+        </ul>
+      </div>
+
+      <h3>Error Handling</h3>
+      <p>
+        If the field path doesn't exist in the current message (e.g., asking for PID.5 when there's
+        no PID segment), an error message is displayed and you can correct your input.
+      </p>
+    </section>
+
     <!-- File Operations -->
     <section id="file-operations">
       <h2>File Operations</h2>
@@ -1144,6 +1197,18 @@
           <tr><td><kbd>Enter</kbd></td><td>Next match (in Find bar)</td></tr>
           <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Previous match (in Find bar)</td></tr>
           <tr><td><kbd>Escape</kbd></td><td>Close Find bar</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Navigation</h3>
+      <table>
+        <thead>
+          <tr><th>Shortcut</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><kbd>Cmd</kbd>+<kbd>J</kbd></td><td>Jump to Field</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Next field (in message editor)</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Previous field (in message editor)</td></tr>
         </tbody>
       </table>
 

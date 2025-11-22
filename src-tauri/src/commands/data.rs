@@ -23,6 +23,7 @@ use hl7_parser::builder::{FieldBuilder, MessageBuilder, SegmentBuilder};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::locate_cursor::CursorRange;
 use crate::AppData;
 
 /// Segment data extracted from an HL7 message.
@@ -235,6 +236,37 @@ pub fn render_message_segment(
     // TODO: rearrange the segments if needed
 
     message.render_with_newlines().to_string()
+}
+
+/// Get the character range of a field within an HL7 message by query path.
+///
+/// This command enables "Jump to Field" functionality in the editor. Given a field
+/// path like "PID.5.1", it returns the character range where that field exists in
+/// the message, allowing the frontend to position the cursor there.
+///
+/// # Query Syntax
+/// Uses the hl7-parser library's query syntax:
+/// * `PID.5` - Fifth field of first PID segment
+/// * `PID.5.1` - First component of fifth field
+/// * `PID[2].5` - Fifth field of second PID segment occurrence
+/// * `PID.5[1].1` - First component of first repeat of fifth field
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+/// * `field_path` - Query path (e.g., "PID.5.1", "MSH.9")
+///
+/// # Returns
+/// * `Some(CursorRange)` - Character range of the field if found
+/// * `None` - If message parsing fails or field path is invalid/not found
+#[tauri::command]
+pub fn get_field_range(message: &str, field_path: &str) -> Option<CursorRange> {
+    let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
+    let result = message.query(field_path)?;
+    let range = result.range();
+    Some(CursorRange {
+        start: range.start,
+        end: range.end,
+    })
 }
 
 /// Parse a field identifier string into segment, field, and component numbers.

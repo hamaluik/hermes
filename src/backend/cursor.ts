@@ -108,3 +108,30 @@ export async function getRangeOfNextField(
     cursor,
   });
 }
+
+/**
+ * Finds the character range of a field by its path.
+ *
+ * Used for "Jump to Field" (Cmd+J) functionality. Given a query path like
+ * "PID.5.1", returns the character range where that field exists in the message.
+ *
+ * ## Query Syntax
+ * Uses hl7-parser's query syntax:
+ * - `PID.5` - Fifth field of first PID segment
+ * - `PID.5.1` - First component of fifth field
+ * - `PID[2].5` - Fifth field of second PID segment occurrence
+ * - `PID.5[1].1` - First component of first repeat of fifth field
+ *
+ * @param message - Raw HL7 message string
+ * @param fieldPath - Query path (e.g., "PID.5.1", "MSH.9")
+ * @returns Start and end offsets of the field, or null if not found
+ */
+export async function getFieldRange(
+  message: string,
+  fieldPath: string,
+): Promise<{ start: number; end: number } | null> {
+  return invoke("get_field_range", {
+    message,
+    fieldPath,
+  });
+}

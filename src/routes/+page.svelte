@@ -99,6 +99,7 @@
   import IconUndo from "$lib/icons/IconUndo.svelte";
   import IconRedo from "$lib/icons/IconRedo.svelte";
   import FindReplaceBar from "$lib/find_replace_bar.svelte";
+  import JumpToFieldModal from "$lib/jump_to_field_modal.svelte";
   import type { SearchMatch } from "../backend/syntax_highlight";
 
   let { data }: PageProps = $props();
@@ -138,6 +139,9 @@
   let getEditorSelection: (() => string) | undefined = $state(undefined);
   let editorElement: HTMLTextAreaElement | undefined = $state(undefined);
   let findInitialSelection = $state("");
+
+  // Jump to Field state
+  let showJumpToField = $state(false);
 
   /**
    * Message Editor Resize System
@@ -444,6 +448,7 @@
     let unlistenMenuRedo: UnlistenFn | undefined = undefined;
     let unlistenMenuFind: UnlistenFn | undefined = undefined;
     let unlistenMenuFindReplace: UnlistenFn | undefined = undefined;
+    let unlistenMenuJumpToField: UnlistenFn | undefined = undefined;
     let unlistenMenuOpenRecent: UnlistenFn | undefined = undefined;
     let unlistenMenuClearRecent: UnlistenFn | undefined = undefined;
     let unlistenMenuHelp: UnlistenFn | undefined = undefined;
@@ -482,6 +487,11 @@
     });
     listen("menu-edit-find-replace", () => handleFind()).then((fn) => {
       unlistenMenuFindReplace = fn;
+    });
+    listen("menu-edit-jump-to-field", () => {
+      showJumpToField = true;
+    }).then((fn) => {
+      unlistenMenuJumpToField = fn;
     });
     // View menu: Zoom controls
     listen("menu-view-zoom-in", () => handleZoomIn()).then((fn) => {
@@ -553,6 +563,7 @@
       unlistenMenuRedo?.();
       unlistenMenuFind?.();
       unlistenMenuFindReplace?.();
+      unlistenMenuJumpToField?.();
       unlistenMenuZoomIn?.();
       unlistenMenuZoomOut?.();
       unlistenMenuResetZoom?.();
@@ -1065,6 +1076,24 @@
     updateMessage(m);
   }}
   settings={data.settings}
+/>
+<JumpToFieldModal
+  bind:show={showJumpToField}
+  {message}
+  onJump={(start, end) => {
+    // Use setTimeout to ensure modal has fully closed before focusing editor
+    setTimeout(() => {
+      if (editorElement) {
+        editorElement.focus();
+        editorElement.setSelectionRange(start, end);
+        // Scroll the selection into view by briefly blurring and refocusing
+        // This triggers the browser's native scroll-to-caret behavior
+        editorElement.blur();
+        editorElement.focus();
+        editorElement.setSelectionRange(start, end);
+      }
+    }, 0);
+  }}
 />
 
 <style>
