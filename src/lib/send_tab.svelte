@@ -21,6 +21,7 @@
   - Error: Last send failed, showing error message
 -->
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import type { Settings } from "../settings";
   import IconSend from "./icons/IconSend.svelte";
   import IconSpinner from "./icons/IconSpinner.svelte";
@@ -42,6 +43,19 @@
   let hostname: string = $state(settings.sendHostname);
   let port: number = $state(settings.sendPort);
   let timeout: number = $state(settings.sendWaitTimeoutSeconds);
+
+  // Register callback to sync state after settings load from disk
+  onMount(() => {
+    settings.onSendSettingsChanged = (h, p, t) => {
+      hostname = h;
+      port = p;
+      timeout = t;
+    };
+  });
+
+  onDestroy(() => {
+    settings.onSendSettingsChanged = null;
+  });
 
   // State machine
   let sendState: SendState = $state("idle" as SendState);

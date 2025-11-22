@@ -20,6 +20,7 @@
   - Clicking a message selects it and marks it as read
 -->
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import type { Settings } from "../settings";
   import type { Writable } from "svelte/store";
   import { startListening, stopListening } from "../backend/listen";
@@ -43,6 +44,17 @@
 
   // Local state
   let port: number = $state(settings.listenPort);
+
+  // Register callback to sync state after settings load from disk
+  onMount(() => {
+    settings.onListenSettingsChanged = (p) => {
+      port = p;
+    };
+  });
+
+  onDestroy(() => {
+    settings.onListenSettingsChanged = null;
+  });
   let selectedIndex: number | null = $state(null);
   let isStarting: boolean = $state(false);
   let error: string | null = $state(null);

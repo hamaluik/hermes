@@ -30,14 +30,21 @@
  * - Recent files list needs to update the native File menu
  * - Auto-save setting needs to update the File menu's checkable Auto-Save item
  * - Theme setting needs to update the document's data-theme attribute
+ * - Send/listen settings need to sync with tab component local state
  *
  * This is handled via optional callback properties (e.g., `onRecentFilesChanged`,
- * `onAutoSaveChanged`, `onThemeChanged`).
+ * `onAutoSaveChanged`, `onThemeChanged`, `onSendSettingsChanged`, `onListenSettingsChanged`).
  *
  * The callback pattern is used instead of events because:
  * - It's simpler than setting up a full event emitter
- * - Only one listener is needed (the page component)
+ * - Only one listener is needed (the page component or specific tab)
  * - The callback is called both on setter changes AND after initial load
+ *
+ * The "after initial load" behavior is particularly important for components that
+ * use local $state variables with debounced persistence (like SendTab and ListenTab).
+ * These components initialize their state at mount time, which may occur before the
+ * async settings load completes. The callback allows them to sync their local state
+ * once the persisted values are available.
  *
  * ## Default Values
  *
@@ -101,6 +108,26 @@ export class Settings {
   private _commDrawerHeight: number = 300;
   private _commDrawerTab: "send" | "listen" = "send";
   private _listenPort: number = 2575;
+
+  /**
+   * Callback to sync SendTab's local state after settings load from disk.
+   *
+   * SendTab uses local $state variables for form inputs with debounced persistence.
+   * This callback fires after async load completes, allowing the component to update
+   * its local state with the persisted values.
+   */
+  onSendSettingsChanged:
+    | ((hostname: string, port: number, timeout: number) => void)
+    | null = null;
+
+  /**
+   * Callback to sync ListenTab's local state after settings load from disk.
+   *
+   * ListenTab uses a local $state variable for the port input with debounced persistence.
+   * This callback fires after async load completes, allowing the component to update
+   * its local state with the persisted value.
+   */
+  onListenSettingsChanged: ((port: number) => void) | null = null;
 
   /**
    * Initializes settings by loading from persistent store.
@@ -189,6 +216,16 @@ export class Settings {
           }
           if (this.onThemeChanged) {
             this.onThemeChanged(this._themeSetting);
+          }
+          if (this.onSendSettingsChanged) {
+            this.onSendSettingsChanged(
+              this._sendHostname,
+              this._sendPort,
+              this._sendWaitTimeoutSeconds,
+            );
+          }
+          if (this.onListenSettingsChanged) {
+            this.onListenSettingsChanged(this._listenPort);
           }
         },
       )
