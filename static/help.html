@@ -397,6 +397,7 @@
       </li>
       <li><a href="#find-replace">Find &amp; Replace</a></li>
       <li><a href="#jump-to-field">Jump to Field</a></li>
+      <li><a href="#compare-messages">Compare Messages</a></li>
       <li><a href="#file-operations">File Operations</a></li>
       <li>
         <a href="#communication">Communication</a>
@@ -986,6 +987,99 @@
       </p>
     </section>
 
+    <!-- Compare Messages -->
+    <section id="compare-messages">
+      <h2>Compare Messages</h2>
+      <p>
+        The Compare Messages feature provides semantic diffing for HL7 messages. Unlike text-based
+        diff tools, it understands HL7 structure and identifies changes at the segment, field,
+        component, and subcomponent levels.
+      </p>
+
+      <h3>Opening Compare Messages</h3>
+      <ul>
+        <li>Press <kbd>Cmd</kbd>+<kbd>D</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>D</kbd> (Windows/Linux)</li>
+        <li>Or use the <strong>Tools</strong> menu → <strong>Compare Messages...</strong></li>
+      </ul>
+
+      <h3>Loading Messages</h3>
+      <p>The comparison modal shows two side-by-side panes for the messages you want to compare:</p>
+      <ul>
+        <li><strong>Left (Original)</strong>: The baseline message</li>
+        <li><strong>Right (Modified)</strong>: The message to compare against</li>
+      </ul>
+      <p>Each pane supports two loading methods:</p>
+      <ul>
+        <li><strong>From Editor</strong>: Loads the current message from the main editor</li>
+        <li><strong>From File</strong>: Opens a file dialog to select an HL7 file from disk</li>
+      </ul>
+      <p>You can also paste messages directly into either pane's text area.</p>
+
+      <h3>Understanding the Diff</h3>
+      <p>
+        Click <strong>Compare</strong> to analyze the differences. The results show three types
+        of changes:
+      </p>
+      <table>
+        <thead>
+          <tr><th>Indicator</th><th>Color</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>+</code></td>
+            <td style="background-color: #56949f; color: #000; padding: 2px 6px; border-radius: 2px;">Green</td>
+            <td>Added — element exists only in the right (modified) message</td>
+          </tr>
+          <tr>
+            <td><code>-</code></td>
+            <td style="background-color: #b4637a; color: #fff; padding: 2px 6px; border-radius: 2px;">Red</td>
+            <td>Removed — element exists only in the left (original) message</td>
+          </tr>
+          <tr>
+            <td><code>~</code></td>
+            <td style="background-color: #ea9d34; color: #000; padding: 2px 6px; border-radius: 2px;">Gold</td>
+            <td>Modified — element exists in both but with different values</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>Inline Highlighting</h4>
+      <p>
+        Changed values are highlighted directly in both message panes, making it easy to see
+        exactly where differences occur. The diff list below the messages shows each change
+        with its field path and values.
+      </p>
+
+      <h4>Summary Statistics</h4>
+      <p>
+        The diff results header shows a summary of changes: how many segments were added,
+        removed, or modified. This gives you a quick overview before drilling into details.
+      </p>
+
+      <h3>Why Semantic Diffing?</h3>
+      <p>
+        Standard text diff tools treat HL7 messages as lines of text, which makes their output
+        difficult to interpret. A single field change shows as an entire segment being different,
+        and there's no understanding of which specific fields changed.
+      </p>
+      <p>Semantic diffing solves this by:</p>
+      <ul>
+        <li>Matching segments by name and occurrence (PID to PID, not by line number)</li>
+        <li>Drilling down to identify exactly which field or component changed</li>
+        <li>Providing field paths (e.g., "PID.5.1 changed from 'Smith' to 'Jones'")</li>
+      </ul>
+
+      <div class="tip">
+        <strong>Use Cases</strong>
+        <ul>
+          <li><strong>Debugging transformations</strong>: Verify that an interface engine modified only the expected fields</li>
+          <li><strong>Regression testing</strong>: Compare a message before and after a code change</li>
+          <li><strong>Learning HL7</strong>: Understand what fields differ between message types</li>
+          <li><strong>Troubleshooting</strong>: Compare a working message with a failing one to spot differences</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- File Operations -->
     <section id="file-operations">
       <h2>File Operations</h2>
@@ -1220,6 +1314,7 @@
         <tbody>
           <tr><td><kbd>Cmd</kbd>+<kbd>T</kbd></td><td>Open Communication Drawer (Send tab)</td></tr>
           <tr><td><kbd>Cmd</kbd>+<kbd>L</kbd></td><td>Open Communication Drawer (Listen tab)</td></tr>
+          <tr><td><kbd>Cmd</kbd>+<kbd>D</kbd></td><td>Compare Messages</td></tr>
         </tbody>
       </table>
 

@@ -65,6 +65,37 @@ pub struct SearchMatch {
     pub end: usize,
 }
 
+/// The type of difference for diff highlighting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DiffType {
+    Added,
+    Removed,
+    Modified,
+}
+
+impl DiffType {
+    /// Get the CSS class name for this diff type.
+    fn class(&self) -> &'static str {
+        match self {
+            DiffType::Added => "diff-highlight-added",
+            DiffType::Removed => "diff-highlight-removed",
+            DiffType::Modified => "diff-highlight-modified",
+        }
+    }
+}
+
+/// A range representing a diff highlight with its type.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct DiffMatch {
+    /// Start position of the diff (byte offset)
+    pub start: usize,
+    /// End position of the diff (byte offset, exclusive)
+    pub end: usize,
+    /// Type of difference (added, removed, modified)
+    pub diff_type: DiffType,
+}
+
 /// Generate HTML syntax highlighting for an HL7 message.
 ///
 /// This command parses the message and produces HTML with CSS class annotations
@@ -89,6 +120,7 @@ pub struct SearchMatch {
 /// * `message` - The HL7 message as a string (with newlines or \r separators)
 /// * `search_matches` - Optional list of search match ranges to highlight
 /// * `current_match_index` - Optional index of the currently selected match (0-based)
+/// * `diff_matches` - Optional list of diff highlight ranges with their types
 ///
 /// # Returns
 /// HTML string with syntax highlighting, safe for insertion into the DOM
@@ -98,11 +130,16 @@ pub fn syntax_highlight(
     message: &str,
     search_matches: Option<Vec<SearchMatch>>,
     current_match_index: Option<usize>,
+    diff_matches: Option<Vec<DiffMatch>>,
 ) -> String {
     match hl7_parser::parse_message_with_lenient_newlines(message) {
         Ok(msg) => {
-            let mut highlighted =
-                do_syntax_highlight(&msg, search_matches.as_deref(), current_match_index);
+            let mut highlighted = do_syntax_highlight(
+                &msg,
+                search_matches.as_deref(),
+                current_match_index,
+                diff_matches.as_deref(),
+            );
             if msg.raw_value().len() != message.len() {
                 // the delivered message extends beyond the parsed message
                 // so just append the rest of the message wrapped in an error span
@@ -178,6 +215,7 @@ impl RangeType {
 /// * `message` - Parsed HL7 message
 /// * `search_matches` - Optional slice of search match ranges to highlight
 /// * `current_match_index` - Optional index of the currently selected match
+/// * `diff_matches` - Optional slice of diff highlight ranges with their types
 ///
 /// # Returns
 /// HTML-formatted string with syntax highlighting
@@ -185,12 +223,19 @@ fn do_syntax_highlight(
     message: &Message,
     search_matches: Option<&[SearchMatch]>,
     current_match_index: Option<usize>,
+    diff_matches: Option<&[DiffMatch]>,
 ) -> String {
     let ranges = collect_ranges(message);
     // ranges will already be sorted by their start position because of the
     // structure of the message
     let position_types = create_position_mapping(ranges, message.raw_value().len());
-    generate_html(message, &position_types, search_matches, current_match_index)
+    generate_html(
+        message,
+        &position_types,
+        search_matches,
+        current_match_index,
+        diff_matches,
+    )
 }
 
 /// Collect all character ranges and their types from a parsed message.
@@ -328,6 +373,20 @@ fn get_match_state(
     (false, false)
 }
 
+/// Determines the diff highlight state for a given position.
+///
+/// Returns the diff type if the position is within a diff range, or None if not.
+fn get_diff_state(pos: usize, diff_matches: Option<&[DiffMatch]>) -> Option<DiffType> {
+    let matches = diff_matches?;
+
+    for m in matches {
+        if pos >= m.start && pos < m.end {
+            return Some(m.diff_type);
+        }
+    }
+    None
+}
+
 /// Generate HTML with CSS class spans from a message and position type mapping.
 ///
 /// This function walks through the message character-by-character, emitting `<span>`
@@ -360,11 +419,17 @@ fn get_match_state(
 /// additional `<span class="search-match">` or `<span class="search-match-current">`
 /// tags. The current match (if specified) uses the latter for visual distinction.
 ///
+/// # Diff Highlighting
+///
+/// When diff matches are provided, characters within diff ranges are wrapped in
+/// `<span class="diff-highlight-added/removed/modified">` tags based on the diff type.
+///
 /// # Arguments
 /// * `message` - Parsed HL7 message
 /// * `position_types` - Position-to-type mapping from `create_position_mapping`
 /// * `search_matches` - Optional slice of search match ranges
 /// * `current_match_index` - Optional index of the currently selected match
+/// * `diff_matches` - Optional slice of diff highlight ranges with their types
 ///
 /// # Returns
 /// HTML string with syntax highlighting spans
@@ -373,15 +438,32 @@ fn generate_html(
     position_types: &[Option<RangeType>],
     search_matches: Option<&[SearchMatch]>,
     current_match_index: Option<usize>,
+    diff_matches: Option<&[DiffMatch]>,
 ) -> String {
     let raw_message = message.raw_value();
     let mut highlighted = String::with_capacity(raw_message.len() * 3);
     let mut current_type = None;
     let mut current_match_state: (bool, bool) = (false, false);
+    let mut current_diff_state: Option<DiffType> = None;
 
     for (i, c) in raw_message.char_indices() {
         let range_type = position_types[i].unwrap_or(RangeType::Separator);
         let match_state = get_match_state(i, search_matches, current_match_index);
+        let diff_state = get_diff_state(i, diff_matches);
+
+        // Handle diff span transitions
+        if diff_state != current_diff_state {
+            // Close previous diff span if we were in one
+            if current_diff_state.is_some() {
+                highlighted.push_str("</span>");
+            }
+
+            // If we're transitioning diff state, we need to close and reopen the syntax span
+            if current_type.is_some() {
+                highlighted.push_str("</span>");
+                current_type = None;
+            }
+        }
 
         // Handle search match span transitions
         if match_state != current_match_state {
@@ -421,7 +503,15 @@ fn generate_html(
             highlighted.push_str(&format!(r#"<span class="{match_class}">"#));
         }
 
+        // Open new diff span if entering a diff
+        if diff_state != current_diff_state {
+            if let Some(diff_type) = diff_state {
+                highlighted.push_str(&format!(r#"<span class="{}">"#, diff_type.class()));
+            }
+        }
+
         current_match_state = match_state;
+        current_diff_state = diff_state;
 
         match c {
             '<' => highlighted.push_str("&lt;"),
@@ -432,6 +522,11 @@ fn generate_html(
             '\n' => highlighted.push_str("<br/>"),
             _ => highlighted.push(c),
         }
+    }
+
+    // Close any open diff span
+    if current_diff_state.is_some() {
+        highlighted.push_str("</span>");
     }
 
     // Close any open match span

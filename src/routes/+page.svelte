@@ -105,6 +105,7 @@
   import FindReplaceBar from "$lib/find_replace_bar.svelte";
   import JumpToFieldModal from "$lib/jump_to_field_modal.svelte";
   import InsertTimestampModal from "$lib/insert_timestamp_modal.svelte";
+  import DiffModal from "$lib/diff_modal.svelte";
   import type { SearchMatch } from "../backend/syntax_highlight";
 
   let { data }: PageProps = $props();
@@ -150,6 +151,9 @@
 
   // Insert Timestamp state
   let showInsertTimestampModal = $state(false);
+
+  // Diff modal state
+  let showDiffModal = $state(false);
 
   /**
    * Message Editor Resize System
@@ -466,6 +470,7 @@
     let unlistenMenuToolsGenerateControlId: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsInsertTimestampNow: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsInsertTimestamp: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsCompare: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
     let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
@@ -611,6 +616,11 @@
     }).then((fn) => {
       unlistenMenuToolsInsertTimestamp = fn;
     });
+    listen("menu-tools-compare", () => {
+      showDiffModal = true;
+    }).then((fn) => {
+      unlistenMenuToolsCompare = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -655,6 +665,7 @@
       unlistenMenuToolsGenerateControlId?.();
       unlistenMenuToolsInsertTimestampNow?.();
       unlistenMenuToolsInsertTimestamp?.();
+      unlistenMenuToolsCompare?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -1216,6 +1227,7 @@
     }, 0);
   }}
 />
+<DiffModal bind:show={showDiffModal} editorMessage={message} />
 
 <style>
   .app-content {

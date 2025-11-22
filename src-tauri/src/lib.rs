@@ -260,6 +260,7 @@ pub fn run() {
             commands::wizards::wizard_search_patients,
             commands::wizards::wizard_apply_visit,
             commands::wizards::wizard_search_visits,
+            commands::compare_messages,
         ])
         .setup(|app| {
             // Build the Save menu item separately so we can store a reference for dynamic enable/disable
@@ -474,6 +475,13 @@ pub fn run() {
                 )
                 .separator()
                 .item(
+                    &MenuItemBuilder::new("&Compare Messages...")
+                        .id("tools-compare")
+                        .accelerator("CmdOrCtrl+D")
+                        .build(app)?,
+                )
+                .separator()
+                .item(
                     &MenuItemBuilder::new("&Generate Control ID")
                         .id("tools-generate-control-id")
                         .accelerator("CmdOrCtrl+G")
@@ -544,6 +552,7 @@ pub fn run() {
                     "view-reset-zoom" => Some("menu-view-reset-zoom"),
                     "tools-send" => Some("menu-tools-send"),
                     "tools-listen" => Some("menu-tools-listen"),
+                    "tools-compare" => Some("menu-tools-compare"),
                     "tools-generate-control-id" => Some("menu-tools-generate-control-id"),
                     "tools-insert-timestamp-now" => Some("menu-tools-insert-timestamp-now"),
                     "tools-insert-timestamp" => Some("menu-tools-insert-timestamp"),

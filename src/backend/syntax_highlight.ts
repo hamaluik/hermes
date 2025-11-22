@@ -37,6 +37,23 @@ export interface SearchMatch {
 }
 
 /**
+ * Type of difference for diff highlighting.
+ */
+export type DiffHighlightType = "added" | "removed" | "modified";
+
+/**
+ * Represents a diff highlight range with its type.
+ */
+export interface DiffMatch {
+  /** Start position of the diff (byte offset) */
+  start: number;
+  /** End position of the diff (byte offset, exclusive) */
+  end: number;
+  /** Type of difference */
+  diff_type: DiffHighlightType;
+}
+
+/**
  * Converts an HL7 message to HTML with syntax highlighting spans.
  *
  * The returned HTML contains the same text as the input, but wrapped in span
@@ -46,6 +63,7 @@ export interface SearchMatch {
  * @param message - Raw HL7 message string
  * @param searchMatches - Optional array of search match ranges to highlight
  * @param currentMatchIndex - Optional index of the currently selected match (0-based)
+ * @param diffMatches - Optional array of diff highlight ranges with their types
  * @returns HTML string with syntax highlighting markup
  *
  * @example
@@ -56,17 +74,23 @@ export interface SearchMatch {
  * // With search matches:
  * const htmlWithMatches = await syntaxHighlight("MSH|^~\\&|...", [{ start: 0, end: 3 }], 0);
  * // Returns: '<span class="search-match-current"><span class="msh">MSH</span></span>...'
+ *
+ * // With diff highlights:
+ * const htmlWithDiff = await syntaxHighlight("MSH|^~\\&|...", undefined, undefined, [{ start: 0, end: 3, diff_type: "modified" }]);
+ * // Returns: '<span class="diff-highlight-modified"><span class="msh">MSH</span></span>...'
  * ```
  */
 export async function syntaxHighlight(
   message: string,
   searchMatches?: SearchMatch[],
   currentMatchIndex?: number,
+  diffMatches?: DiffMatch[],
 ): Promise<string> {
   return invoke("syntax_highlight", {
     message,
     searchMatches: searchMatches ?? null,
     currentMatchIndex: currentMatchIndex ?? null,
+    diffMatches: diffMatches ?? null,
   });
 }
 

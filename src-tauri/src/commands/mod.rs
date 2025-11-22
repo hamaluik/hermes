@@ -22,4 +22,7 @@ pub use listen::*;
 mod menu;
 pub use menu::*;
 
+mod diff;
+pub use diff::*;
+
 pub mod wizards;

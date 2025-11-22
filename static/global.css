@@ -241,3 +241,22 @@ input::-webkit-datetime-edit-meridiem-field {
   color: var(--col-base);
   border-radius: 2px;
 }
+
+/* diff highlighting */
+.diff-highlight-added {
+  background-color: var(--col-foam);
+  color: var(--col-base);
+  border-radius: 2px;
+}
+
+.diff-highlight-removed {
+  background-color: var(--col-love);
+  color: var(--col-base);
+  border-radius: 2px;
+}
+
+.diff-highlight-modified {
+  background-color: var(--col-gold);
+  color: var(--col-base);
+  border-radius: 2px;
+}

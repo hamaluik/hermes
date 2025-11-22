@@ -6,11 +6,15 @@
     show = $bindable(false),
     maxWidth,
     maxHeight,
+    width,
+    height,
     children,
   }: {
     show: boolean;
     maxWidth?: string;
     maxHeight?: string;
+    width?: string;
+    height?: string;
     children: Snippet<[]>;
   } = $props();
 
@@ -53,6 +57,8 @@
   bind:this={dialogElement}
   style:max-width={maxWidth}
   style:max-height={maxHeight}
+  style:width={width}
+  style:height={height}
 >
   {@render children()}
 </dialog>

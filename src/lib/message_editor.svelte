@@ -16,6 +16,7 @@
   Key Features:
   - Real-time syntax highlighting via backend Tauri command
   - Search match highlighting integrated with syntax highlighting
+  - Diff highlighting for message comparison (added/removed/modified)
   - Tab/Shift+Tab navigation between HL7 fields (using backend cursor tracking)
   - Ctrl/Cmd+Enter shortcut for quick message sending
   - Document-level cursor tracking for cross-component coordination
@@ -28,14 +29,20 @@
   or <span class="search-match-current"> tags, which are styled via global.css. This allows
   search results to be highlighted inline with HL7 syntax highlighting.
 
+  Diff Highlighting Integration:
+  The editor accepts diffHighlights prop for message comparison scenarios. Each diff range
+  specifies a character range and diff type (added/removed/modified). The backend wraps
+  these ranges in <span class="diff-highlight-{type}"> tags, which are styled via global.css
+  with colored backgrounds (green for added, red for removed, gold for modified).
+
   Parent components can access the current text selection via the getSelection callback
   (used to pre-populate find queries) and the raw textarea element via editElement binding
   (used to programmatically set selection when navigating between matches).
 
   Flow for New Developers:
   1. User types in textarea → handleInput fires
-  2. handleInput calls backend syntaxHighlight command with search matches
-  3. Highlighted HTML (including search matches) is injected into overlay div
+  2. handleInput calls backend syntaxHighlight command with search/diff highlights
+  3. Highlighted HTML (including search matches and diff highlights) is injected into overlay div
   4. Scroll synchronization keeps overlay aligned with textarea
   5. Cursor changes trigger document-level events to update field descriptions elsewhere
 -->
@@ -44,6 +51,7 @@
   import {
     syntaxHighlight,
     type SearchMatch,
+    type DiffMatch,
   } from "../backend/syntax_highlight";
   import {
     getRangeOfNextField,
@@ -54,9 +62,10 @@
   import IconClipboardCheck from "./icons/IconClipboardCheck.svelte";
 
   let {
-    message,
+    message = $bindable(),
     searchMatches,
     currentMatchIndex,
+    diffHighlights,
     onchange,
     oncursorchange,
     onctrlenter,
@@ -69,6 +78,7 @@
     message?: string;
     searchMatches?: SearchMatch[];
     currentMatchIndex?: number;
+    diffHighlights?: DiffMatch[];
     onchange?: (message: string, coalesce?: boolean) => void;
     oncursorchange?: (cursorPos: number) => void;
     onctrlenter?: () => void;
@@ -98,15 +108,26 @@
 
   // Sync external message updates to both the textarea and highlighting overlay
   // This effect runs when the parent component updates the message prop (e.g., loading a file)
+  // or when search/diff highlights change
   // We update both elements to maintain the textarea overlay pattern
   $effect(() => {
-    if (message) {
-      (editElement as HTMLTextAreaElement).value = message;
-      syntaxHighlight(message, searchMatches, currentMatchIndex).then(
-        (highlighted) => {
-          highlightElement.innerHTML = highlighted;
-        },
-      );
+    // Access all reactive dependencies explicitly so Svelte tracks them
+    const _message = message;
+    const _searchMatches = searchMatches;
+    const _currentMatchIndex = currentMatchIndex;
+    const _diffHighlights = diffHighlights;
+
+    if (editElement && highlightElement) {
+      (editElement as HTMLTextAreaElement).value = _message ?? "";
+      if (_message) {
+        syntaxHighlight(_message, _searchMatches, _currentMatchIndex, _diffHighlights).then(
+          (highlighted) => {
+            highlightElement.innerHTML = highlighted;
+          },
+        );
+      } else {
+        highlightElement.innerHTML = "";
+      }
     }
   });
 
@@ -143,7 +164,10 @@
    */
   async function handleInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
-    let message = target.value;
+    const newMessage = target.value;
+
+    // Update the bound message prop
+    message = newMessage;
 
     // Determine if this is a paste operation (should not coalesce)
     const inputEvent = event as InputEvent;
@@ -152,13 +176,14 @@
       inputEvent.inputType === "insertFromPasteAsQuotation";
 
     if (onchange) {
-      onchange(message, !isPaste);
+      onchange(newMessage, !isPaste);
     }
 
     const highlighted = await syntaxHighlight(
-      message,
+      newMessage,
       searchMatches,
       currentMatchIndex,
+      diffHighlights,
     );
     highlightElement.innerHTML = highlighted;
 
