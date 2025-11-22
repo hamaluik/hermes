@@ -4,6 +4,7 @@ name = "Order Control"
 maxlength = 2
 required = true
 note = "Code indicating the purpose of the order message (e.g., NW for new order, CA for cancel)."
+template = "NW"
 
 [[fields]]
 field = 2
@@ -12,12 +13,14 @@ group = "Placer Order Number"
 name = "Entity Identifier"
 maxlength = 75
 note = "Order number assigned by the placer. Must match OBR-2 if both are present."
+template = "RING001"
 
 [[fields]]
 field = 2
 component = 2
 group = "Placer Order Number"
 name = "Namespace ID"
+template = "SHIRE"
 
 [[fields]]
 field = 3
@@ -26,12 +29,14 @@ group = "Filler Order Number"
 name = "Entity Identifier"
 maxlength = 75
 note = "Order number assigned by the filler. Must match OBR-3 if both are present."
+template = "MORDOR99"
 
 [[fields]]
 field = 3
 component = 2
 group = "Filler Order Number"
 name = "Namespace ID"
+template = "SAURON"
 
 [[fields]]
 field = 4
@@ -39,18 +44,21 @@ component = 1
 group = "Placer Group Number"
 name = "Entity Identifier"
 note = "Identifier for grouping related orders."
+template = "FELLOWSHIP"
 
 [[fields]]
 field = 4
 component = 2
 group = "Placer Group Number"
 name = "Namespace ID"
+template = "NINE"
 
 [[fields]]
 field = 6
 name = "Response Flag"
 maxlength = 1
 note = "Controls the level of detail in order response messages."
+template = "E"
 [fields.values]
 E = "Report exceptions only"
 R = "Same as E, also Replacement and Parent-Child"
@@ -64,6 +72,7 @@ component = 1
 group = "Quantity/Timing"
 name = "Quantity"
 note = "Quantity ordered. Used if OBR-27 is not specified."
+template = "1"
 
 [[fields]]
 field = 7
@@ -72,6 +81,7 @@ group = "Quantity/Timing"
 name = "Start Date/Time"
 datatype = "datetime"
 note = "Requested start date/time for the order."
+template = "{auto}"
 
 [[fields]]
 field = 7
@@ -79,6 +89,7 @@ component = 6
 group = "Quantity/Timing"
 name = "Priority"
 note = "Order priority code."
+template = "R"
 
 [[fields]]
 field = 12
@@ -88,24 +99,28 @@ name = "ID Number"
 maxlength = 10
 required = true
 note = "Identifier for the ordering provider."
+template = "ARA001"
 
 [[fields]]
 field = 12
 component = 2
 group = "Ordering Provider"
 name = "Family Name"
+template = "Strider"
 
 [[fields]]
 field = 12
 component = 3
 group = "Ordering Provider"
 name = "Given Name"
+template = "Aragorn"
 
 [[fields]]
 field = 12
 component = 4
 group = "Ordering Provider"
 name = "Middle Name"
+template = "II"
 
 [[fields]]
 field = 13
@@ -114,6 +129,7 @@ group = "Enterer's Location"
 name = "Point of Care"
 maxlength = 10
 note = "Location where the order was entered."
+template = "PRANCING"
 
 [[fields]]
 field = 13
@@ -121,6 +137,7 @@ component = 2
 group = "Enterer's Location"
 name = "Room"
 maxlength = 10
+template = "PONY"
 
 [[fields]]
 field = 13
@@ -128,6 +145,7 @@ component = 4
 group = "Enterer's Location"
 name = "Facility"
 maxlength = 10
+template = "BREE"
 
 [[fields]]
 field = 13
@@ -135,6 +153,7 @@ component = 7
 group = "Enterer's Location"
 name = "Building"
 maxlength = 10
+template = "INN"
 
 [[fields]]
 field = 13
@@ -142,6 +161,7 @@ component = 8
 group = "Enterer's Location"
 name = "Floor"
 maxlength = 10
+template = "2"
 
 [[fields]]
 field = 14
@@ -150,15 +170,18 @@ maxlength = 14
 pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{1,5})?"
 placeholder = "[(999)]999-9999 [X99999]"
 note = "Phone number for callbacks regarding the order."
+template = "555-RANGER1"
 
 [[fields]]
 field = 15
 name = "Order Effective Date/Time"
 datatype = "datetime"
 note = "Date/time the order should take effect."
+template = "{auto}"
 
 [[fields]]
 field = 16
 component = 2
 name = "Order Control Code Reason"
 note = "Reason for the order control action, such as cancellation reason."
+template = ""

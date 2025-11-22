@@ -2,6 +2,7 @@
 field = 1
 name = "Set ID"
 note = "Sequence number for this DG1 segment within the message, starting at 1."
+template = "1"
 
 [[fields]]
 field = 3
@@ -9,6 +10,7 @@ component = 1
 name = "Diagnosis Code"
 note = "Code identifying the diagnosis (e.g., ICD-10 code)."
 maxlength = 10
+template = "R99.9"
 
 [[fields]]
 field = 3
@@ -16,9 +18,11 @@ component = 2
 name = "Comments"
 note = "Free-text comment associated with the diagnosis."
 maxlength = 60
+template = "Ring-induced invisibility syndrome"
 
 [[fields]]
 field = 4
 name = "Description"
 note = "Text description of the diagnosis."
 maxlength = 60
+template = ""

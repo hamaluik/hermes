@@ -642,6 +642,163 @@ fn format_hl7_offset(base: &str, offset: jiff::tz::Offset) -> String {
     format!("{}{}{:02}{:02}", base, sign, hours.abs(), minutes)
 }
 
+/// Generate an HL7 message from a template.
+///
+/// Creates an HL7 message for the specified message type by looking up
+/// the required segments in the schema and populating fields with template values.
+///
+/// # Template Names
+/// Template names correspond to message type keys in messages.toml:
+/// - `adt_a01`, `adt_a02`, ..., `adt_a50` for ADT messages
+/// - `orm_o01` for Order messages
+/// - `oru_r01` for Observation Result messages
+/// - `orr_o02` for Order Response messages
+/// - `dft_p03` for Financial Transaction messages
+///
+/// # Message Structure
+/// The generated message includes:
+/// - MSH segment with message type/trigger event pre-filled
+/// - All segments defined in the schema for that message type
+/// - Fields populated with template values from segment schemas
+///
+/// # Template Values
+/// Each field in the segment schema can have a `template` value. Special values:
+/// - `{auto}` - Placeholder for dynamic values (timestamps, control IDs) expanded at send time
+/// - Empty string - Field left blank
+/// - Any other value - Used directly
+///
+/// # Arguments
+/// * `template_name` - Template identifier (e.g., "adt_a01", "orm_o01")
+/// * `state` - Application state containing the schema cache
+///
+/// # Returns
+/// * `Ok(String)` - The generated HL7 message
+/// * `Err(String)` - If template not found or schema loading fails
+#[tauri::command]
+pub fn generate_template_message(
+    template_name: &str,
+    state: State<'_, AppData>,
+) -> Result<String, String> {
+    let schema = state
+        .schema
+        .get_messages()
+        .map_err(|e| format!("Failed to load messages schema: {e:#}"))?;
+
+    let segments = schema
+        .message
+        .get(template_name)
+        .ok_or_else(|| format!("Template '{template_name}' not found in schema"))?;
+
+    // Parse template name to extract message type and trigger event
+    // e.g., "adt_a01" -> ("ADT", "A01")
+    let parts: Vec<&str> = template_name.split('_').collect();
+    if parts.len() != 2 {
+        return Err(format!("Invalid template name format: {template_name}"));
+    }
+    let message_type = parts[0].to_uppercase();
+    let trigger_event = parts[1].to_uppercase();
+
+    // Build the message using hl7_parser's MessageBuilder
+    let mut builder = MessageBuilder::default();
+
+    // Add each segment from the schema
+    for segment_meta in segments.iter() {
+        let segment_name = &segment_meta.name;
+        let mut seg = SegmentBuilder::new(segment_name);
+
+        // Load the segment schema to get field definitions with template values
+        let segment_fields = state.schema.get_segment(segment_name).ok();
+
+        // Determine the max field number
+        let max_field = segment_fields
+            .as_ref()
+            .and_then(|fields| fields.iter().map(|f| f.field).max())
+            .unwrap_or(1) as usize;
+
+        // Group fields by field number to handle multi-component fields
+        let fields_by_number: HashMap<u8, Vec<&crate::schema::segment::Field>> =
+            if let Some(ref fields) = segment_fields {
+                let mut grouped: HashMap<u8, Vec<&crate::schema::segment::Field>> = HashMap::new();
+                for field in fields.iter() {
+                    grouped.entry(field.field).or_default().push(field);
+                }
+                grouped
+            } else {
+                HashMap::new()
+            };
+
+        // Special handling for MSH.9 (message type/trigger event)
+        if segment_name == "MSH" {
+            seg.set_field(9, {
+                let mut field = FieldBuilder::default();
+                field.set_component(1, &message_type);
+                field.set_component(2, &trigger_event);
+                field
+            });
+        }
+
+        // Special handling for EVN.1 (event type code from trigger)
+        if segment_name == "EVN" {
+            seg.set_field_value(1, &trigger_event);
+        }
+
+        // Apply template values for all fields
+        for field_num in 1..=max_field {
+            let field_num_u8 = field_num as u8;
+
+            // Skip MSH.9 (already set) and EVN.1 (already set)
+            if (segment_name == "MSH" && field_num == 9)
+                || (segment_name == "EVN" && field_num == 1)
+            {
+                continue;
+            }
+
+            if let Some(field_defs) = fields_by_number.get(&field_num_u8) {
+                // Check if any field definitions have components
+                let has_components = field_defs.iter().any(|f| f.component.is_some());
+
+                if has_components {
+                    // Multi-component field: use FieldBuilder
+                    let mut field_builder = FieldBuilder::default();
+                    let mut has_any_value = false;
+
+                    for field_def in field_defs {
+                        if let Some(component_num) = field_def.component {
+                            if let Some(ref template) = field_def.template {
+                                field_builder.set_component(component_num as usize, template);
+                                has_any_value = true;
+                            }
+                        }
+                    }
+
+                    if has_any_value {
+                        seg.set_field(field_num, field_builder);
+                    } else if !seg.has_field(field_num) {
+                        seg.set_field_value(field_num, "");
+                    }
+                } else {
+                    // Single field (no components)
+                    let field_def = field_defs.first();
+                    if let Some(template) = field_def.and_then(|f| f.template.as_ref()) {
+                        seg.set_field_value(field_num, template);
+                    } else if !seg.has_field(field_num) {
+                        seg.set_field_value(field_num, "");
+                    }
+                }
+            } else {
+                // No schema definition for this field, ensure it exists as empty
+                if !seg.has_field(field_num) {
+                    seg.set_field_value(field_num, "");
+                }
+            }
+        }
+
+        builder.push_segment(seg);
+    }
+
+    Ok(builder.render_with_newlines().to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

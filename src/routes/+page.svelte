@@ -69,6 +69,7 @@
   import {
     generateControlId,
     generateDefaultData,
+    generateTemplateMessage,
     getMessageSegmentNames,
     renderMessageSegment,
     getCurrentCellRange,
@@ -447,6 +448,7 @@
      * - Help: Help window
      */
     let unlistenMenuNew: UnlistenFn | undefined = undefined;
+    let unlistenMenuNewFromTemplate: UnlistenFn | undefined = undefined;
     let unlistenMenuOpen: UnlistenFn | undefined = undefined;
     let unlistenMenuSave: UnlistenFn | undefined = undefined;
     let unlistenMenuSaveAs: UnlistenFn | undefined = undefined;
@@ -470,6 +472,23 @@
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
+    });
+    listen<string>("menu-new-from-template", async (event) => {
+      try {
+        const templateMessage = await generateTemplateMessage(event.payload);
+        history.clear();
+        message = templateMessage;
+        savedMessage = message;
+        currentFilePath = undefined;
+      } catch (error) {
+        console.error("Failed to generate template message:", error);
+        messageDialog(`Failed to generate template: ${error}`, {
+          title: "Template Error",
+          kind: "error",
+        });
+      }
+    }).then((fn) => {
+      unlistenMenuNewFromTemplate = fn;
     });
     listen("menu-file-open", () => handleOpenFile()).then((fn) => {
       unlistenMenuOpen = fn;
@@ -615,6 +634,7 @@
     return () => {
       unlisten?.();
       unlistenMenuNew?.();
+      unlistenMenuNewFromTemplate?.();
       unlistenMenuOpen?.();
       unlistenMenuSave?.();
       unlistenMenuSaveAs?.();

@@ -4,12 +4,14 @@ component = 1
 name = "Observation Identifier"
 required = true
 note = "Code identifying the observation or measurement."
+template = "QTY"
 
 [[fields]]
 field = 5
 name = "Observation Value"
 required = true
 note = "The actual observation value or measurement result."
+template = "1"
 
 [[fields]]
 field = 6
@@ -17,6 +19,7 @@ component = 1
 name = "Identifier"
 required = true
 note = "Code for the units of measure."
+template = "U"
 
 [[fields]]
 field = 6
@@ -24,23 +27,27 @@ component = 2
 name = "Text"
 required = true
 note = "Text description of the units."
+template = "Units"
 
 [[fields]]
 field = 7
 name = "Reference Range"
 required = true
 note = "Normal range for the observation value."
+template = "1-10"
 
 [[fields]]
 field = 8
 name = "Abnormal Flag"
 note = "Flag indicating whether the result is abnormal (e.g., H for high, L for low, A for abnormal)."
+template = ""
 
 [[fields]]
 field = 11
 name = "Result Status"
 maxlength = 1
 note = "Status of the observation result."
+template = "F"
 [fields.values]
 F = "Final result"
 C = "Corrected result"
@@ -51,3 +58,4 @@ name = "Date/Time of the Observation"
 datatype = "datetime"
 required = true
 note = "Date/time the observation was made."
+template = "{auto}"

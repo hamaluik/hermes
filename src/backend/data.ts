@@ -307,3 +307,31 @@ export async function formatDatetimeToHl7(
 ): Promise<string> {
   return await invoke("format_datetime_to_hl7", { datetime, includeOffset });
 }
+
+/**
+ * Generates an HL7 message from a template.
+ *
+ * Creates a minimal HL7 message for the specified message type by looking up
+ * the required segments in the schema and building a properly structured message.
+ *
+ * Template names correspond to message type keys in messages.toml:
+ * - `adt_a01`, `adt_a02`, ..., `adt_a50` for ADT messages
+ * - `orm_o01` for Order messages
+ * - `oru_r01` for Observation Result messages
+ * - `orr_o02` for Order Response messages
+ * - `dft_p03` for Financial Transaction messages
+ *
+ * The generated message includes:
+ * - MSH segment with message type/trigger event pre-filled
+ * - All segments defined in the schema for that message type
+ * - Empty field structures (minimal placeholders)
+ *
+ * @param templateName - Template identifier (e.g., "adt_a01", "orm_o01")
+ * @returns The generated HL7 message string
+ * @throws If template not found or schema loading fails
+ */
+export async function generateTemplateMessage(
+  templateName: string,
+): Promise<string> {
+  return await invoke("generate_template_message", { templateName });
+}

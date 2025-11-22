@@ -243,6 +243,7 @@ pub fn run() {
             commands::get_current_cell_range,
             commands::get_current_hl7_timestamp,
             commands::format_datetime_to_hl7,
+            commands::generate_template_message,
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
@@ -280,6 +281,33 @@ pub fn run() {
                 .enabled(false) // Disabled until populated with files
                 .build()?;
 
+            // Build the "New from Template" submenu with pre-populated message types
+            // Templates are generated dynamically from messages.toml schema
+            let template_submenu = SubmenuBuilder::new(app, "New from &Template")
+                .id("file-new-from-template")
+                // ADT messages
+                .item(&MenuItemBuilder::new("ADT^A01 (Admit)").id("template-adt_a01").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A02 (Transfer)").id("template-adt_a02").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A03 (Discharge)").id("template-adt_a03").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A04 (Register)").id("template-adt_a04").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A05 (Pre-admit)").id("template-adt_a05").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A08 (Update)").id("template-adt_a08").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A11 (Cancel Admit)").id("template-adt_a11").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A12 (Cancel Transfer)").id("template-adt_a12").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A13 (Cancel Discharge)").id("template-adt_a13").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A23 (Delete)").id("template-adt_a23").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A34 (Merge Patient - ID Only)").id("template-adt_a34").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A40 (Merge Patient)").id("template-adt_a40").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A49 (Change Patient ID)").id("template-adt_a49").build(app)?)
+                .item(&MenuItemBuilder::new("ADT^A50 (Change Visit ID)").id("template-adt_a50").build(app)?)
+                .separator()
+                // Order messages
+                .item(&MenuItemBuilder::new("ORM^O01 (Order)").id("template-orm_o01").build(app)?)
+                .item(&MenuItemBuilder::new("ORU^R01 (Results)").id("template-oru_r01").build(app)?)
+                .item(&MenuItemBuilder::new("ORR^O02 (Order Response)").id("template-orr_o02").build(app)?)
+                .item(&MenuItemBuilder::new("DFT^P03 (Financial)").id("template-dft_p03").build(app)?)
+                .build()?;
+
             // Build the File menu with standard file operations
             // Note: We borrow save_menu_item here so we can move it into AppData afterwards
             let file_menu = SubmenuBuilder::new(app, "&File")
@@ -289,6 +317,7 @@ pub fn run() {
                         .accelerator("CmdOrCtrl+N")
                         .build(app)?,
                 )
+                .item(&template_submenu)
                 .item(
                     &MenuItemBuilder::new("&Open...")
                         .id("file-open")
@@ -540,6 +569,12 @@ pub fn run() {
                             }
                         }
                     }
+                    return;
+                }
+
+                // Handle template menu items (emit template name as payload)
+                if let Some(template_name) = event_id.strip_prefix("template-") {
+                    let _ = app_handle.emit("menu-new-from-template", template_name);
                 }
             });
 

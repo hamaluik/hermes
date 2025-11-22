@@ -6,6 +6,7 @@ note = "Primary patient identifier within the healthcare facility."
 maxlength = 20
 placeholder = "123456789"
 required = true
+template = "WIZARD42"
 
 [[fields]]
 field = 2
@@ -14,6 +15,7 @@ name = "ID Number"
 note = "Patient ID number"
 maxlength = 25
 placeholder = "123456789"
+template = "ENCHANTED99"
 
 [[fields]]
 field = 18
@@ -22,6 +24,7 @@ group = "Patient ID"
 note = "Patient account number for billing purposes."
 maxlength = 20
 placeholder = "123456789"
+template = "POTION777"
 
 [[fields]]
 field = 19
@@ -31,6 +34,7 @@ note = "Accepts formatted (123-45-6789) or unformatted (123456789) values."
 maxlength = 11
 pattern = "(\\d{9})|(\\d{3}-\\d{2}-\\d{4})"
 placeholder = "123-45-6789"
+template = "987-65-4321"
 
 [[fields]]
 field = 5
@@ -38,6 +42,7 @@ component = 5
 group = "Patient Name"
 name = "Prefix"
 maxlength = 2
+template = "DR"
 [fields.values]
 DR = "Doctor"
 FR = "Father"
@@ -56,6 +61,7 @@ group = "Patient Name"
 name = "First Name"
 maxlength = 30
 placeholder = "Mickey"
+template = "Gandalf"
 
 [[fields]]
 field = 5
@@ -63,6 +69,7 @@ component = 3
 group = "Patient Name"
 name = "Middle Name"
 maxlength = 30
+template = "The"
 
 [[fields]]
 field = 5
@@ -71,6 +78,7 @@ group = "Patient Name"
 name = "Last Name"
 maxlength = 50
 placeholder = "Mouse"
+template = "Greybeard"
 
 [[fields]]
 field = 5
@@ -78,6 +86,7 @@ component = 4
 group = "Patient Name"
 name = "Suffix"
 maxlength = 4
+template = ""
 
 [[fields]]
 field = 7
@@ -87,6 +96,7 @@ datatype = "date"
 note = "Patients date of birth in YYYYMMDD format. Time component is ignored if present."
 placeholder = "YYYYMMDD"
 required = true
+template = "19540102"
 
 [[fields]]
 field = 8
@@ -95,6 +105,7 @@ group = "Demographics"
 maxlength = 1
 required = true
 note = "Administrative gender of the patient."
+template = "M"
 [fields.values]
 M = "Male"
 F = "Female"
@@ -106,6 +117,7 @@ group = "Demographics"
 maxlength = 2
 placeholder = "OT"
 note = "Patient's ethnic group."
+template = "C"
 [fields.values]
 AA = "African American"
 AS = "Asian"
@@ -122,6 +134,7 @@ field = 30
 name = "Status Code"
 group = "Demographics"
 note = "Patient status indicator."
+template = "A"
 [fields.values]
 A = "Active"
 D = "Deceased"
@@ -137,6 +150,7 @@ group = "Address"
 name = "Address 1"
 maxlength = 28
 placeholder = "123 Main St"
+template = "7 Wizard Lane"
 
 [[fields]]
 field = 11
@@ -145,6 +159,7 @@ group = "Address"
 name = "Address 2"
 maxlength = 28
 placeholder = "Apt 4B"
+template = ""
 
 [[fields]]
 field = 11
@@ -153,6 +168,7 @@ group = "Address"
 name = "City"
 maxlength = 25
 placeholder = "New York"
+template = "Hobbiton"
 
 [[fields]]
 field = 11
@@ -161,6 +177,7 @@ group = "Address"
 name = "State"
 maxlength = 2
 placeholder = "NY"
+template = "SH"
 
 [[fields]]
 field = 11
@@ -169,6 +186,7 @@ group = "Address"
 name = "Zip Code"
 maxlength = 11
 placeholder = "90210"
+template = "11111"
 
 [[fields]]
 field = 11
@@ -177,6 +195,7 @@ group = "Address"
 name = "Country"
 maxlength = 24
 placeholder = "USA"
+template = "Middle Earth"
 
 [[fields]]
 field = 11
@@ -186,6 +205,7 @@ name = "Type"
 maxlength = 1
 placeholder = "H"
 note = "Address type code."
+template = "H"
 [fields.values]
 H = "Home"
 W = "Work"
@@ -200,6 +220,7 @@ maxlength = 14
 pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
 placeholder = "867-5309"
 note = "Patient's home phone number."
+template = "555-RING-ONE"
 
 [[fields]]
 field = 14
@@ -209,4 +230,4 @@ maxlength = 14
 pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
 placeholder = "(780)867-5309 X12345"
 note = "Patient's business phone number."
-
+template = "555-SHIRE-42"

@@ -5,7 +5,10 @@
 //! metadata about validation, display, and behavior.
 //!
 //! # Schema File Format
-//! Segment TOML files contain a `[[fields]]` array:
+//!
+//! Segment TOML files contain a `[[fields]]` array. Each field definition specifies
+//! the field number, human-readable name, and optional metadata for validation,
+//! display, and template generation.
 //!
 //! ```toml
 //! [[fields]]
@@ -13,12 +16,23 @@
 //! name = "Patient ID"
 //! required = true
 //! maxlength = 20
+//! template = "MRN123456"
 //!
 //! [[fields]]
 //! field = 5
 //! component = 1
 //! name = "Family Name"
+//! template = "Doe"
 //! ```
+//!
+//! ## Template Values
+//!
+//! The `template` field provides default values used when generating messages via
+//! **File > New from Template**. Special values:
+//!
+//! * `{auto}` - Placeholder for values generated at send time (timestamps, control IDs)
+//! * Empty string - Field left blank intentionally
+//! * Regular value - Used directly in the generated message
 
 use color_eyre::{eyre::Context, Result};
 use serde::{Deserialize, Serialize};
@@ -73,6 +87,8 @@ pub struct Field {
     pub note: Option<String>,
     /// Map of valid values (code → description) for enumerated fields
     pub values: Option<HashMap<String, String>>,
+    /// Template/example value used when generating message templates
+    pub template: Option<String>,
 }
 
 /// Wrapper for deserializing TOML segment files.

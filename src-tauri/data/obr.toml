@@ -3,6 +3,7 @@ field = 1
 name = "Set ID - OBR"
 required = true
 note = "Sequence number for this OBR segment within the message, starting at 1."
+template = "1"
 
 [[fields]]
 field = 2
@@ -11,12 +12,14 @@ group = "Placer Order Number"
 name = "Entity Identifier"
 maxlength = 75
 note = "Order number assigned by the placer (ordering system). Required in either ORC or OBR."
+template = "RING001"
 
 [[fields]]
 field = 2
 component = 2
 group = "Placer Order Number"
 name = "Namespace ID"
+template = "SHIRE"
 
 [[fields]]
 field = 3
@@ -25,12 +28,14 @@ group = "Filler Order Number"
 name = "Entity Identifier"
 maxlength = 75
 note = "Order number assigned by the filler (fulfilling system)."
+template = "MORDOR99"
 
 [[fields]]
 field = 3
 component = 2
 group = "Filler Order Number"
 name = "Namespace ID"
+template = "SAURON"
 
 [[fields]]
 field = 4
@@ -39,46 +44,54 @@ group = "Universal Service ID"
 name = "Identifier"
 required = true
 note = "Code identifying the ordered service or test."
+template = "LEMBAS"
 
 [[fields]]
 field = 4
 component = 2
 group = "Universal Service ID"
 name = "Text"
+template = "Lembas Bread Analysis"
 
 [[fields]]
 field = 5
 name = "Priority"
 note = "Order priority."
+template = "R"
 
 [[fields]]
 field = 6
 name = "Requested Date/Time"
 datatype = "datetime"
 note = "Requested date/time for the service."
+template = "{auto}"
 
 [[fields]]
 field = 7
 name = "Observation Date/Time"
 datatype = "datetime"
 note = "Date/time the specimen was collected or the observation was made."
+template = "{auto}"
 
 [[fields]]
 field = 10
 name = "Collection Identifier"
 note = "Identifier for the person who collected the specimen."
+template = "SAMWISE"
 
 [[fields]]
 field = 13
 name = "Relevant Clinical Information"
 maxlength = 250
 note = "Clinical information relevant to the order. Limited to 250 characters."
+template = "Quest to Mount Doom"
 
 [[fields]]
 field = 14
 name = "Specimen Received Date/Time"
 datatype = "datetime"
 note = "Date/time the specimen was received by the filling organisation."
+template = "{auto}"
 
 [[fields]]
 field = 16
@@ -86,48 +99,56 @@ component = 1
 group = "Ordering Provider"
 name = "ID Number"
 maxlength = 10
+template = "FRO001"
 
 [[fields]]
 field = 16
 component = 2
 group = "Ordering Provider"
 name = "Family Name"
+template = "Baggins"
 
 [[fields]]
 field = 16
 component = 3
 group = "Ordering Provider"
 name = "Given Name"
+template = "Frodo"
 
 [[fields]]
 field = 16
 component = 4
 group = "Ordering Provider"
 name = "Middle Name"
+template = "R"
 
 [[fields]]
 field = 18
 name = "Placer Field 1"
 maxlength = 75
 note = "User-defined field for placer use."
+template = "ONE_RING"
 
 [[fields]]
 field = 19
 name = "Placer Field 2"
 maxlength = 75
 note = "User-defined field for placer use."
+template = "TO_RULE"
 
 [[fields]]
 field = 20
 name = "Filler Field 1"
 maxlength = 75
 note = "User-defined field for filler use."
+template = "THEM_ALL"
 
 [[fields]]
 field = 21
 name = "Filler Field 2"
 maxlength = 75
 note = "User-defined field for filler use."
+template = "AND_BIND"
 
 [[fields]]
 field = 27
@@ -135,6 +156,7 @@ component = 1
 group = "Quantity/Timing"
 name = "Quantity"
 note = "Quantity ordered."
+template = "1"
 
 [[fields]]
 field = 27
@@ -142,12 +164,14 @@ component = 4
 group = "Quantity/Timing"
 name = "Start Date/Time"
 datatype = "datetime"
+template = "{auto}"
 
 [[fields]]
 field = 27
 component = 6
 group = "Quantity/Timing"
 name = "Priority"
+template = "R"
 
 [[fields]]
 field = 36
@@ -155,3 +179,4 @@ name = "Scheduled Date/Time"
 datatype = "datetime"
 placeholder = "YYYYMMDDHHMMSS"
 note = "Date/time the service is scheduled to occur."
+template = "{auto}"

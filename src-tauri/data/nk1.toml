@@ -3,6 +3,7 @@ field = 1
 name = "Set ID"
 note = "Sequence number for this NK1 segment within the message, starting at 1."
 required = true
+template = "1"
 
 [[fields]]
 field = 2
@@ -10,6 +11,7 @@ component = 5
 group = "Contact Name"
 name = "Prefix"
 maxlength = 2
+template = "MR"
 [fields.values]
 DR = "Doctor"
 FR = "Father"
@@ -29,6 +31,7 @@ name = "First Name"
 maxlength = 30
 placeholder = "Mickey"
 required = true
+template = "Bilbo"
 
 [[fields]]
 field = 2
@@ -36,6 +39,7 @@ component = 3
 group = "Contact Name"
 name = "Middle Name"
 maxlength = 30
+template = "T"
 
 [[fields]]
 field = 2
@@ -45,6 +49,7 @@ name = "Last Name"
 maxlength = 50
 placeholder = "Mouse"
 required = true
+template = "Baggins"
 
 [[fields]]
 field = 2
@@ -52,6 +57,7 @@ component = 4
 group = "Contact Name"
 name = "Suffix"
 maxlength = 4
+template = ""
 
 [[fields]]
 field = 3
@@ -59,6 +65,7 @@ name = "Relationship"
 note = "Code indicating the relationship of the contact to the patient."
 maxlength = 1
 required = true
+template = "S"
 
 [[fields]]
 field = 4
@@ -67,6 +74,7 @@ group = "Address"
 name = "Address 1"
 maxlength = 28
 placeholder = "123 Main St"
+template = "1 Bag End"
 
 [[fields]]
 field = 4
@@ -75,6 +83,7 @@ group = "Address"
 name = "Address 2"
 maxlength = 28
 placeholder = "Apt 4B"
+template = ""
 
 [[fields]]
 field = 4
@@ -83,6 +92,7 @@ group = "Address"
 name = "City"
 maxlength = 25
 placeholder = "New York"
+template = "Hobbiton"
 
 [[fields]]
 field = 4
@@ -91,6 +101,7 @@ group = "Address"
 name = "State"
 maxlength = 2
 placeholder = "NY"
+template = "SH"
 
 [[fields]]
 field = 4
@@ -99,6 +110,7 @@ group = "Address"
 name = "Zip Code"
 maxlength = 11
 placeholder = "90210"
+template = "11111"
 
 [[fields]]
 field = 4
@@ -107,6 +119,7 @@ group = "Address"
 name = "Country"
 maxlength = 24
 placeholder = "USA"
+template = "Middle Earth"
 
 [[fields]]
 field = 4
@@ -116,6 +129,7 @@ name = "Type"
 maxlength = 1
 placeholder = "H"
 note = "Address type code."
+template = "H"
 [fields.values]
 H = "Home"
 W = "Work"
@@ -128,6 +142,7 @@ name = "Phone Number"
 maxlength = 14
 pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
 placeholder = "867-5309"
+template = "555-HOBBIT1"
 
 [[fields]]
 field = 6
@@ -135,6 +150,7 @@ name = "Business Phone"
 maxlength = 14
 pattern = "(\\(\\d{3}\\))?\\d{3}-\\d{4}(?:\\s[Xx]\\d{(1, 5)})?"
 placeholder = "(780)867-5309 X12345"
+template = "555-BAGEND2"
 
 [[fields]]
 field = 7
@@ -142,22 +158,25 @@ name = "Contact Role"
 note = "Code indicating the role of the contact (e.g., emergency contact, next of kin)."
 maxlength = 1
 required = true
+template = "E"
 
 [[fields]]
 field = 8
 name = "Start Date"
-type = "datetime"
+datatype = "datetime"
 required = true
 placeholder = "YYYYMMDDHHMMSS"
 pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 maxlength = 23
 note = "Date the contact relationship became effective."
+template = "{auto}"
 
 [[fields]]
 field = 9
 name = "End Date"
-type = "datetime"
+datatype = "datetime"
 maxlength = 23
 placeholder = "YYYYMMDDHHMMSS"
 pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 note = "Date the contact relationship ended."
+template = ""
