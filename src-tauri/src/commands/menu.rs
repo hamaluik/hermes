@@ -204,6 +204,31 @@ pub async fn update_recent_files_menu(
     Ok(())
 }
 
+/// Set the enabled state of the timestamp insertion menu items.
+///
+/// This command allows the frontend to sync the enabled state of both "Insert Current Timestamp"
+/// and "Insert Timestamp..." menu items based on cursor position. Both items should be disabled
+/// when the cursor is not within a valid field/component that can be replaced.
+///
+/// # Arguments
+/// * `enabled` - Whether the timestamp insertion menu items should be enabled
+/// * `state` - Application state containing the menu item references
+///
+/// # Returns
+/// * `Ok(())` - State was updated successfully
+/// * `Err(String)` - Failed to update the menu item state
+#[tauri::command]
+pub fn set_insert_timestamp_enabled(enabled: bool, state: State<'_, AppData>) -> Result<(), String> {
+    state
+        .insert_timestamp_now_menu_item
+        .set_enabled(enabled)
+        .map_err(|e| format!("Failed to set insert timestamp now menu enabled state: {e}"))?;
+    state
+        .insert_timestamp_menu_item
+        .set_enabled(enabled)
+        .map_err(|e| format!("Failed to set insert timestamp menu enabled state: {e}"))
+}
+
 /// Open the help window.
 ///
 /// Creates a new window displaying the help documentation. If the help window

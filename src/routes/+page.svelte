@@ -71,6 +71,8 @@
     generateDefaultData,
     getMessageSegmentNames,
     renderMessageSegment,
+    getCurrentCellRange,
+    getCurrentHl7Timestamp,
   } from "../backend/data";
   import Toolbar from "$lib/toolbar.svelte";
   import ToolbarButton from "$lib/toolbar_button.svelte";
@@ -101,6 +103,7 @@
   import IconRedo from "$lib/icons/IconRedo.svelte";
   import FindReplaceBar from "$lib/find_replace_bar.svelte";
   import JumpToFieldModal from "$lib/jump_to_field_modal.svelte";
+  import InsertTimestampModal from "$lib/insert_timestamp_modal.svelte";
   import type { SearchMatch } from "../backend/syntax_highlight";
 
   let { data }: PageProps = $props();
@@ -143,6 +146,9 @@
 
   // Jump to Field state
   let showJumpToField = $state(false);
+
+  // Insert Timestamp state
+  let showInsertTimestampModal = $state(false);
 
   /**
    * Message Editor Resize System
@@ -456,6 +462,8 @@
     let unlistenMenuToolsSend: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsListen: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsGenerateControlId: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsInsertTimestampNow: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsInsertTimestamp: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
     let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
@@ -551,6 +559,39 @@
     }).then((fn) => {
       unlistenMenuToolsGenerateControlId = fn;
     });
+    // Tools menu: Insert timestamp at current cursor position
+    listen("menu-tools-insert-timestamp-now", async () => {
+      try {
+        const cursor = editorElement?.selectionStart ?? 0;
+        const range = await getCurrentCellRange(message, cursor);
+        if (!range) {
+          console.warn("No valid field at cursor position for timestamp insertion");
+          return;
+        }
+        // Generate current timestamp with UTC offset
+        const timestamp = await getCurrentHl7Timestamp(true);
+        // Replace the current cell with the timestamp
+        const newMessage =
+          message.slice(0, range.start) + timestamp + message.slice(range.end);
+        updateMessage(newMessage);
+        // Select the inserted timestamp
+        setTimeout(() => {
+          if (editorElement) {
+            editorElement.focus();
+            editorElement.setSelectionRange(range.start, range.start + timestamp.length);
+          }
+        }, 0);
+      } catch (error) {
+        console.error("Failed to insert timestamp:", error);
+      }
+    }).then((fn) => {
+      unlistenMenuToolsInsertTimestampNow = fn;
+    });
+    listen("menu-tools-insert-timestamp", () => {
+      showInsertTimestampModal = true;
+    }).then((fn) => {
+      unlistenMenuToolsInsertTimestamp = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -592,6 +633,8 @@
       unlistenMenuToolsSend?.();
       unlistenMenuToolsListen?.();
       unlistenMenuToolsGenerateControlId?.();
+      unlistenMenuToolsInsertTimestampNow?.();
+      unlistenMenuToolsInsertTimestamp?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -734,6 +777,21 @@
 
   $effect(() => {
     invoke("set_redo_enabled", { enabled: history.canRedo });
+  });
+
+  // Sync the Insert Timestamp menu items enabled state based on cursor position
+  // Menu items are enabled only when cursor is within a valid field/component
+  // Track cursorPos (reactive) so this re-runs when cursor moves
+  $effect(() => {
+    // Access cursorPos to track it as a dependency
+    const cursor = cursorPos;
+    // Also track message changes
+    const currentMessage = message;
+    const checkEnabled = async () => {
+      const range = await getCurrentCellRange(currentMessage, cursor);
+      invoke("set_insert_timestamp_enabled", { enabled: range !== null });
+    };
+    checkEnabled();
   });
 
   // Sync communication drawer state to settings
@@ -1111,6 +1169,29 @@
         editorElement.blur();
         editorElement.focus();
         editorElement.setSelectionRange(start, end);
+      }
+    }, 0);
+  }}
+/>
+<InsertTimestampModal
+  bind:show={showInsertTimestampModal}
+  onInsert={async (timestamp) => {
+    // Get the current cell range at cursor position
+    const cursor = editorElement?.selectionStart ?? cursorPos;
+    const range = await getCurrentCellRange(message, cursor);
+    if (!range) {
+      console.warn("No valid field at cursor position for timestamp insertion");
+      return;
+    }
+    // Replace the current cell with the timestamp
+    const newMessage =
+      message.slice(0, range.start) + timestamp + message.slice(range.end);
+    updateMessage(newMessage);
+    // Select the inserted timestamp
+    setTimeout(() => {
+      if (editorElement) {
+        editorElement.focus();
+        editorElement.setSelectionRange(range.start, range.start + timestamp.length);
       }
     }, 0);
   }}

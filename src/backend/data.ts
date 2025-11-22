@@ -219,3 +219,91 @@ export function generateDefaultData(
   }
   return data;
 }
+
+/**
+ * Character range within a message (start and end offsets).
+ */
+export interface CursorRange {
+  start: number;
+  end: number;
+}
+
+/**
+ * Gets the character range of the current navigable cell at the cursor position.
+ *
+ * A "cell" is the smallest navigable unit (field, repeat, component, or subcomponent)
+ * that the cursor is currently within. This is used to determine what text to replace
+ * when inserting content at the cursor position.
+ *
+ * Returns null if the cursor is not within a valid cell (e.g., on a segment name,
+ * between segments, or if the message can't be parsed).
+ *
+ * @param message - Raw HL7 message string
+ * @param cursor - Cursor position (character offset)
+ * @returns Range of the cell containing the cursor, or null if not in a valid cell
+ */
+export async function getCurrentCellRange(
+  message: string,
+  cursor: number,
+): Promise<CursorRange | null> {
+  return await invoke("get_current_cell_range", { message, cursor });
+}
+
+/**
+ * Generates a current timestamp in HL7 DTM format.
+ *
+ * Creates an HL7-formatted timestamp for the current time in the local timezone.
+ * Format: YYYYMMDDHHmmss (without offset) or YYYYMMDDHHmmss+/-ZZZZ (with offset)
+ *
+ * @param includeOffset - Whether to include the UTC offset (e.g., -0500)
+ * @returns Formatted timestamp string
+ */
+export async function getCurrentHl7Timestamp(
+  includeOffset: boolean,
+): Promise<string> {
+  return await invoke("get_current_hl7_timestamp", { includeOffset });
+}
+
+/**
+ * Formats a datetime string into HL7 DTM format.
+ *
+ * Parses an ISO 8601 datetime string and converts it to HL7 timestamp format.
+ * Handles three cases:
+ *
+ * 1. **With explicit offset** (e.g., "2025-01-15T14:30:00-05:00"):
+ *    Uses the provided offset. This is the typical case when a user selects
+ *    a specific timezone in the Insert Timestamp modal.
+ *
+ * 2. **Without offset** (e.g., "2025-01-15T14:30:00"):
+ *    Uses the system's local timezone. This happens when "Local timezone"
+ *    is selected in the modal.
+ *
+ * 3. **With timezone annotation** (e.g., "2025-01-15T14:30:00[America/New_York]"):
+ *    Uses the named timezone. This format is less common but fully supported.
+ *
+ * @param datetime - ISO 8601 formatted datetime with optional offset
+ * @param includeOffset - Whether to include the UTC offset in the output
+ * @returns Formatted HL7 timestamp string (e.g., "20250115143000-0500")
+ * @throws If the datetime string cannot be parsed
+ *
+ * @example
+ * // With offset - uses the specified offset
+ * await formatDatetimeToHl7("2025-01-15T14:30:00-08:00", true);
+ * // Returns: "20250115143000-0800"
+ *
+ * @example
+ * // Without offset - uses local timezone
+ * await formatDatetimeToHl7("2025-01-15T14:30:00", true);
+ * // Returns: "20250115143000-0500" (if local is EST)
+ *
+ * @example
+ * // Exclude offset from output
+ * await formatDatetimeToHl7("2025-01-15T14:30:00-08:00", false);
+ * // Returns: "20250115143000"
+ */
+export async function formatDatetimeToHl7(
+  datetime: string,
+  includeOffset: boolean,
+): Promise<string> {
+  return await invoke("format_datetime_to_hl7", { datetime, includeOffset });
+}

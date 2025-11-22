@@ -149,6 +149,16 @@ pub struct AppData {
     /// when a recent file menu item is clicked. Stored here because menu event
     /// handlers need access to the paths to emit the correct event payload.
     pub recent_files: Mutex<Vec<String>>,
+
+    /// Reference to the "Insert Current Timestamp" menu item for dynamic enable/disable.
+    ///
+    /// Disabled when the cursor is not within a valid field/component (e.g., on segment name).
+    pub insert_timestamp_now_menu_item: MenuItem<Wry>,
+
+    /// Reference to the "Insert Timestamp..." menu item for dynamic enable/disable.
+    ///
+    /// Disabled when the cursor is not within a valid field/component (e.g., on segment name).
+    pub insert_timestamp_menu_item: MenuItem<Wry>,
 }
 
 /// Main entry point for the Hermes application.
@@ -230,6 +240,9 @@ pub fn run() {
             commands::parse_message_segment,
             commands::render_message_segment,
             commands::generate_control_id,
+            commands::get_current_cell_range,
+            commands::get_current_hl7_timestamp,
+            commands::format_datetime_to_hl7,
             commands::send_message,
             commands::start_listening,
             commands::stop_listening,
@@ -238,6 +251,7 @@ pub fn run() {
             commands::set_undo_enabled,
             commands::set_redo_enabled,
             commands::update_recent_files_menu,
+            commands::set_insert_timestamp_enabled,
             commands::open_help_window,
             commands::wizards::wizard_apply_interface,
             commands::wizards::wizard_query_interfaces,
@@ -402,6 +416,20 @@ pub fn run() {
             // functionality without using the mouse. This is particularly useful during
             // rapid edit-send-review cycles when testing HL7 messages.
             // Both items open the communication drawer with the appropriate tab selected.
+            //
+            // Timestamp insertion items start disabled and are enabled by the frontend when
+            // the cursor is within a valid field/component that can be replaced.
+            let insert_timestamp_now_menu_item = MenuItemBuilder::new("Insert &Current Timestamp")
+                .id("tools-insert-timestamp-now")
+                .accelerator("CmdOrCtrl+Shift+T")
+                .enabled(false)
+                .build(app)?;
+
+            let insert_timestamp_menu_item = MenuItemBuilder::new("Insert &Timestamp...")
+                .id("tools-insert-timestamp")
+                .enabled(false)
+                .build(app)?;
+
             let tools_menu = SubmenuBuilder::new(app, "&Tools")
                 .item(
                     &MenuItemBuilder::new("&Send Message...")
@@ -422,6 +450,8 @@ pub fn run() {
                         .accelerator("CmdOrCtrl+G")
                         .build(app)?,
                 )
+                .item(&insert_timestamp_now_menu_item)
+                .item(&insert_timestamp_menu_item)
                 .build()?;
 
             // Build the Window menu with standard window operations.
@@ -459,6 +489,8 @@ pub fn run() {
                 redo_menu_item,
                 recent_files_submenu,
                 recent_files: Mutex::new(Vec::new()),
+                insert_timestamp_now_menu_item,
+                insert_timestamp_menu_item,
             };
             app.manage(app_data);
 
@@ -484,6 +516,8 @@ pub fn run() {
                     "tools-send" => Some("menu-tools-send"),
                     "tools-listen" => Some("menu-tools-listen"),
                     "tools-generate-control-id" => Some("menu-tools-generate-control-id"),
+                    "tools-insert-timestamp-now" => Some("menu-tools-insert-timestamp-now"),
+                    "tools-insert-timestamp" => Some("menu-tools-insert-timestamp"),
                     "recent-clear" => Some("menu-clear-recent"),
                     "help" => Some("menu-help"),
                     _ => None,

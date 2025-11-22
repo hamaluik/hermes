@@ -387,3 +387,305 @@ pub fn generate_control_id(message: &str) -> Result<GenerateControlIdResult, Str
         },
     })
 }
+
+/// Get the character range of the current navigable cell (field/component) at the cursor.
+///
+/// This command finds the smallest navigable unit containing the cursor position.
+/// A "cell" is the smallest unit that should be treated as a single navigation target:
+/// - If a field has no repeats, the entire field is a cell
+/// - If a field has repeats but a repeat has no components, each repeat is a cell
+/// - If a repeat has components but no subcomponents, each component is a cell
+/// - If a component has subcomponents, each subcomponent is a cell
+///
+/// # Use Case
+/// Used by the "Insert Timestamp" feature to determine what text to replace when
+/// inserting a timestamp at the current cursor position.
+///
+/// # Arguments
+/// * `message` - The HL7 message as a string
+/// * `cursor` - Current cursor position (character offset)
+///
+/// # Returns
+/// * `Some(CursorRange)` - Range of the cell containing the cursor
+/// * `None` - If cursor is not within a valid cell (e.g., on segment name, between segments)
+#[tauri::command]
+pub fn get_current_cell_range(message: &str, cursor: usize) -> Option<CursorRange> {
+    let message = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
+
+    // Flatten message into navigable cells and find the one containing the cursor
+    for segment in message.segments() {
+        // Skip segment name - we don't want to replace segment identifiers
+        let segment_name_end = segment.range.start + segment.name.len();
+        if cursor >= segment.range.start && cursor <= segment_name_end {
+            return None; // Cursor is on segment name, not a valid cell for replacement
+        }
+
+        for field in segment.fields() {
+            if field.repeats.is_empty() {
+                if cursor >= field.range.start && cursor <= field.range.end {
+                    return Some(CursorRange {
+                        start: field.range.start,
+                        end: field.range.end,
+                    });
+                }
+                continue;
+            }
+
+            for repeat in field.repeats.iter() {
+                if repeat.components.is_empty() {
+                    if cursor >= repeat.range.start && cursor <= repeat.range.end {
+                        return Some(CursorRange {
+                            start: repeat.range.start,
+                            end: repeat.range.end,
+                        });
+                    }
+                    continue;
+                }
+
+                for component in repeat.components.iter() {
+                    if component.subcomponents.is_empty() {
+                        if cursor >= component.range.start && cursor <= component.range.end {
+                            return Some(CursorRange {
+                                start: component.range.start,
+                                end: component.range.end,
+                            });
+                        }
+                        continue;
+                    }
+
+                    for subcomponent in component.subcomponents.iter() {
+                        if cursor >= subcomponent.range.start && cursor <= subcomponent.range.end {
+                            return Some(CursorRange {
+                                start: subcomponent.range.start,
+                                end: subcomponent.range.end,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Generate a current timestamp in HL7 format.
+///
+/// Creates an HL7-formatted timestamp (DTM data type) for the current time
+/// in the local timezone. The format is YYYYMMDDHHmmss with optional UTC offset.
+///
+/// # Arguments
+/// * `include_offset` - Whether to include the UTC offset (e.g., -0500)
+///
+/// # Returns
+/// The formatted timestamp string (e.g., "20250115143000" or "20250115143000-0500")
+#[tauri::command]
+pub fn get_current_hl7_timestamp(include_offset: bool) -> String {
+    let now = jiff::Zoned::now();
+    format_hl7_timestamp(&now, include_offset)
+}
+
+/// Format a datetime string into HL7 timestamp format.
+///
+/// Parses an ISO 8601 datetime string and converts it to HL7 DTM format.
+/// Handles both offset-aware and naive datetime inputs.
+///
+/// # Why Manual Offset Parsing?
+///
+/// The frontend sends datetime strings like `2025-01-15T14:30:00-05:00`. However,
+/// jiff's `Zoned` type requires a timezone annotation in brackets (e.g., `[America/New_York]`),
+/// not just an offset. When only an offset is provided, `Zoned::parse()` fails.
+///
+/// To preserve the user's selected offset (rather than falling back to local timezone),
+/// we manually split the datetime string at the offset position and parse each part
+/// separately. This ensures that selecting "UTC-08:00 (Pacific)" in the UI actually
+/// generates a timestamp with `-0800`, not the system's local offset.
+///
+/// # Parsing Strategy
+///
+/// 1. Try parsing as `jiff::Zoned` (handles strings with timezone annotation)
+/// 2. Look for an offset at position 19+ (after `YYYY-MM-DDTHH:MM:SS`)
+/// 3. If offset found, split and parse datetime + offset separately
+/// 4. Otherwise, parse as naive datetime and use local timezone
+///
+/// # Arguments
+/// * `datetime` - ISO 8601 formatted datetime string (e.g., "2025-01-15T14:30:00-05:00")
+/// * `include_offset` - Whether to include the UTC offset in the output
+///
+/// # Returns
+/// * `Ok(String)` - The formatted HL7 timestamp
+/// * `Err(String)` - If the datetime string cannot be parsed
+#[tauri::command]
+pub fn format_datetime_to_hl7(datetime: &str, include_offset: bool) -> Result<String, String> {
+    // Try to parse as a Zoned datetime (with timezone annotation like [America/New_York])
+    if let Ok(zoned) = datetime.parse::<jiff::Zoned>() {
+        return Ok(format_hl7_timestamp_from_zoned(&zoned, include_offset));
+    }
+
+    // Check if the string contains an offset by looking for + or - after the time portion
+    // This handles strings like "2025-01-15T14:30:00-05:00"
+    if let Some(offset_start) = datetime.rfind(|c| c == '+' || c == '-') {
+        // Make sure it's after the time portion (not a negative year or part of date)
+        // The 'T' separator is at position 10, so offset should be after position 18 (after seconds)
+        if offset_start >= 19 {
+            let datetime_part = &datetime[..offset_start];
+            let offset_str = &datetime[offset_start..];
+
+            if let Ok(civil_dt) = datetime_part.parse::<jiff::civil::DateTime>() {
+                if let Ok(offset) = parse_offset(offset_str) {
+                    return Ok(format_hl7_timestamp_from_parts(&civil_dt, offset, include_offset));
+                }
+            }
+        }
+    }
+
+    // Try to parse as a civil datetime (no offset) and assume local timezone
+    if let Ok(civil) = datetime.parse::<jiff::civil::DateTime>() {
+        let zoned = civil
+            .to_zoned(jiff::tz::TimeZone::system())
+            .map_err(|e| format!("Failed to convert to local time: {e}"))?;
+        return Ok(format_hl7_timestamp_from_zoned(&zoned, include_offset));
+    }
+
+    Err(format!("Could not parse datetime: {datetime}"))
+}
+
+/// Parse an offset string like "-05:00" or "+05:30" into a jiff::tz::Offset.
+///
+/// This is needed because jiff doesn't provide a direct way to parse ISO 8601
+/// offset strings without a full datetime. The offset is extracted from the
+/// user's timezone selection in the Insert Timestamp modal.
+///
+/// # Format
+/// Expects `±HH:MM` format (e.g., "-05:00", "+05:30", "+00:00")
+fn parse_offset(offset_str: &str) -> Result<jiff::tz::Offset, String> {
+    let sign = if offset_str.starts_with('-') { -1 } else { 1 };
+    let rest = offset_str.trim_start_matches(['+', '-']);
+
+    let parts: Vec<&str> = rest.split(':').collect();
+    if parts.len() != 2 {
+        return Err(format!("Invalid offset format: {offset_str}"));
+    }
+
+    let hours: i8 = parts[0].parse().map_err(|_| format!("Invalid hours in offset: {offset_str}"))?;
+    let minutes: i8 = parts[1].parse().map_err(|_| format!("Invalid minutes in offset: {offset_str}"))?;
+
+    let total_seconds = sign * (hours as i32 * 3600 + minutes as i32 * 60);
+    jiff::tz::Offset::from_seconds(total_seconds)
+        .map_err(|e| format!("Invalid offset value: {e}"))
+}
+
+/// Format a Zoned datetime into HL7 DTM format.
+///
+/// HL7 DTM format: YYYYMMDDHHmmss[±ZZZZ]
+/// - YYYY: 4-digit year
+/// - MM: 2-digit month (01-12)
+/// - DD: 2-digit day (01-31)
+/// - HH: 2-digit hour (00-23)
+/// - mm: 2-digit minute (00-59)
+/// - ss: 2-digit second (00-59)
+/// - ±ZZZZ: UTC offset as ±HHmm (optional)
+fn format_hl7_timestamp(dt: &jiff::Zoned, include_offset: bool) -> String {
+    format_hl7_timestamp_from_zoned(dt, include_offset)
+}
+
+/// Format a Zoned datetime into HL7 DTM format.
+fn format_hl7_timestamp_from_zoned(dt: &jiff::Zoned, include_offset: bool) -> String {
+    let datetime = dt.datetime();
+    let base = format!(
+        "{:04}{:02}{:02}{:02}{:02}{:02}",
+        datetime.year(),
+        datetime.month(),
+        datetime.day(),
+        datetime.hour(),
+        datetime.minute(),
+        datetime.second()
+    );
+
+    if include_offset {
+        let offset = dt.offset();
+        format_hl7_offset(&base, offset)
+    } else {
+        base
+    }
+}
+
+/// Format a civil DateTime with an explicit offset into HL7 DTM format.
+fn format_hl7_timestamp_from_parts(
+    dt: &jiff::civil::DateTime,
+    offset: jiff::tz::Offset,
+    include_offset: bool,
+) -> String {
+    let base = format!(
+        "{:04}{:02}{:02}{:02}{:02}{:02}",
+        dt.year(),
+        dt.month(),
+        dt.day(),
+        dt.hour(),
+        dt.minute(),
+        dt.second()
+    );
+
+    if include_offset {
+        format_hl7_offset(&base, offset)
+    } else {
+        base
+    }
+}
+
+/// Append an HL7-formatted offset to a base timestamp string.
+fn format_hl7_offset(base: &str, offset: jiff::tz::Offset) -> String {
+    let total_seconds = offset.seconds();
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds.abs() % 3600) / 60;
+    let sign = if total_seconds >= 0 { '+' } else { '-' };
+    format!("{}{}{:02}{:02}", base, sign, hours.abs(), minutes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_datetime_with_explicit_negative_offset() {
+        let result = format_datetime_to_hl7("2025-01-15T14:30:00-05:00", true).unwrap();
+        assert_eq!(result, "20250115143000-0500");
+    }
+
+    #[test]
+    fn format_datetime_with_explicit_positive_offset() {
+        let result = format_datetime_to_hl7("2025-01-15T14:30:00+05:30", true).unwrap();
+        assert_eq!(result, "20250115143000+0530");
+    }
+
+    #[test]
+    fn format_datetime_with_explicit_offset_no_include() {
+        let result = format_datetime_to_hl7("2025-01-15T14:30:00-05:00", false).unwrap();
+        assert_eq!(result, "20250115143000");
+    }
+
+    #[test]
+    fn format_datetime_without_offset_uses_local() {
+        // This will use local timezone, so we can only check the base part
+        let result = format_datetime_to_hl7("2025-01-15T14:30:00", false).unwrap();
+        assert_eq!(result, "20250115143000");
+    }
+
+    #[test]
+    fn parse_offset_negative() {
+        let offset = parse_offset("-05:00").unwrap();
+        assert_eq!(offset.seconds(), -5 * 3600);
+    }
+
+    #[test]
+    fn parse_offset_positive() {
+        let offset = parse_offset("+05:30").unwrap();
+        assert_eq!(offset.seconds(), 5 * 3600 + 30 * 60);
+    }
+
+    #[test]
+    fn parse_offset_utc() {
+        let offset = parse_offset("+00:00").unwrap();
+        assert_eq!(offset.seconds(), 0);
+    }
+}
