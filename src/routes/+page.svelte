@@ -356,6 +356,19 @@
     invoke("set_auto_save_checked", { checked: data.settings.autoSaveEnabled });
 
     /**
+     * Theme Application
+     *
+     * Applies the theme setting to the document's data-theme attribute.
+     * The CSS uses this attribute to apply light/dark/auto theme colors.
+     */
+    const applyTheme = (theme: "light" | "dark" | "auto") => {
+      document.documentElement.dataset.theme = theme;
+    };
+    data.settings.onThemeChanged = applyTheme;
+    // Initialize with current theme setting
+    applyTheme(data.settings.themeSetting);
+
+    /**
      * File Menu Event Listeners
      *
      * The Tauri backend emits events when File menu items are clicked.

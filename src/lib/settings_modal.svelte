@@ -1,7 +1,8 @@
 <!--
   Settings Modal
 
-  Modal dialog for configuring application preferences. Provides toggles for:
+  Modal dialog for configuring application preferences. Provides controls for:
+  - Theme: 3-way toggle for Light/Auto/Dark mode with live preview
   - Auto-Save: Automatically save files after changes (also accessible via File menu)
   - Tabs Follow Cursor: Auto-switch segment tabs when cursor moves in raw editor
 
@@ -21,6 +22,19 @@
   The Settings object itself handles persistence to Tauri's store, so we don't need
   explicit save-to-disk calls here - just updating the Settings properties is sufficient.
 
+  ## Theme Live Preview
+
+  Unlike other settings, the theme change is applied immediately when the user toggles
+  it, providing a live preview of each theme option. This is handled specially:
+
+  1. On modal open: Store the original theme in `originalTheme`
+  2. An $effect watches `themeSetting` and applies it to `document.documentElement.dataset.theme`
+  3. On Save: The already-applied theme is persisted to settings
+  4. On Cancel: The theme is reverted to `originalTheme`
+
+  This approach lets users see the actual theme before committing, which is important
+  for a visual preference where the impact isn't obvious from just reading the option name.
+
   ## Auto-Save Menu Sync
 
   When Auto-Save is changed via this modal and saved, the Settings setter triggers
@@ -32,6 +46,7 @@
   import type { Settings } from "../settings";
   import IconSave from "./icons/IconSave.svelte";
   import WizardToggle from "./wizards/wizard_toggle.svelte";
+  import ThemeToggle from "./theme_toggle.svelte";
   import Modal from "./components/modal.svelte";
   import ModalHeader from "./components/modal_header.svelte";
   import ModalFooter from "./components/modal_footer.svelte";
@@ -47,10 +62,30 @@
   // Local staging state for settings changes
   let tabsFollowCursor: boolean = $state(settings.tabsFollowCursor);
   let autoSaveEnabled: boolean = $state(settings.autoSaveEnabled);
+  let themeSetting: "light" | "dark" | "auto" = $state(settings.themeSetting);
+
+  // Store original theme when modal opens, for reverting on cancel
+  let originalTheme: "light" | "dark" | "auto" = $state(settings.themeSetting);
+
+  // Apply theme preview immediately when toggle changes
+  $effect(() => {
+    document.documentElement.dataset.theme = themeSetting;
+  });
+
+  // Reset staging state when modal opens
+  $effect(() => {
+    if (show) {
+      tabsFollowCursor = settings.tabsFollowCursor;
+      autoSaveEnabled = settings.autoSaveEnabled;
+      themeSetting = settings.themeSetting;
+      originalTheme = settings.themeSetting;
+    }
+  });
 
   const saveSettings = () => {
     settings.tabsFollowCursor = tabsFollowCursor;
     settings.autoSaveEnabled = autoSaveEnabled;
+    settings.themeSetting = themeSetting;
   };
 
   const handleSave = () => {
@@ -59,6 +94,8 @@
   };
 
   const handleClose = () => {
+    // Revert theme preview to original
+    document.documentElement.dataset.theme = originalTheme;
     show = false;
   };
 </script>
@@ -67,6 +104,8 @@
   <ModalHeader onclose={handleClose}>Settings</ModalHeader>
   <main>
     <form method="dialog">
+      <label for="themeSetting">Theme</label>
+      <ThemeToggle id="themeSetting" bind:value={themeSetting} />
       <label for="autoSaveEnabled">Auto-Save</label>
       <WizardToggle id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
       <label for="tabsFollowCursor">Tabs Follow Cursor</label>
@@ -116,8 +155,12 @@
     }
   }
 
+  :global(html[data-theme="dark"]) button.save {
+    color: var(--col-text);
+  }
+
   @media (prefers-color-scheme: dark) {
-    button.save {
+    :global(html[data-theme="auto"]) button.save {
       color: var(--col-text);
     }
   }

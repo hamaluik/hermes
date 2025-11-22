@@ -29,9 +29,10 @@
  * Some settings need to notify external systems when they change. For example:
  * - Recent files list needs to update the native File menu
  * - Auto-save setting needs to update the File menu's checkable Auto-Save item
+ * - Theme setting needs to update the document's data-theme attribute
  *
  * This is handled via optional callback properties (e.g., `onRecentFilesChanged`,
- * `onAutoSaveChanged`).
+ * `onAutoSaveChanged`, `onThemeChanged`).
  *
  * The callback pattern is used instead of events because:
  * - It's simpler than setting up a full event emitter
@@ -46,6 +47,7 @@
  * - wizardDbPort: 1433 (SQL Server default port)
  * - tabsFollowCursor: true (better UX for most users)
  * - autoSaveEnabled: false (explicit opt-in, matches VS Code default)
+ * - themeSetting: "auto" (follows system preference, most intuitive default)
  * - editorHeight: 200px (fits typical screen layouts)
  * - recentFiles: [] (empty list, populated as user opens files)
  */
@@ -63,6 +65,12 @@ export class Settings {
 
   // Callback to notify when auto-save setting changes (for menu updates)
   onAutoSaveChanged: ((enabled: boolean) => void) | null = null;
+
+  // Theme setting: "light", "dark", or "auto" (follows system preference)
+  private _themeSetting: "light" | "dark" | "auto" = "auto";
+
+  // Callback to notify when theme setting changes (for applying theme to document)
+  onThemeChanged: ((theme: "light" | "dark" | "auto") => void) | null = null;
 
   // Send/Receive configuration for MLLP client
   private _sendHostname: string = "127.0.0.1";
@@ -102,6 +110,7 @@ export class Settings {
           store.get<boolean>("tabsFollowCursor"),
           store.get<number>("editorHeight"),
           store.get<boolean>("autoSaveEnabled"),
+          store.get<"light" | "dark" | "auto">("themeSetting"),
           store.get<string>("sendHostname"),
           store.get<number>("sendPort"),
           store.get<boolean>("sendTransformControlId"),
@@ -120,6 +129,7 @@ export class Settings {
           tabsFollowCursor,
           editorHeight,
           autoSaveEnabled,
+          themeSetting,
           sendHostname,
           sendPort,
           sendTransformControlId,
@@ -135,6 +145,7 @@ export class Settings {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
           this._autoSaveEnabled = autoSaveEnabled ?? false;
+          this._themeSetting = themeSetting ?? "auto";
           this._sendHostname = sendHostname ?? "127.0.0.1";
           this._sendPort = sendPort ?? 2575;
           this._sendTransformControlId = sendTransformControlId ?? true;
@@ -153,6 +164,9 @@ export class Settings {
           }
           if (this.onAutoSaveChanged) {
             this.onAutoSaveChanged(this._autoSaveEnabled);
+          }
+          if (this.onThemeChanged) {
+            this.onThemeChanged(this._themeSetting);
           }
         },
       )
@@ -213,6 +227,24 @@ export class Settings {
     }
     if (this.onAutoSaveChanged) {
       this.onAutoSaveChanged(value);
+    }
+  }
+
+  /** Theme setting: "light" for light mode, "dark" for dark mode, "auto" to follow system */
+  get themeSetting(): "light" | "dark" | "auto" {
+    return this._themeSetting;
+  }
+  set themeSetting(value: "light" | "dark" | "auto") {
+    console.debug("Setting themeSetting to:", value);
+    this._themeSetting = value;
+    if (this.store) {
+      this.store.set("themeSetting", value).catch((error) => {
+        console.error("Error saving themeSetting setting:", error);
+        logError("Failed to save themeSetting setting");
+      });
+    }
+    if (this.onThemeChanged) {
+      this.onThemeChanged(value);
     }
   }
 

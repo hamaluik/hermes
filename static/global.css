@@ -73,6 +73,7 @@ body>div {
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
+  /* Light theme (Rose Pine Dawn) - default */
   --col-base: #faf4ed;
   --col-surface: #fffaf3;
   --col-overlay: #f2e9e1;
@@ -90,8 +91,28 @@ body>div {
   --col-highlightHigh: #cecacd;
 }
 
+/* Dark theme (Rose Pine) - forced via data attribute */
+html[data-theme="dark"] {
+  --col-base: #191724;
+  --col-surface: #1f1d2e;
+  --col-overlay: #26233a;
+  --col-muted: #6e6a86;
+  --col-subtle: #908caa;
+  --col-text: #e0def4;
+  --col-love: #eb6f92;
+  --col-gold: #f6c177;
+  --col-rose: #ebbcba;
+  --col-pine: #31748f;
+  --col-foam: #9ccfd8;
+  --col-iris: #c4a7e7;
+  --col-highlightLow: #21202e;
+  --col-highlightMed: #403d52;
+  --col-highlightHigh: #524f67;
+}
+
+/* Auto theme - follows system preference */
 @media (prefers-color-scheme: dark) {
-  :root {
+  html[data-theme="auto"] {
     --col-base: #191724;
     --col-surface: #1f1d2e;
     --col-overlay: #26233a;
