@@ -11,7 +11,7 @@
 //! │  Frontend (Svelte + SvelteKit)                              │
 //! │  - Message editor UI                                        │
 //! │  - Wizard forms (patient, visit, interface)                 │
-//! │  - Send/receive modals                                      │
+//! │  - Communication drawer (send/listen for messages)          │
 //! └────────────────────┬────────────────────────────────────────┘
 //!                      │ Tauri Commands (invoke/events)
 //! ┌────────────────────▼────────────────────────────────────────┐
@@ -365,6 +365,26 @@ pub fn run() {
                 .item(&PredefinedMenuItem::about(app, Some("About Hermes"), Some(about_metadata))?)
                 .build()?;
 
+            // Build the Tools menu for HL7 communication operations.
+            // Provides keyboard shortcuts (Cmd+T, Cmd+L) to quickly access send/listen
+            // functionality without using the mouse. This is particularly useful during
+            // rapid edit-send-review cycles when testing HL7 messages.
+            // Both items open the communication drawer with the appropriate tab selected.
+            let tools_menu = SubmenuBuilder::new(app, "&Tools")
+                .item(
+                    &MenuItemBuilder::new("&Send Message...")
+                        .id("tools-send")
+                        .accelerator("CmdOrCtrl+T")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::new("&Listen for Messages...")
+                        .id("tools-listen")
+                        .accelerator("CmdOrCtrl+L")
+                        .build(app)?,
+                )
+                .build()?;
+
             // Build the Window menu with standard window operations.
             // This provides Cmd+W (close) and Cmd+M (minimize) shortcuts that macOS users expect.
             // Using PredefinedMenuItem types ensures proper platform integration without
@@ -380,6 +400,7 @@ pub fn run() {
             let menu = MenuBuilder::new(app)
                 .item(&file_menu)
                 .item(&edit_menu)
+                .item(&tools_menu)
                 .item(&window_menu)
                 .item(&help_menu)
                 .build()?;
@@ -416,6 +437,8 @@ pub fn run() {
                     "edit-redo" => Some("menu-edit-redo"),
                     "edit-find" => Some("menu-edit-find"),
                     "edit-find-replace" => Some("menu-edit-find-replace"),
+                    "tools-send" => Some("menu-tools-send"),
+                    "tools-listen" => Some("menu-tools-listen"),
                     "recent-clear" => Some("menu-clear-recent"),
                     "help" => Some("menu-help"),
                     _ => None,

@@ -369,10 +369,16 @@
     applyTheme(data.settings.themeSetting);
 
     /**
-     * File Menu Event Listeners
+     * Menu Event Listeners
      *
-     * The Tauri backend emits events when File menu items are clicked.
-     * We listen for these events and trigger the corresponding file operations.
+     * The Tauri backend emits events when native menu items are clicked.
+     * We listen for these events and trigger the corresponding operations.
+     *
+     * Organized by menu:
+     * - File: New, Open, Save, Save As, Auto-Save, Open Recent, Clear Recent
+     * - Edit: Undo, Redo, Find, Find and Replace
+     * - Tools: Send Message, Listen for Messages
+     * - Help: Help window
      */
     let unlistenMenuNew: UnlistenFn | undefined = undefined;
     let unlistenMenuOpen: UnlistenFn | undefined = undefined;
@@ -386,6 +392,8 @@
     let unlistenMenuOpenRecent: UnlistenFn | undefined = undefined;
     let unlistenMenuClearRecent: UnlistenFn | undefined = undefined;
     let unlistenMenuHelp: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsSend: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsListen: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -432,6 +440,20 @@
     }).then((fn) => {
       unlistenMenuHelp = fn;
     });
+    // Tools menu: Open communication drawer with appropriate tab
+    // Provides keyboard shortcuts (Cmd+T, Cmd+L) for quick access during testing workflows
+    listen("menu-tools-send", () => {
+      showCommDrawer = true;
+      commDrawerTab = "send";
+    }).then((fn) => {
+      unlistenMenuToolsSend = fn;
+    });
+    listen("menu-tools-listen", () => {
+      showCommDrawer = true;
+      commDrawerTab = "listen";
+    }).then((fn) => {
+      unlistenMenuToolsListen = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -466,6 +488,8 @@
       unlistenMenuOpenRecent?.();
       unlistenMenuClearRecent?.();
       unlistenMenuHelp?.();
+      unlistenMenuToolsSend?.();
+      unlistenMenuToolsListen?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
