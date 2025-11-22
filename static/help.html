@@ -1,1526 +1,2464 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hermes Help</title>
-  <style>
-    /* Rose Pine Color Scheme */
-    :root {
-      --col-base: #faf4ed;
-      --col-surface: #fffaf3;
-      --col-overlay: #f2e9e1;
-      --col-muted: #9893a5;
-      --col-subtle: #797593;
-      --col-text: #575279;
-      --col-love: #b4637a;
-      --col-gold: #ea9d34;
-      --col-rose: #d7827e;
-      --col-pine: #286983;
-      --col-foam: #56949f;
-      --col-iris: #907aa9;
-      --col-highlightLow: #f4ede8;
-      --col-highlightMed: #dfdad9;
-      --col-highlightHigh: #cecacd;
-    }
-
-    @media (prefers-color-scheme: dark) {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hermes Help</title>
+    <style>
+      /* Rose Pine Color Scheme */
       :root {
-        --col-base: #191724;
-        --col-surface: #1f1d2e;
-        --col-overlay: #26233a;
-        --col-muted: #6e6a86;
-        --col-subtle: #908caa;
-        --col-text: #e0def4;
-        --col-love: #eb6f92;
-        --col-gold: #f6c177;
-        --col-rose: #ebbcba;
-        --col-pine: #31748f;
-        --col-foam: #9ccfd8;
-        --col-iris: #c4a7e7;
-        --col-highlightLow: #21202e;
-        --col-highlightMed: #403d52;
-        --col-highlightHigh: #524f67;
+        --col-base: #faf4ed;
+        --col-surface: #fffaf3;
+        --col-overlay: #f2e9e1;
+        --col-muted: #9893a5;
+        --col-subtle: #797593;
+        --col-text: #575279;
+        --col-love: #b4637a;
+        --col-gold: #ea9d34;
+        --col-rose: #d7827e;
+        --col-pine: #286983;
+        --col-foam: #56949f;
+        --col-iris: #907aa9;
+        --col-highlightLow: #f4ede8;
+        --col-highlightMed: #dfdad9;
+        --col-highlightHigh: #cecacd;
       }
-    }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      scroll-behavior: smooth;
-      overflow-x: hidden;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--col-base);
-      color: var(--col-text);
-      line-height: 1.6;
-      display: flex;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Sidebar Navigation */
-    nav {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 260px;
-      height: 100vh;
-      background-color: var(--col-surface);
-      border-right: 1px solid var(--col-highlightMed);
-      padding: 24px 16px;
-      overflow-y: auto;
-    }
-
-    nav h1 {
-      font-size: 1.25rem;
-      color: var(--col-pine);
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    nav .subtitle {
-      font-size: 0.75rem;
-      color: var(--col-muted);
-      margin-bottom: 24px;
-    }
-
-    nav ul {
-      list-style: none;
-    }
-
-    nav > ul > li {
-      margin-bottom: 4px;
-    }
-
-    nav a {
-      display: block;
-      padding: 8px 12px;
-      color: var(--col-subtle);
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      transition: background-color 0.15s, color 0.15s;
-    }
-
-    nav a:hover {
-      background-color: var(--col-highlightLow);
-      color: var(--col-text);
-    }
-
-    nav a.active {
-      background-color: var(--col-highlightMed);
-      color: var(--col-pine);
-      font-weight: 500;
-    }
-
-    nav ul ul {
-      margin-left: 12px;
-      margin-top: 4px;
-    }
-
-    nav ul ul a {
-      font-size: 0.8125rem;
-      padding: 6px 12px;
-      color: var(--col-muted);
-    }
-
-    /* Main Content */
-    main {
-      margin-left: 260px;
-      flex: 1;
-      padding: 32px 24px;
-      min-width: 0; /* Allow flex item to shrink below content size */
-      overflow-x: hidden;
-    }
-
-    section {
-      margin-bottom: 64px;
-    }
-
-    h2 {
-      font-size: 1.75rem;
-      color: var(--col-pine);
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid var(--col-highlightMed);
-    }
-
-    h3 {
-      font-size: 1.25rem;
-      color: var(--col-text);
-      margin-top: 32px;
-      margin-bottom: 12px;
-    }
-
-    h4 {
-      font-size: 1rem;
-      color: var(--col-subtle);
-      margin-top: 24px;
-      margin-bottom: 8px;
-    }
-
-    p {
-      margin-bottom: 16px;
-    }
-
-    ul, ol {
-      margin-bottom: 16px;
-      padding-left: 24px;
-    }
-
-    li {
-      margin-bottom: 8px;
-    }
-
-    code {
-      font-family: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", monospace;
-      background-color: var(--col-overlay);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.875em;
-      overflow-wrap: break-word;
-      word-break: break-word;
-    }
-
-    pre {
-      font-family: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", monospace;
-      background-color: var(--col-overlay);
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      line-height: 1.5;
-      border: 1px solid var(--col-highlightMed);
-      max-width: 100%;
-    }
-
-    /* HL7 syntax highlighting in pre blocks */
-    pre .seg {
-      color: var(--col-foam);
-      font-weight: 600;
-    }
-
-    pre .sep {
-      color: var(--col-muted);
-    }
-
-    pre .field {
-      color: var(--col-text);
-    }
-
-    pre .comment {
-      color: var(--col-muted);
-      font-style: italic;
-    }
-
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      display: block;
-      overflow-x: auto;
-    }
-
-    th, td {
-      padding: 8px 10px;
-      text-align: left;
-      border: 1px solid var(--col-highlightMed);
-    }
-
-    th {
-      background-color: var(--col-overlay);
-      font-weight: 600;
-      color: var(--col-text);
-    }
-
-    tr:nth-child(even) {
-      background-color: var(--col-highlightLow);
-    }
-
-    /* Keyboard shortcuts */
-    kbd {
-      display: inline-block;
-      padding: 4px 8px;
-      font-family: ui-monospace, Menlo, Monaco, monospace;
-      font-size: 0.75rem;
-      background-color: var(--col-overlay);
-      border: 1px solid var(--col-highlightHigh);
-      border-radius: 4px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-
-    /* Info boxes */
-    .note {
-      background-color: var(--col-highlightLow);
-      border-left: 4px solid var(--col-pine);
-      padding: 16px;
-      margin-bottom: 16px;
-      border-radius: 0 8px 8px 0;
-    }
-
-    .tip {
-      background-color: var(--col-highlightLow);
-      border-left: 4px solid var(--col-gold);
-      padding: 16px;
-      margin-bottom: 16px;
-      border-radius: 0 8px 8px 0;
-    }
-
-    .warning {
-      background-color: var(--col-highlightLow);
-      border-left: 4px solid var(--col-love);
-      padding: 16px;
-      margin-bottom: 16px;
-      border-radius: 0 8px 8px 0;
-    }
-
-    .note strong, .tip strong, .warning strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    /* Links */
-    a {
-      color: var(--col-pine);
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    /* Definition lists for field descriptions */
-    dl {
-      margin-bottom: 16px;
-    }
-
-    dt {
-      font-weight: 600;
-      color: var(--col-foam);
-      margin-top: 12px;
-    }
-
-    dd {
-      margin-left: 16px;
-      color: var(--col-subtle);
-    }
-
-    /* Interface tour figure */
-    .interface-diagram {
-      background-color: var(--col-overlay);
-      border: 1px solid var(--col-highlightMed);
-      border-radius: 8px;
-      padding: 16px;
-      margin: 0 0 16px;
-      font-family: ui-monospace, monospace;
-      font-size: 0.7rem;
-      line-height: 1.4;
-      white-space: pre;
-      overflow-x: auto;
-      max-width: 100%;
-    }
-
-    .interface-diagram .label {
-      color: var(--col-pine);
-      font-weight: 600;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      nav {
-        width: 200px;
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --col-base: #191724;
+          --col-surface: #1f1d2e;
+          --col-overlay: #26233a;
+          --col-muted: #6e6a86;
+          --col-subtle: #908caa;
+          --col-text: #e0def4;
+          --col-love: #eb6f92;
+          --col-gold: #f6c177;
+          --col-rose: #ebbcba;
+          --col-pine: #31748f;
+          --col-foam: #9ccfd8;
+          --col-iris: #c4a7e7;
+          --col-highlightLow: #21202e;
+          --col-highlightMed: #403d52;
+          --col-highlightHigh: #524f67;
+        }
       }
-      main {
-        margin-left: 200px;
-        padding: 24px 16px;
-      }
-    }
 
-    @media (max-width: 700px) {
-      nav {
-        position: static;
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--col-highlightMed);
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
+
+      html {
+        scroll-behavior: smooth;
+        overflow-x: hidden;
+      }
+
       body {
-        flex-direction: column;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--col-base);
+        color: var(--col-text);
+        line-height: 1.6;
+        display: flex;
+        min-height: 100vh;
+        overflow-x: hidden;
       }
-      main {
-        margin-left: 0;
+
+      /* Sidebar Navigation */
+      nav {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 260px;
+        height: 100vh;
+        background-color: var(--col-surface);
+        border-right: 1px solid var(--col-highlightMed);
         padding: 24px 16px;
+        overflow-y: auto;
       }
-    }
-  </style>
-</head>
-<body>
-  <nav>
-    <h1>Hermes Help</h1>
-    <p class="subtitle">HL7 Message Editor</p>
-    <ul>
-      <li><a href="#getting-started">Getting Started</a></li>
-      <li>
-        <a href="#hl7-fundamentals">HL7 Fundamentals</a>
-        <ul>
-          <li><a href="#what-is-hl7">What is HL7?</a></li>
-          <li><a href="#message-structure">Message Structure</a></li>
-          <li><a href="#delimiters">Delimiters</a></li>
-          <li><a href="#common-segments">Common Segments</a></li>
-        </ul>
-      </li>
-      <li>
-        <a href="#editing-messages">Editing Messages</a>
-        <ul>
-          <li><a href="#message-editor">Message Editor</a></li>
-          <li><a href="#segment-tabs">Segment Tabs</a></li>
-          <li><a href="#adding-segments">Adding Segments</a></li>
-        </ul>
-      </li>
-      <li>
-        <a href="#wizards">Wizards</a>
-        <ul>
-          <li><a href="#header-wizard">Header Wizard</a></li>
-          <li><a href="#patient-wizard">Patient Wizard</a></li>
-          <li><a href="#visit-wizard">Visit Wizard</a></li>
-        </ul>
-      </li>
-      <li><a href="#find-replace">Find &amp; Replace</a></li>
-      <li><a href="#jump-to-field">Jump to Field</a></li>
-      <li><a href="#compare-messages">Compare Messages</a></li>
-      <li><a href="#file-operations">File Operations</a></li>
-      <li>
-        <a href="#communication">Communication</a>
-        <ul>
-          <li><a href="#send-tab">Send Tab</a></li>
-          <li><a href="#listen-tab">Listen Tab</a></li>
-        </ul>
-      </li>
-      <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
-      <li><a href="#message-types">Message Types Reference</a></li>
-      <li><a href="#troubleshooting">Troubleshooting</a></li>
-    </ul>
-  </nav>
 
-  <main>
-    <!-- Getting Started -->
-    <section id="getting-started">
-      <h2>Getting Started</h2>
-      <p>
-        Hermes is a desktop application for composing, editing, sending, and receiving HL7 messages.
-        It's designed for development and testing, providing a visual interface for
-        working with healthcare interoperability messages.
-      </p>
+      nav h1 {
+        font-size: 1.25rem;
+        color: var(--col-pine);
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
 
-      <h3>Interface Overview</h3>
-      <p>The application is divided into several key areas:</p>
+      nav .subtitle {
+        font-size: 0.75rem;
+        color: var(--col-muted);
+        margin-bottom: 24px;
+      }
 
-      <div class="interface-diagram">
-<span class="label">Toolbar</span>
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  [New] [Open] [Save] [Save As]  │ [Undo] [Redo] [Comm] │ [Help] [Settings]  │
-└─────────────────────────────────────────────────────────────────────────────┘
+      nav ul {
+        list-style: none;
+      }
 
-<span class="label">Segment Tabs</span>
-┌─────────────────────────────────────────────────────────────────────┐
-│  [ MSH ]  [ PID ]  [ PV1 ]  [ ORC ]  [ + ]                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌─ Header Fields ──────────────────────────────────────────────┐   │
-│  │  Sending Application: [____________]   Message Type: [___]   │   │
-│  │  Receiving Application: [__________]   Trigger Event: [__]   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-<span class="label">                         ═══ Resize Handle ═══</span>
-<span class="label">Message Editor</span>
-┌─────────────────────────────────────────────────────────────────────┐
-│  MSH|^~\&amp;|SendingApp|SendingFac|ReceivingApp|ReceivingFac|...       │
-│  PID|||123456^^^MRN||Doe^John^Q||19800115|M|||...                   │
-│  PV1||I|ICU^101^A||||...                                            │
-└─────────────────────────────────────────────────────────────────────┘
+      nav > ul > li {
+        margin-bottom: 4px;
+      }
 
-<span class="label">Status Bar</span>
-┌─────────────────────────────────────────────────────────────────────┐
-│  PID.5.1 - Patient Name → Family Name             ~/messages/adt.hl7│
-└─────────────────────────────────────────────────────────────────────┘
-      </div>
+      nav a {
+        display: block;
+        padding: 8px 12px;
+        color: var(--col-subtle);
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition:
+          background-color 0.15s,
+          color 0.15s;
+      }
 
-      <dl>
-        <dt>Toolbar</dt>
-        <dd>Quick access to file operations (New, Open, Save), edit operations (Undo, Redo), and application settings.</dd>
+      nav a:hover {
+        background-color: var(--col-highlightLow);
+        color: var(--col-text);
+      }
 
-        <dt>Segment Tabs</dt>
-        <dd>Form-based editing for each HL7 segment. Click a tab to view and edit that segment's fields in a structured format.</dd>
+      nav a.active {
+        background-color: var(--col-highlightMed);
+        color: var(--col-pine);
+        font-weight: 500;
+      }
 
-        <dt>Resize Handle</dt>
-        <dd>Drag to adjust the space between the segment tabs and the raw message editor.</dd>
+      nav ul ul {
+        margin-left: 12px;
+        margin-top: 4px;
+      }
 
-        <dt>Message Editor</dt>
-        <dd>Raw HL7 text editor with syntax highlighting. Edit messages directly with full control over the message structure.</dd>
+      nav ul ul a {
+        font-size: 0.8125rem;
+        padding: 6px 12px;
+        color: var(--col-muted);
+      }
 
-        <dt>Status Bar</dt>
-        <dd>Shows your current cursor position within the HL7 message (field path and description) and the path to the currently open file.</dd>
-      </dl>
+      /* Main Content */
+      main {
+        margin-left: 260px;
+        flex: 1;
+        padding: 32px 24px;
+        min-width: 0; /* Allow flex item to shrink below content size */
+        overflow-x: hidden;
+      }
 
-      <h3>Quick Start</h3>
-      <ol>
-        <li><strong>Create a new message</strong>: Click <strong>New</strong> or press <kbd>Cmd</kbd>+<kbd>N</kbd> to start with a blank MSH segment.</li>
-        <li><strong>Select a message type</strong>: Use the <strong>Header Wizard</strong> button on the MSH tab to choose your message type and populate header fields.</li>
-        <li><strong>Add segments</strong>: Click the <strong>+</strong> button to add segments like PID, PV1, or OBR to your message.</li>
-        <li><strong>Edit fields</strong>: Use the segment tabs for guided editing, or type directly in the message editor.</li>
-        <li><strong>Save your work</strong>: Press <kbd>Cmd</kbd>+<kbd>S</kbd> to save, or enable <strong>Auto-Save</strong> in Settings.</li>
-      </ol>
-    </section>
+      section {
+        margin-bottom: 64px;
+      }
 
-    <!-- HL7 Fundamentals -->
-    <section id="hl7-fundamentals">
-      <h2>HL7 Fundamentals</h2>
+      h2 {
+        font-size: 1.75rem;
+        color: var(--col-pine);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--col-highlightMed);
+      }
 
-      <h3 id="what-is-hl7">What is HL7?</h3>
-      <p>
-        HL7 (Health Level Seven) is a set of international standards for the exchange of clinical and
-        administrative healthcare data between software applications. The "Level Seven" refers to the
-        seventh layer (application layer) of the OSI model.
-      </p>
-      <p>
-        HL7 v2.x messages are pipe-delimited text messages used to communicate events like patient
-        admissions, lab orders, results, and billing information between healthcare systems. Despite
-        newer standards like HL7 FHIR, v2.x remains the most widely implemented healthcare interface
-        standard worldwide.
-      </p>
+      h3 {
+        font-size: 1.25rem;
+        color: var(--col-text);
+        margin-top: 32px;
+        margin-bottom: 12px;
+      }
 
-      <h3 id="message-structure">Message Structure</h3>
-      <p>An HL7 message is composed of hierarchical elements:</p>
+      h4 {
+        font-size: 1rem;
+        color: var(--col-subtle);
+        margin-top: 24px;
+        margin-bottom: 8px;
+      }
 
-      <h4>Segments</h4>
-      <p>
-        A message is made up of <strong>segments</strong>, each on its own line. Every segment begins
-        with a three-character identifier (like MSH, PID, or OBR) followed by field data.
-      </p>
-      <pre><span class="seg">MSH</span><span class="sep">|</span>^~\&amp;<span class="sep">|</span>SendingApp<span class="sep">|</span>SendingFac<span class="sep">|</span>ReceivingApp<span class="sep">|</span>ReceivingFac<span class="sep">|</span>202401151030<span class="sep">||</span>ADT^A01<span class="sep">|</span>MSG001<span class="sep">|</span>P<span class="sep">|</span>2.5.1
+      p {
+        margin-bottom: 16px;
+      }
+
+      ul,
+      ol {
+        margin-bottom: 16px;
+        padding-left: 24px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      code {
+        font-family:
+          ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+          "Roboto Mono", monospace;
+        background-color: var(--col-overlay);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.875em;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+
+      pre {
+        font-family:
+          ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+          "Roboto Mono", monospace;
+        background-color: var(--col-overlay);
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        border: 1px solid var(--col-highlightMed);
+        max-width: 100%;
+      }
+
+      /* HL7 syntax highlighting in pre blocks */
+      pre .seg {
+        color: var(--col-foam);
+        font-weight: 600;
+      }
+
+      pre .sep {
+        color: var(--col-muted);
+      }
+
+      pre .field {
+        color: var(--col-text);
+      }
+
+      pre .comment {
+        color: var(--col-muted);
+        font-style: italic;
+      }
+
+      /* Tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        display: block;
+        overflow-x: auto;
+      }
+
+      th,
+      td {
+        padding: 8px 10px;
+        text-align: left;
+        border: 1px solid var(--col-highlightMed);
+      }
+
+      th {
+        background-color: var(--col-overlay);
+        font-weight: 600;
+        color: var(--col-text);
+      }
+
+      tr:nth-child(even) {
+        background-color: var(--col-highlightLow);
+      }
+
+      /* Keyboard shortcuts */
+      kbd {
+        display: inline-block;
+        padding: 4px 8px;
+        font-family: ui-monospace, Menlo, Monaco, monospace;
+        font-size: 0.75rem;
+        background-color: var(--col-overlay);
+        border: 1px solid var(--col-highlightHigh);
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Info boxes */
+      .note {
+        background-color: var(--col-highlightLow);
+        border-left: 4px solid var(--col-pine);
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .tip {
+        background-color: var(--col-highlightLow);
+        border-left: 4px solid var(--col-gold);
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .warning {
+        background-color: var(--col-highlightLow);
+        border-left: 4px solid var(--col-love);
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .note strong,
+      .tip strong,
+      .warning strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      /* Links */
+      a {
+        color: var(--col-pine);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* Definition lists for field descriptions */
+      dl {
+        margin-bottom: 16px;
+      }
+
+      dt {
+        font-weight: 600;
+        color: var(--col-foam);
+        margin-top: 12px;
+      }
+
+      dd {
+        margin-left: 16px;
+        color: var(--col-subtle);
+      }
+
+      /* Interface tour figure */
+      .interface-diagram {
+        background-color: var(--col-overlay);
+        border: 1px solid var(--col-highlightMed);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 0 0 16px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.7rem;
+        line-height: 1.4;
+        white-space: pre;
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .interface-diagram .label {
+        color: var(--col-pine);
+        font-weight: 600;
+      }
+
+      /* Responsive */
+      @media (max-width: 900px) {
+        nav {
+          width: 200px;
+        }
+        main {
+          margin-left: 200px;
+          padding: 24px 16px;
+        }
+      }
+
+      @media (max-width: 700px) {
+        nav {
+          position: static;
+          width: 100%;
+          height: auto;
+          border-right: none;
+          border-bottom: 1px solid var(--col-highlightMed);
+        }
+        body {
+          flex-direction: column;
+        }
+        main {
+          margin-left: 0;
+          padding: 24px 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <h1>Hermes Help</h1>
+      <p class="subtitle">HL7 Message Editor</p>
+      <ul>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li>
+          <a href="#hl7-fundamentals">HL7 Fundamentals</a>
+          <ul>
+            <li><a href="#what-is-hl7">What is HL7?</a></li>
+            <li><a href="#message-structure">Message Structure</a></li>
+            <li><a href="#delimiters">Delimiters</a></li>
+            <li><a href="#common-segments">Common Segments</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#editing-messages">Editing Messages</a>
+          <ul>
+            <li><a href="#message-editor">Message Editor</a></li>
+            <li><a href="#segment-tabs">Segment Tabs</a></li>
+            <li><a href="#adding-segments">Adding Segments</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#wizards">Wizards</a>
+          <ul>
+            <li><a href="#header-wizard">Header Wizard</a></li>
+            <li><a href="#patient-wizard">Patient Wizard</a></li>
+            <li><a href="#visit-wizard">Visit Wizard</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#tools">Tools</a>
+          <ul>
+            <li><a href="#find-replace">Find &amp; Replace</a></li>
+            <li><a href="#jump-to-field">Jump to Field</a></li>
+            <li><a href="#generate-control-id">Generate Control ID</a></li>
+            <li><a href="#insert-timestamp">Insert Timestamp</a></li>
+            <li><a href="#compare-messages">Compare Messages</a></li>
+          </ul>
+        </li>
+        <li><a href="#file-operations">File Operations</a></li>
+        <li>
+          <a href="#communication">Communication</a>
+          <ul>
+            <li><a href="#send-tab">Send Tab</a></li>
+            <li><a href="#listen-tab">Listen Tab</a></li>
+          </ul>
+        </li>
+        <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+        <li><a href="#message-types">Message Types Reference</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ul>
+    </nav>
+
+    <main>
+      <!-- Getting Started -->
+      <section id="getting-started">
+        <h2>Getting Started</h2>
+        <p>
+          Hermes is a desktop application for composing, editing, sending, and
+          receiving HL7 messages. It's designed for HL7 system development and
+          testing, providing a visual interface for working with healthcare
+          interoperability messages.
+        </p>
+
+        <h3>Interface Overview</h3>
+        <p>The application is divided into several key areas:</p>
+
+        <div class="interface-diagram">
+          <span class="label">Toolbar</span>
+          ┌─────────────────────────────────────────────────────────────────────────────┐
+          │ [New] [Open] [Save] [Save As] │ [Undo] [Redo] [Comm] │ [Help] [Settings]    │
+          └─────────────────────────────────────────────────────────────────────────────┘
+
+          <span class="label">Segment Tabs</span>
+          ┌─────────────────────────────────────────────────────────────────────┐
+          │ [ MSH ] [ PID ] [ PV1 ] [ ORC ] [ + ]                               │
+          ├─────────────────────────────────────────────────────────────────────┤
+          │ ┌─ Header Fields ──────────────────────────────────────────────┐    │
+          │ │ Sending Application: [____________] Message Type: [___]      │    │
+          │ │ Receiving Application: [__________] Trigger Event: [__]      │    │
+          │ └──────────────────────────────────────────────────────────────┘    │
+          └─────────────────────────────────────────────────────────────────────┘
+          <span class="label">                         ═══ Resize Handle ═══</span>
+          <span class="label">Message Editor</span>
+          ┌─────────────────────────────────────────────────────────────────────┐
+          │ MSH|^~\&amp;|SendingApp|SendingFac|ReceivingApp|ReceivingFac|...        │
+          │ PID|||123456^^^MRN||Doe^John^Q||19800115|M|||...                    │
+          │ PV1||I|ICU^101^A||||...                                             │
+          └─────────────────────────────────────────────────────────────────────┘
+
+          <span class="label">Status Bar</span>
+          ┌─────────────────────────────────────────────────────────────────────┐
+          │ PID.5.1 - Patient Name → Family Name             ~/messages/adt.hl7 │
+          └─────────────────────────────────────────────────────────────────────┘
+        </div>
+
+        <dl>
+          <dt>Toolbar</dt>
+          <dd>
+            Quick access to file operations (New, Open, Save), edit operations
+            (Undo, Redo), and application settings.
+          </dd>
+
+          <dt>Segment Tabs</dt>
+          <dd>
+            Form-based editing for each HL7 segment. Click a tab to view and
+            edit that segment's fields in a structured format.
+          </dd>
+
+          <dt>Resize Handle</dt>
+          <dd>
+            Drag to adjust the space between the segment tabs and the raw
+            message editor.
+          </dd>
+
+          <dt>Message Editor</dt>
+          <dd>
+            Raw HL7 text editor with syntax highlighting. Edit messages directly
+            with full control over the message structure.
+          </dd>
+
+          <dt>Status Bar</dt>
+          <dd>
+            Shows your current cursor position within the HL7 message (field
+            path and description) and the path to the currently open file.
+          </dd>
+        </dl>
+
+        <h3>Quick Start</h3>
+        <ol>
+          <li>
+            <strong>Create a new message</strong>: Click <strong>New</strong> or
+            press <kbd>Cmd</kbd>+<kbd>N</kbd> to start with a blank MSH segment.
+          </li>
+          <li>
+            <strong>Select a message type</strong>: Use the
+            <strong>Header Wizard</strong> button on the MSH tab to choose your
+            message type and populate header fields.
+          </li>
+          <li>
+            <strong>Add segments</strong>: Click the <strong>+</strong> button
+            to add segments like PID, PV1, or OBR to your message.
+          </li>
+          <li>
+            <strong>Edit fields</strong>: Use the segment tabs for guided
+            editing, or type directly in the message editor.
+          </li>
+          <li>
+            <strong>Save your work</strong>: Press <kbd>Cmd</kbd>+<kbd>S</kbd>
+            to save, or enable <strong>Auto-Save</strong> in Settings.
+          </li>
+        </ol>
+      </section>
+
+      <!-- HL7 Fundamentals -->
+      <section id="hl7-fundamentals">
+        <h2>HL7 Fundamentals</h2>
+
+        <h3 id="what-is-hl7">What is HL7?</h3>
+        <p>
+          HL7 (Health Level Seven) is a set of international standards for
+          exchanging clinical and administrative healthcare data between
+          software applications. The name "Level Seven" refers to the
+          application layer (Layer 7) of the OSI networking model.
+        </p>
+        <p>
+          HL7 v2.x messages are pipe-delimited text messages used to communicate
+          events such as patient admissions, lab orders, results, and billing
+          information between healthcare systems. Despite newer standards like
+          HL7 FHIR, v2.x remains the most widely deployed healthcare interface
+          standard in the world.
+        </p>
+
+        <h3 id="message-structure">Message Structure</h3>
+        <p>An HL7 message is composed of hierarchical elements:</p>
+
+        <h4>Segments</h4>
+        <p>
+          A message is made up of <strong>segments</strong>, each on its own
+          line. Every segment begins with a three-character identifier (like
+          MSH, PID, or OBR) followed by field data.
+        </p>
+        <pre><span class="seg">MSH</span><span class="sep">|</span>^~\&amp;<span class="sep">|</span>SendingApp<span class="sep">|</span>SendingFac<span class="sep">|</span>ReceivingApp<span class="sep">|</span>ReceivingFac<span class="sep">|</span>202401151030<span class="sep">||</span>ADT^A01<span class="sep">|</span>MSG001<span class="sep">|</span>P<span class="sep">|</span>2.5.1
 <span class="seg">PID</span><span class="sep">|||</span>123456^^^MRN<span class="sep">||</span>Doe^John^Q<span class="sep">||</span>19800115<span class="sep">|</span>M
 <span class="seg">PV1</span><span class="sep">||</span>I<span class="sep">|</span>ICU^101^A</pre>
 
-      <h4>Fields</h4>
-      <p>
-        Within each segment, data is divided into <strong>fields</strong> separated by the pipe
-        character (<code>|</code>). Fields are numbered starting from 1 (though MSH is special—see below).
-      </p>
-      <pre><span class="comment">Field:    1      2          3           4              5</span>
+        <h4>Fields</h4>
+        <p>
+          Within each segment, data is divided into
+          <strong>fields</strong> separated by the pipe character
+          (<code>|</code>). Fields are numbered starting from 1 (though MSH is
+          special—see below).
+        </p>
+        <pre><span class="comment">Field:    1      2          3           4              5</span>
 <span class="seg">PID</span><span class="sep">|</span><span class="field">SetID</span><span class="sep">|</span><span class="field">PatientID</span><span class="sep">|</span><span class="field">PatientList</span><span class="sep">|</span><span class="field">AltPatientID</span><span class="sep">|</span><span class="field">PatientName</span><span class="sep">|</span>...</pre>
 
-      <h4>Components</h4>
-      <p>
-        Fields can be further divided into <strong>components</strong> using the caret (<code>^</code>).
-        For example, a patient name field contains family name, given name, and middle name as separate components:
-      </p>
-      <pre><span class="comment">Components:  1 (Family)  2 (Given)  3 (Middle)</span>
+        <h4>Components</h4>
+        <p>
+          Fields can be further divided into <strong>components</strong> using
+          the caret (<code>^</code>). For example, a patient name field contains
+          family name, given name, and middle name as separate components:
+        </p>
+        <pre><span class="comment">Components:  1 (Family)  2 (Given)  3 (Middle)</span>
              Doe<span class="sep">^</span>John<span class="sep">^</span>Q</pre>
 
-      <h4>Subcomponents</h4>
-      <p>
-        Components can be divided further into <strong>subcomponents</strong> using the ampersand (<code>&amp;</code>).
-        This is less common but used for complex data like coded values with multiple identifiers.
-      </p>
-
-      <h4>Repetition</h4>
-      <p>
-        Some fields allow multiple values, separated by the tilde (<code>~</code>). For example, a patient
-        with multiple phone numbers:
-      </p>
-      <pre>(555)123-4567<span class="sep">~</span>(555)987-6543</pre>
-
-      <h3 id="delimiters">Delimiters</h3>
-      <p>
-        HL7 uses special characters as delimiters. These are defined in MSH-2 (the encoding characters field)
-        and typically are:
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Character</th>
-            <th>Name</th>
-            <th>Purpose</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>|</code></td>
-            <td>Pipe</td>
-            <td>Field separator</td>
-          </tr>
-          <tr>
-            <td><code>^</code></td>
-            <td>Caret</td>
-            <td>Component separator</td>
-          </tr>
-          <tr>
-            <td><code>~</code></td>
-            <td>Tilde</td>
-            <td>Repetition separator</td>
-          </tr>
-          <tr>
-            <td><code>\</code></td>
-            <td>Backslash</td>
-            <td>Escape character</td>
-          </tr>
-          <tr>
-            <td><code>&amp;</code></td>
-            <td>Ampersand</td>
-            <td>Subcomponent separator</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="note">
-        <strong>MSH Field Numbering</strong>
+        <h4>Subcomponents</h4>
         <p>
-          The MSH segment is special: the field separator (<code>|</code>) itself is MSH-1, and the
-          encoding characters (<code>^~\&amp;</code>) are MSH-2. This means what looks like the "third"
-          field is actually MSH-3 (Sending Application).
+          Components can be divided further into
+          <strong>subcomponents</strong> using the ampersand
+          (<code>&amp;</code>). This is less common but used for complex data
+          like coded values with multiple identifiers.
         </p>
-      </div>
 
-      <h3 id="common-segments">Common Segments</h3>
-
-      <h4>MSH - Message Header</h4>
-      <p>
-        Every HL7 message starts with MSH. It identifies the sending and receiving applications,
-        the message type, timestamp, and HL7 version. This segment is required in all messages.
-      </p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>MSH-1</td><td>Field Separator</td><td>Always <code>|</code></td></tr>
-          <tr><td>MSH-2</td><td>Encoding Characters</td><td>Usually <code>^~\&amp;</code></td></tr>
-          <tr><td>MSH-3</td><td>Sending Application</td><td>Name of the sending system</td></tr>
-          <tr><td>MSH-4</td><td>Sending Facility</td><td>Organization sending the message</td></tr>
-          <tr><td>MSH-5</td><td>Receiving Application</td><td>Name of the receiving system</td></tr>
-          <tr><td>MSH-6</td><td>Receiving Facility</td><td>Organization receiving the message</td></tr>
-          <tr><td>MSH-7</td><td>Date/Time of Message</td><td>When the message was created</td></tr>
-          <tr><td>MSH-9</td><td>Message Type</td><td>Type and trigger event (e.g., ADT^A01)</td></tr>
-          <tr><td>MSH-10</td><td>Message Control ID</td><td>Unique message identifier</td></tr>
-          <tr><td>MSH-11</td><td>Processing ID</td><td>P (Production), T (Training), D (Debug)</td></tr>
-          <tr><td>MSH-12</td><td>Version ID</td><td>HL7 version (e.g., 2.5.1)</td></tr>
-        </tbody>
-      </table>
-
-      <h4>PID - Patient Identification</h4>
-      <p>Contains patient demographic information like name, date of birth, sex, and identifiers.</p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>PID-3</td><td>Patient Identifier List</td><td>MRN and other patient IDs</td></tr>
-          <tr><td>PID-5</td><td>Patient Name</td><td>Family^Given^Middle^Suffix^Prefix</td></tr>
-          <tr><td>PID-7</td><td>Date of Birth</td><td>YYYYMMDD format</td></tr>
-          <tr><td>PID-8</td><td>Sex</td><td>M, F, O, U, A, N</td></tr>
-          <tr><td>PID-11</td><td>Patient Address</td><td>Street^City^State^ZIP^Country</td></tr>
-          <tr><td>PID-13</td><td>Phone Number - Home</td><td>Patient's home phone</td></tr>
-        </tbody>
-      </table>
-
-      <h4>PV1 - Patient Visit</h4>
-      <p>Contains information about the patient's visit or encounter.</p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>PV1-2</td><td>Patient Class</td><td>I (Inpatient), O (Outpatient), E (Emergency)</td></tr>
-          <tr><td>PV1-3</td><td>Assigned Patient Location</td><td>Unit^Room^Bed</td></tr>
-          <tr><td>PV1-7</td><td>Attending Doctor</td><td>Physician responsible for patient</td></tr>
-          <tr><td>PV1-19</td><td>Visit Number</td><td>Unique visit/encounter identifier</td></tr>
-          <tr><td>PV1-44</td><td>Admit Date/Time</td><td>When patient was admitted</td></tr>
-          <tr><td>PV1-45</td><td>Discharge Date/Time</td><td>When patient was discharged</td></tr>
-        </tbody>
-      </table>
-
-      <h4>ORC - Common Order</h4>
-      <p>Contains information common to all orders, like order control codes and placer/filler numbers.</p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>ORC-1</td><td>Order Control</td><td>NW (New), CA (Cancel), SC (Status Changed)</td></tr>
-          <tr><td>ORC-2</td><td>Placer Order Number</td><td>Order ID from requesting system</td></tr>
-          <tr><td>ORC-3</td><td>Filler Order Number</td><td>Order ID from fulfilling system</td></tr>
-          <tr><td>ORC-5</td><td>Order Status</td><td>Current status of the order</td></tr>
-        </tbody>
-      </table>
-
-      <h4>OBR - Observation Request</h4>
-      <p>Contains information about a specific observation or test being ordered or reported.</p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>OBR-2</td><td>Placer Order Number</td><td>Links to ORC-2</td></tr>
-          <tr><td>OBR-3</td><td>Filler Order Number</td><td>Links to ORC-3</td></tr>
-          <tr><td>OBR-4</td><td>Universal Service ID</td><td>What is being ordered (code^description)</td></tr>
-          <tr><td>OBR-7</td><td>Observation Date/Time</td><td>When observation was made</td></tr>
-        </tbody>
-      </table>
-
-      <h4>OBX - Observation Result</h4>
-      <p>Contains the actual observation or result data.</p>
-      <table>
-        <thead>
-          <tr><th>Field</th><th>Name</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>OBX-2</td><td>Value Type</td><td>NM (Numeric), ST (String), TX (Text)</td></tr>
-          <tr><td>OBX-3</td><td>Observation Identifier</td><td>What was measured (code^description)</td></tr>
-          <tr><td>OBX-5</td><td>Observation Value</td><td>The actual result value</td></tr>
-          <tr><td>OBX-6</td><td>Units</td><td>Unit of measure</td></tr>
-          <tr><td>OBX-11</td><td>Observation Result Status</td><td>F (Final), P (Preliminary), C (Corrected)</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- Editing Messages -->
-    <section id="editing-messages">
-      <h2>Editing Messages</h2>
-
-      <h3 id="message-editor">Message Editor</h3>
-      <p>
-        The message editor is a text area with HL7-aware features that make editing messages easier
-        and less error-prone.
-      </p>
-
-      <h4>Syntax Highlighting</h4>
-      <p>The editor uses color coding to help you understand message structure at a glance:</p>
-      <ul>
-        <li><strong style="color: var(--col-foam);">Segment identifiers</strong> (MSH, PID, PV1) are highlighted in teal</li>
-        <li><strong style="color: var(--col-muted);">Field separators</strong> (<code>|</code>) are dimmed to reduce visual noise</li>
-        <li><strong style="color: var(--col-subtle);">Encoding characters</strong> (<code>^~\&amp;</code>) are shown in a subtle color</li>
-        <li><strong style="color: var(--col-iris);">Timestamps</strong> are highlighted in purple for easy identification</li>
-        <li><strong style="color: var(--col-love);">Parse errors</strong> are shown in red if the message has structural issues</li>
-      </ul>
-
-      <h4>Field Navigation</h4>
-      <p>
-        Press <kbd>Tab</kbd> to jump to the next HL7 field, or <kbd>Shift</kbd>+<kbd>Tab</kbd> to
-        jump to the previous field. This is much faster than manually navigating with arrow keys.
-      </p>
-
-      <h4>Cursor Position Tracking</h4>
-      <p>
-        As you move through the message, the status bar at the bottom shows your current position
-        in HL7 terms. For example:
-      </p>
-      <pre>PID.5.1 - Patient Name → Family Name</pre>
-      <p>
-        This tells you that your cursor is in the PID segment, field 5 (Patient Name), component 1
-        (Family Name). The description helps you understand what data belongs in each position.
-      </p>
-
-      <h4>Copy to Clipboard</h4>
-      <p>
-        Hover over the message editor to reveal a copy button in the corner. Click it to copy the
-        entire message to your clipboard. A checkmark appears briefly to confirm the copy succeeded.
-      </p>
-
-      <h3 id="segment-tabs">Segment Tabs</h3>
-      <p>
-        Above the message editor, tabs provide a form-based interface for editing each segment.
-        This is often easier than editing raw text, especially for complex fields.
-      </p>
-
-      <h4>Two-Way Sync</h4>
-      <p>
-        Changes in the segment tabs immediately update the raw message, and vice versa. You can
-        freely switch between editing modes without losing data.
-      </p>
-
-      <h4>Field Grouping</h4>
-      <p>
-        Related fields are grouped into fieldsets for easier navigation. For example, the MSH tab
-        groups sending application and facility together, separate from receiving information.
-      </p>
-
-      <h4>Tabs Follow Cursor (Optional)</h4>
-      <p>
-        Enable <strong>Tabs Follow Cursor</strong> in Settings to automatically switch tabs as you
-        navigate through the message editor. When your cursor enters a PV1 segment, the PV1 tab
-        will automatically activate.
-      </p>
-
-      <h3 id="adding-segments">Adding Segments</h3>
-      <p>
-        Click the <strong>+</strong> button next to the segment tabs to add a new segment. A dropdown
-        appears showing available segment types based on your message type.
-      </p>
-      <p>
-        For example, if you're editing an ADT^A01 message, you'll see options to add PID, PV1, EVN,
-        NK1, DG1, and NTE segments.
-      </p>
-
-      <div class="tip">
-        <strong>Segment Order</strong>
+        <h4>Repetition</h4>
         <p>
-          HL7 messages have a defined segment order. When you add a segment, it will be inserted
-          at the appropriate position in the message according to the HL7 specification.
+          Some fields allow multiple values, separated by the tilde
+          (<code>~</code>). For example, a patient with multiple phone numbers:
         </p>
-      </div>
+        <pre>(555)123-4567<span class="sep">~</span>(555)987-6543</pre>
 
-      <h4>Repeated Segments</h4>
-      <p>
-        Some segments can appear multiple times (like OBX for multiple results). When you have
-        repeated segments, tabs are numbered: "OBX (1)", "OBX (2)", etc.
-      </p>
-    </section>
-
-    <!-- Wizards -->
-    <section id="wizards">
-      <h2>Wizards</h2>
-      <p>
-        Wizards help you populate message fields with real data from the database.
-        They appear as buttons on certain segment tabs (MSH, PID, PV1) when database connectivity
-        is available.
-      </p>
-
-      <h3 id="header-wizard">Header Wizard (MSH)</h3>
-      <p>
-        The Header Wizard helps you configure the message header with proper interface settings
-        and message type information.
-      </p>
-      <ol>
-        <li>Click the <strong>Header Wizard</strong> button on the MSH tab</li>
-        <li>Select an <strong>interface</strong> from the dropdown (populated from HL7 system configuration)</li>
-        <li>Choose the <strong>message type</strong> (ADT, ORM, etc.)</li>
-        <li>Select the <strong>trigger event</strong> (A01, A02, O01, etc.)</li>
-        <li>Click <strong>Apply</strong> to populate the MSH fields</li>
-      </ol>
-
-      <h4>Override Mode</h4>
-      <p>
-        By default, the wizard merges new data with existing fields (empty fields are filled,
-        existing data is preserved). Enable <strong>Override</strong> to replace all fields with
-        wizard data, even if they already have values.
-      </p>
-
-      <h3 id="patient-wizard">Patient Wizard (PID)</h3>
-      <p>
-        The Patient Wizard searches the database for patient records and populates demographic fields.
-      </p>
-      <ol>
-        <li>Click the <strong>Patient Wizard</strong> button on the PID tab</li>
-        <li>Enter a <strong>search term</strong> (patient name, MRN, or ID)</li>
-        <li>Select a patient from the results table</li>
-        <li>Click <strong>Apply</strong> to populate PID fields</li>
-      </ol>
-
-      <p>The wizard populates these fields:</p>
-      <ul>
-        <li>PID-3: Patient Identifier List (MRN)</li>
-        <li>PID-5: Patient Name</li>
-        <li>PID-7: Date of Birth</li>
-        <li>PID-8: Sex</li>
-      </ul>
-
-      <h3 id="visit-wizard">Visit Wizard (PV1)</h3>
-      <p>
-        The Visit Wizard finds visit/encounter records for the patient currently in your message.
-      </p>
-      <ol>
-        <li>Ensure your message has patient information in the PID segment</li>
-        <li>Click the <strong>Visit Wizard</strong> button on the PV1 tab</li>
-        <li>The wizard automatically searches for visits for the current patient</li>
-        <li>Select a visit from the results</li>
-        <li>Click <strong>Apply</strong> to populate PV1 fields</li>
-      </ol>
-
-      <p>The wizard populates these fields:</p>
-      <ul>
-        <li>PV1-2: Patient Class (Inpatient/Outpatient/Emergency)</li>
-        <li>PV1-3: Assigned Patient Location</li>
-        <li>PV1-19: Visit Number</li>
-        <li>PV1-44: Admit Date/Time</li>
-        <li>PV1-45: Discharge Date/Time</li>
-      </ul>
-
-      <h3>Database Connection</h3>
-      <p>
-        Wizards require a connection to a database. Configure the connection in
-        <strong>Settings</strong>:
-      </p>
-      <ul>
-        <li><strong>Host</strong>: Database server hostname or IP address</li>
-        <li><strong>Port</strong>: SQL Server port (default: 1433)</li>
-        <li><strong>Database</strong>: Database name (e.g., "LAB")</li>
-        <li><strong>User</strong>: SQL Server username (supports DOMAIN\user format)</li>
-        <li><strong>Password</strong>: Database password</li>
-      </ul>
-    </section>
-
-    <!-- Find & Replace -->
-    <section id="find-replace">
-      <h2>Find &amp; Replace</h2>
-      <p>
-        Use Find &amp; Replace to search for text in your message and optionally replace it with
-        different text.
-      </p>
-
-      <h3>Opening the Find Bar</h3>
-      <ul>
-        <li>Press <kbd>Cmd</kbd>+<kbd>F</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>F</kbd> (Windows/Linux) to open Find</li>
-        <li>Press <kbd>Cmd</kbd>+<kbd>H</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>H</kbd> (Windows/Linux) to open Find &amp; Replace</li>
-        <li>Or use the <strong>Edit</strong> menu → <strong>Find</strong> or <strong>Find and Replace</strong></li>
-      </ul>
-
-      <div class="tip">
-        <strong>Selection Pre-population</strong>
+        <h3 id="delimiters">Delimiters</h3>
         <p>
-          If you have text selected when opening Find, the search field is automatically populated
-          with your selection.
+          HL7 uses special characters as delimiters. These are defined in MSH-2
+          (the encoding characters field) and typically are:
         </p>
-      </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Character</th>
+              <th>Name</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>|</code></td>
+              <td>Pipe</td>
+              <td>Field separator</td>
+            </tr>
+            <tr>
+              <td><code>^</code></td>
+              <td>Caret</td>
+              <td>Component separator</td>
+            </tr>
+            <tr>
+              <td><code>~</code></td>
+              <td>Tilde</td>
+              <td>Repetition separator</td>
+            </tr>
+            <tr>
+              <td><code>\</code></td>
+              <td>Backslash</td>
+              <td>Escape character</td>
+            </tr>
+            <tr>
+              <td><code>&amp;</code></td>
+              <td>Ampersand</td>
+              <td>Subcomponent separator</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <h3>Searching</h3>
-      <p>
-        Type your search term in the Find field. Matches are highlighted in the message editor
-        as you type:
-      </p>
-      <ul>
-        <li><strong style="background-color: var(--col-gold); color: #000; padding: 2px 4px; border-radius: 2px;">Gold</strong> highlighting shows all matches</li>
-        <li><strong style="background-color: var(--col-iris); color: #000; padding: 2px 4px; border-radius: 2px;">Purple</strong> highlighting shows the current match</li>
-      </ul>
+        <div class="note">
+          <strong>MSH Field Numbering</strong>
+          <p>
+            The MSH segment is special: the field separator (<code>|</code>)
+            itself is MSH-1, and the encoding characters (<code>^~\&amp;</code>)
+            are MSH-2. This means what looks like the "third" field is actually
+            MSH-3 (Sending Application).
+          </p>
+        </div>
 
-      <p>The match counter shows your position (e.g., "1 of 5").</p>
+        <h3 id="common-segments">Common Segments</h3>
 
-      <h3>Navigation</h3>
-      <ul>
-        <li>Click the <strong>↓</strong> (Next) button or press <kbd>Enter</kbd> to go to the next match</li>
-        <li>Click the <strong>↑</strong> (Previous) button or press <kbd>Shift</kbd>+<kbd>Enter</kbd> to go to the previous match</li>
-      </ul>
-
-      <h3>Case Sensitivity</h3>
-      <p>
-        Click the <strong>Aa</strong> button to toggle case-sensitive search. When enabled, "DOE"
-        will not match "Doe" or "doe".
-      </p>
-
-      <h3>Replacing</h3>
-      <ol>
-        <li>Enter the replacement text in the Replace field</li>
-        <li>Navigate to the match you want to replace</li>
-        <li>Click <strong>Replace</strong> to replace the current match</li>
-        <li>Or click <strong>Replace All</strong> to replace every match at once</li>
-      </ol>
-
-      <div class="warning">
-        <strong>Caution</strong>
+        <h4>MSH - Message Header</h4>
         <p>
-          Replace All cannot be undone in a single step. Each replacement creates a separate undo
-          entry, so you may need to undo multiple times to fully revert a Replace All operation.
+          Every HL7 message starts with MSH. It identifies the sending and
+          receiving applications, the message type, timestamp, and HL7 version.
+          This segment is required in all messages.
         </p>
-      </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>MSH-1</td>
+              <td>Field Separator</td>
+              <td>Always <code>|</code></td>
+            </tr>
+            <tr>
+              <td>MSH-2</td>
+              <td>Encoding Characters</td>
+              <td>Usually <code>^~\&amp;</code></td>
+            </tr>
+            <tr>
+              <td>MSH-3</td>
+              <td>Sending Application</td>
+              <td>Name of the sending system</td>
+            </tr>
+            <tr>
+              <td>MSH-4</td>
+              <td>Sending Facility</td>
+              <td>Organization sending the message</td>
+            </tr>
+            <tr>
+              <td>MSH-5</td>
+              <td>Receiving Application</td>
+              <td>Name of the receiving system</td>
+            </tr>
+            <tr>
+              <td>MSH-6</td>
+              <td>Receiving Facility</td>
+              <td>Organization receiving the message</td>
+            </tr>
+            <tr>
+              <td>MSH-7</td>
+              <td>Date/Time of Message</td>
+              <td>When the message was created</td>
+            </tr>
+            <tr>
+              <td>MSH-9</td>
+              <td>Message Type</td>
+              <td>Type and trigger event (for example, ADT^A01)</td>
+            </tr>
+            <tr>
+              <td>MSH-10</td>
+              <td>Message Control ID</td>
+              <td>Unique message identifier</td>
+            </tr>
+            <tr>
+              <td>MSH-11</td>
+              <td>Processing ID</td>
+              <td>P (Production), T (Training), D (Debug)</td>
+            </tr>
+            <tr>
+              <td>MSH-12</td>
+              <td>Version ID</td>
+              <td>HL7 version (for example, 2.5.1)</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <h3>Closing the Find Bar</h3>
-      <p>Press <kbd>Escape</kbd> or click the <strong>×</strong> button to close the Find bar.</p>
-    </section>
-
-    <!-- Jump to Field -->
-    <section id="jump-to-field">
-      <h2>Jump to Field</h2>
-      <p>
-        Jump to Field lets you navigate directly to any HL7 field by entering its path. This is
-        faster than scrolling or searching when you know exactly which field you need.
-      </p>
-
-      <h3>Opening Jump to Field</h3>
-      <ul>
-        <li>Press <kbd>Cmd</kbd>+<kbd>J</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>J</kbd> (Windows/Linux)</li>
-        <li>Or use the <strong>Edit</strong> menu → <strong>Jump to Field</strong></li>
-      </ul>
-
-      <h3>Field Path Syntax</h3>
-      <p>
-        Enter the field path using HL7 dot notation. The field will be selected in the message editor.
-      </p>
-      <table>
-        <thead>
-          <tr><th>Pattern</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>PID.5</code></td><td>Fifth field of the PID segment</td></tr>
-          <tr><td><code>PID.5.1</code></td><td>First component of that field (last name)</td></tr>
-          <tr><td><code>PID[2].5</code></td><td>Fifth field of the <em>second</em> PID segment</td></tr>
-          <tr><td><code>MSH.9.1</code></td><td>Message type (e.g., "ADT")</td></tr>
-          <tr><td><code>MSH.9.2</code></td><td>Trigger event (e.g., "A01")</td></tr>
-        </tbody>
-      </table>
-
-      <div class="tip">
-        <strong>Common Fields</strong>
+        <h4>PID - Patient Identification</h4>
         <p>
-          Here are some frequently used field paths:
+          Contains patient demographic information like name, date of birth,
+          sex, and identifiers.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PID-3</td>
+              <td>Patient Identifier List</td>
+              <td>MRN and other patient IDs</td>
+            </tr>
+            <tr>
+              <td>PID-5</td>
+              <td>Patient Name</td>
+              <td>Family^Given^Middle^Suffix^Prefix</td>
+            </tr>
+            <tr>
+              <td>PID-7</td>
+              <td>Date of Birth</td>
+              <td>YYYYMMDD format</td>
+            </tr>
+            <tr>
+              <td>PID-8</td>
+              <td>Sex</td>
+              <td>M, F, O, U, A, N</td>
+            </tr>
+            <tr>
+              <td>PID-11</td>
+              <td>Patient Address</td>
+              <td>Street^City^State^ZIP^Country</td>
+            </tr>
+            <tr>
+              <td>PID-13</td>
+              <td>Phone Number - Home</td>
+              <td>Patient's home phone</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>PV1 - Patient Visit</h4>
+        <p>Contains information about the patient's visit or encounter.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PV1-2</td>
+              <td>Patient Class</td>
+              <td>I (Inpatient), O (Outpatient), E (Emergency)</td>
+            </tr>
+            <tr>
+              <td>PV1-3</td>
+              <td>Assigned Patient Location</td>
+              <td>Unit^Room^Bed</td>
+            </tr>
+            <tr>
+              <td>PV1-7</td>
+              <td>Attending Doctor</td>
+              <td>Physician responsible for patient</td>
+            </tr>
+            <tr>
+              <td>PV1-19</td>
+              <td>Visit Number</td>
+              <td>Unique visit/encounter identifier</td>
+            </tr>
+            <tr>
+              <td>PV1-44</td>
+              <td>Admit Date/Time</td>
+              <td>When patient was admitted</td>
+            </tr>
+            <tr>
+              <td>PV1-45</td>
+              <td>Discharge Date/Time</td>
+              <td>When patient was discharged</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>ORC - Common Order</h4>
+        <p>
+          Contains information common to all orders, like order control codes
+          and placer/filler numbers.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORC-1</td>
+              <td>Order Control</td>
+              <td>NW (New), CA (Cancel), SC (Status Changed)</td>
+            </tr>
+            <tr>
+              <td>ORC-2</td>
+              <td>Placer Order Number</td>
+              <td>Order ID from requesting system</td>
+            </tr>
+            <tr>
+              <td>ORC-3</td>
+              <td>Filler Order Number</td>
+              <td>Order ID from fulfilling system</td>
+            </tr>
+            <tr>
+              <td>ORC-5</td>
+              <td>Order Status</td>
+              <td>Current status of the order</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>OBR - Observation Request</h4>
+        <p>
+          Contains information about a specific observation or test being
+          ordered or reported.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OBR-2</td>
+              <td>Placer Order Number</td>
+              <td>Links to ORC-2</td>
+            </tr>
+            <tr>
+              <td>OBR-3</td>
+              <td>Filler Order Number</td>
+              <td>Links to ORC-3</td>
+            </tr>
+            <tr>
+              <td>OBR-4</td>
+              <td>Universal Service ID</td>
+              <td>What is being ordered (code^description)</td>
+            </tr>
+            <tr>
+              <td>OBR-7</td>
+              <td>Observation Date/Time</td>
+              <td>When observation was made</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>OBX - Observation Result</h4>
+        <p>Contains the actual observation or result data.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Name</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OBX-2</td>
+              <td>Value Type</td>
+              <td>NM (Numeric), ST (String), TX (Text)</td>
+            </tr>
+            <tr>
+              <td>OBX-3</td>
+              <td>Observation Identifier</td>
+              <td>What was measured (code^description)</td>
+            </tr>
+            <tr>
+              <td>OBX-5</td>
+              <td>Observation Value</td>
+              <td>The actual result value</td>
+            </tr>
+            <tr>
+              <td>OBX-6</td>
+              <td>Units</td>
+              <td>Unit of measure</td>
+            </tr>
+            <tr>
+              <td>OBX-11</td>
+              <td>Observation Result Status</td>
+              <td>F (Final), P (Preliminary), C (Corrected)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Editing Messages -->
+      <section id="editing-messages">
+        <h2>Editing Messages</h2>
+
+        <h3 id="message-editor">Message Editor</h3>
+        <p>
+          The message editor is a text area with HL7-aware features that make
+          editing messages easier and less error-prone.
+        </p>
+
+        <h4>Syntax Highlighting</h4>
+        <p>
+          The editor uses color coding to help you understand message structure
+          at a glance:
         </p>
         <ul>
-          <li><code>PID.3</code> — Patient ID (MRN)</li>
-          <li><code>PID.5</code> — Patient Name</li>
-          <li><code>PV1.2</code> — Patient Class</li>
-          <li><code>PV1.3</code> — Assigned Patient Location</li>
-          <li><code>OBR.4</code> — Universal Service Identifier</li>
+          <li>
+            <strong style="color: var(--col-foam)">Segment identifiers</strong>
+            (MSH, PID, PV1) are highlighted in teal
+          </li>
+          <li>
+            <strong style="color: var(--col-muted)">Field separators</strong>
+            (<code>|</code>) are dimmed to reduce visual noise
+          </li>
+          <li>
+            <strong style="color: var(--col-subtle)"
+              >Encoding characters</strong
+            >
+            (<code>^~\&amp;</code>) are shown in a subtle color
+          </li>
+          <li>
+            <strong style="color: var(--col-iris)">Timestamps</strong> are
+            highlighted in purple for easy identification
+          </li>
+          <li>
+            <strong style="color: var(--col-love)">Parse errors</strong> are
+            shown in red if the message has structural issues
+          </li>
         </ul>
-      </div>
 
-      <h3>Error Handling</h3>
-      <p>
-        If the field path doesn't exist in the current message (e.g., asking for PID.5 when there's
-        no PID segment), an error message is displayed and you can correct your input.
-      </p>
-    </section>
-
-    <!-- Compare Messages -->
-    <section id="compare-messages">
-      <h2>Compare Messages</h2>
-      <p>
-        The Compare Messages feature provides semantic diffing for HL7 messages. Unlike text-based
-        diff tools, it understands HL7 structure and identifies changes at the segment, field,
-        component, and subcomponent levels.
-      </p>
-
-      <h3>Opening Compare Messages</h3>
-      <ul>
-        <li>Press <kbd>Cmd</kbd>+<kbd>D</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>D</kbd> (Windows/Linux)</li>
-        <li>Or use the <strong>Tools</strong> menu → <strong>Compare Messages...</strong></li>
-      </ul>
-
-      <h3>Loading Messages</h3>
-      <p>The comparison modal shows two side-by-side panes for the messages you want to compare:</p>
-      <ul>
-        <li><strong>Left (Original)</strong>: The baseline message</li>
-        <li><strong>Right (Modified)</strong>: The message to compare against</li>
-      </ul>
-      <p>Each pane supports two loading methods:</p>
-      <ul>
-        <li><strong>From Editor</strong>: Loads the current message from the main editor</li>
-        <li><strong>From File</strong>: Opens a file dialog to select an HL7 file from disk</li>
-      </ul>
-      <p>You can also paste messages directly into either pane's text area.</p>
-
-      <h3>Understanding the Diff</h3>
-      <p>
-        Click <strong>Compare</strong> to analyze the differences. The results show three types
-        of changes:
-      </p>
-      <table>
-        <thead>
-          <tr><th>Indicator</th><th>Color</th><th>Meaning</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>+</code></td>
-            <td style="background-color: #56949f; color: #000; padding: 2px 6px; border-radius: 2px;">Green</td>
-            <td>Added — element exists only in the right (modified) message</td>
-          </tr>
-          <tr>
-            <td><code>-</code></td>
-            <td style="background-color: #b4637a; color: #fff; padding: 2px 6px; border-radius: 2px;">Red</td>
-            <td>Removed — element exists only in the left (original) message</td>
-          </tr>
-          <tr>
-            <td><code>~</code></td>
-            <td style="background-color: #ea9d34; color: #000; padding: 2px 6px; border-radius: 2px;">Gold</td>
-            <td>Modified — element exists in both but with different values</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h4>Inline Highlighting</h4>
-      <p>
-        Changed values are highlighted directly in both message panes, making it easy to see
-        exactly where differences occur. The diff list below the messages shows each change
-        with its field path and values.
-      </p>
-
-      <h4>Summary Statistics</h4>
-      <p>
-        The diff results header shows a summary of changes: how many segments were added,
-        removed, or modified. This gives you a quick overview before drilling into details.
-      </p>
-
-      <h3>Why Semantic Diffing?</h3>
-      <p>
-        Standard text diff tools treat HL7 messages as lines of text, which makes their output
-        difficult to interpret. A single field change shows as an entire segment being different,
-        and there's no understanding of which specific fields changed.
-      </p>
-      <p>Semantic diffing solves this by:</p>
-      <ul>
-        <li>Matching segments by name and occurrence (PID to PID, not by line number)</li>
-        <li>Drilling down to identify exactly which field or component changed</li>
-        <li>Providing field paths (e.g., "PID.5.1 changed from 'Smith' to 'Jones'")</li>
-      </ul>
-
-      <div class="tip">
-        <strong>Use Cases</strong>
-        <ul>
-          <li><strong>Debugging transformations</strong>: Verify that an interface engine modified only the expected fields</li>
-          <li><strong>Regression testing</strong>: Compare a message before and after a code change</li>
-          <li><strong>Learning HL7</strong>: Understand what fields differ between message types</li>
-          <li><strong>Troubleshooting</strong>: Compare a working message with a failing one to spot differences</li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- File Operations -->
-    <section id="file-operations">
-      <h2>File Operations</h2>
-
-      <h3>Creating a New Message</h3>
-      <p>
-        Click <strong>New</strong> in the toolbar or press <kbd>Cmd</kbd>+<kbd>N</kbd> to create
-        a new message. This creates a minimal MSH segment with default values that you can customize.
-      </p>
-      <p>If you have unsaved changes, you'll be prompted to save them first.</p>
-
-      <h3>Opening Files</h3>
-      <p>
-        Click <strong>Open</strong> or press <kbd>Cmd</kbd>+<kbd>O</kbd> to open an HL7 file.
-        The application opens files with the <code>.hl7</code> extension.
-      </p>
-
-      <h4>Open Recent</h4>
-      <p>
-        The <strong>File</strong> menu → <strong>Open Recent</strong> submenu shows up to 10
-        recently opened files for quick access. Click a file to open it, or choose
-        <strong>Clear Recent</strong> to clear the list.
-      </p>
-
-      <h3>Saving Files</h3>
-      <ul>
-        <li><strong>Save</strong> (<kbd>Cmd</kbd>+<kbd>S</kbd>): Saves to the current file. If the file hasn't been saved before, this acts like Save As.</li>
-        <li><strong>Save As</strong> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>): Always prompts for a filename and location.</li>
-      </ul>
-
-      <h4>Unsaved Changes Indicator</h4>
-      <p>
-        When you have unsaved changes, the window title shows a dot (•) and the Save button
-        becomes active. After saving, the indicator disappears.
-      </p>
-
-      <h3>Auto-Save</h3>
-      <p>
-        Enable Auto-Save to automatically save your changes as you work. When enabled, changes
-        are saved 500 milliseconds after you stop typing.
-      </p>
-      <p>To enable Auto-Save:</p>
-      <ul>
-        <li>Go to <strong>Settings</strong> and toggle <strong>Auto-Save</strong>, or</li>
-        <li>Use the <strong>File</strong> menu → <strong>Auto-Save</strong> (shows a checkmark when enabled)</li>
-      </ul>
-
-      <div class="note">
-        <strong>New Files</strong>
+        <h4>Field Navigation</h4>
         <p>
-          Auto-Save only works for files that have been saved at least once. New, unsaved
-          documents won't be auto-saved—you need to Save or Save As first.
+          Press <kbd>Tab</kbd> to jump to the next HL7 field, or
+          <kbd>Shift</kbd>+<kbd>Tab</kbd> to jump to the previous field. This is
+          much faster than manually navigating with arrow keys.
         </p>
-      </div>
 
-      <h3>Undo and Redo</h3>
-      <p>
-        The application maintains a complete history of your changes, allowing you to undo
-        and redo as needed.
-      </p>
-      <ul>
-        <li><strong>Undo</strong> (<kbd>Cmd</kbd>+<kbd>Z</kbd>): Reverts the last change</li>
-        <li><strong>Redo</strong> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>): Reapplies an undone change</li>
-      </ul>
+        <h4>Cursor Position Tracking</h4>
+        <p>
+          As you move through the message, the status bar at the bottom shows
+          your current position in HL7 terms. For example:
+        </p>
+        <pre>PID.5.1 - Patient Name → Family Name</pre>
+        <p>
+          This tells you that your cursor is in the PID segment, field 5
+          (Patient Name), component 1 (Family Name). The description helps you
+          understand what data belongs in each position.
+        </p>
 
-      <h4>How Undo Works</h4>
-      <p>
-        The undo system is smart about grouping changes:
-      </p>
-      <ul>
-        <li><strong>Typing</strong>: Rapid keystrokes (within 500ms) are grouped into a single undo entry, so you don't have to undo each character individually.</li>
-        <li><strong>Form edits</strong>: Each change in the segment tabs creates a separate undo entry for precise control.</li>
-        <li><strong>Wizard changes</strong>: Applying a wizard creates a single undo entry, so you can revert all wizard changes at once.</li>
-      </ul>
+        <h4>Copy to Clipboard</h4>
+        <p>
+          Hover over the message editor to reveal a copy button in the corner.
+          Click it to copy the entire message to your clipboard. A checkmark
+          appears briefly to confirm the copy succeeded.
+        </p>
 
-      <p>
-        The Undo/Redo buttons in the toolbar (and menu items) are disabled when there's nothing
-        to undo or redo.
-      </p>
-    </section>
+        <h3 id="segment-tabs">Segment Tabs</h3>
+        <p>
+          Above the message editor, tabs provide a form-based interface for
+          editing each segment. This is often easier than editing raw text,
+          especially for complex fields.
+        </p>
 
-    <!-- Communication -->
-    <section id="communication">
-      <h2>Communication</h2>
-      <p>
-        Hermes can send and receive HL7 messages over the network using the MLLP (Minimal Lower Layer Protocol)
-        standard, which is how most healthcare systems exchange HL7 v2.x messages. The Communication Drawer
-        provides a convenient, non-blocking interface for both operations.
-      </p>
+        <h4>Two-Way Sync</h4>
+        <p>
+          Changes in the segment tabs immediately update the raw message, and
+          vice versa. You can freely switch between editing modes without losing
+          data.
+        </p>
 
-      <h3>Opening the Communication Drawer</h3>
-      <p>Click the <strong>Communication</strong> button in the toolbar to open the drawer. The button shows
-        the current state:</p>
-      <ul>
-        <li><strong>Gray</strong>: Not listening, drawer closed</li>
-        <li><strong>Green</strong>: Listen server is active</li>
-        <li><strong>Purple</strong>: Drawer is open</li>
-      </ul>
-      <p>A red badge appears on the button when there are unread received messages.</p>
+        <h4>Field Grouping</h4>
+        <p>
+          Related fields are grouped into fieldsets for easier navigation. For
+          example, the MSH tab groups sending application and facility together,
+          separate from receiving information.
+        </p>
 
-      <h3 id="send-tab">Send Tab</h3>
-      <p>The Send tab lets you send the current message to a remote MLLP server and view the response.</p>
+        <h4>Tabs Follow Cursor (Optional)</h4>
+        <p>
+          Enable <strong>Tabs Follow Cursor</strong> in Settings to
+          automatically switch tabs as you navigate through the message editor.
+          When your cursor enters a PV1 segment, the PV1 tab will automatically
+          activate.
+        </p>
 
-      <h4>Configuration</h4>
-      <ul>
-        <li><strong>Host</strong>: The server address to send to (IP address or hostname)</li>
-        <li><strong>Port</strong>: The MLLP port number (commonly 2575, but varies by system)</li>
-        <li><strong>Timeout</strong>: How long to wait for a response (in seconds)</li>
-      </ul>
-      <p>These settings are saved automatically and persist across sessions.</p>
+        <h3 id="adding-segments">Adding Segments</h3>
+        <p>
+          Click the <strong>+</strong> button next to the segment tabs to add a
+          new segment. A dropdown appears showing available segment types based
+          on your message type.
+        </p>
+        <p>
+          For example, if you're editing an ADT^A01 message, you'll see options
+          to add PID, PV1, EVN, NK1, DG1, and NTE segments.
+        </p>
 
-      <h4>Sending a Message</h4>
-      <ol>
-        <li>Configure the host, port, and timeout</li>
-        <li>Click <strong>Send</strong></li>
-        <li>The status area shows connection progress</li>
-        <li>If successful, the response appears in the Response panel with syntax highlighting</li>
-      </ol>
+        <div class="tip">
+          <strong>Segment Order</strong>
+          <p>
+            HL7 messages have a defined segment order. When you add a segment,
+            it will be inserted at the appropriate position in the message
+            according to the HL7 specification.
+          </p>
+        </div>
 
-      <h4>Understanding Responses</h4>
-      <p>
-        Most receiving systems respond with an ACK (acknowledgment) message. Common ACK codes in MSA-1:
-      </p>
-      <ul>
-        <li><strong>AA</strong>: Application Accept - message was processed successfully</li>
-        <li><strong>AE</strong>: Application Error - message had errors but was understood</li>
-        <li><strong>AR</strong>: Application Reject - message was rejected</li>
-      </ul>
+        <h4>Repeated Segments</h4>
+        <p>
+          Some segments can appear multiple times (like OBX for multiple
+          results). When you have repeated segments, tabs are numbered: "OBX
+          (1)", "OBX (2)", etc.
+        </p>
+      </section>
 
-      <h3 id="listen-tab">Listen Tab</h3>
-      <p>The Listen tab runs an MLLP server to receive incoming HL7 messages from other systems.</p>
+      <!-- Wizards -->
+      <section id="wizards">
+        <h2>Wizards</h2>
+        <p>
+          Wizards help you populate message fields with real data from the
+          database. They appear as buttons on certain segment tabs
+          (MSH, PID, PV1) when a database connection is configured.
+        </p>
 
-      <h4>Starting the Server</h4>
-      <ol>
-        <li>Enter the <strong>Port</strong> to listen on (commonly 2575)</li>
-        <li>Click <strong>Start Listening</strong></li>
-        <li>The status shows "Listening on port X" when active</li>
-      </ol>
-      <p>Click <strong>Stop Listening</strong> to shut down the server.</p>
+        <h3 id="header-wizard">Header Wizard (MSH)</h3>
+        <p>
+          The Header Wizard helps you configure the message header with proper
+          interface settings and message type information.
+        </p>
+        <ol>
+          <li>
+            Click the <strong>Header Wizard</strong> button on the MSH tab
+          </li>
+          <li>
+            Select an <strong>interface</strong> from the dropdown (populated
+            from HL7 system configuration)
+          </li>
+          <li>Choose the <strong>message type</strong> (ADT, ORM, etc.)</li>
+          <li>
+            Select the <strong>trigger event</strong> (A01, A02, O01, etc.)
+          </li>
+          <li>Click <strong>Apply</strong> to populate the MSH fields</li>
+        </ol>
 
-      <h4>Viewing Received Messages</h4>
-      <p>Received messages appear in the center list with:</p>
-      <ul>
-        <li><strong>●</strong> (filled circle): Unread message</li>
-        <li><strong>○</strong> (empty circle): Read message</li>
-        <li><strong>Message type</strong>: Extracted from MSH-9 (e.g., "ADT^A01")</li>
-        <li><strong>Time</strong>: When the message was received</li>
-      </ul>
-      <p>Click a message to view it in the right panel with syntax highlighting.</p>
+        <h4>Override Mode</h4>
+        <p>
+          By default, the wizard merges new data with existing fields (empty
+          fields are filled, existing data is preserved). Enable
+          <strong>Override</strong> to replace all fields with wizard data, even
+          if they already have values.
+        </p>
 
-      <h4>Loading Messages to Editor</h4>
-      <p>Click <strong>Load to Editor</strong> to copy a received message into the main editor.
-        This is useful for modifying and resending messages during testing.</p>
+        <h3 id="patient-wizard">Patient Wizard (PID)</h3>
+        <p>
+          The Patient Wizard searches the database for patient records and
+          populates demographic fields.
+        </p>
+        <ol>
+          <li>
+            Click the <strong>Patient Wizard</strong> button on the PID tab
+          </li>
+          <li>
+            Enter a <strong>search term</strong> (patient name, MRN, or ID)
+          </li>
+          <li>Select a patient from the results table</li>
+          <li>Click <strong>Apply</strong> to populate PID fields</li>
+        </ol>
 
-      <h3>Understanding MLLP</h3>
-      <p>
-        MLLP wraps HL7 messages with special characters to mark the start and end:
-      </p>
-      <ul>
-        <li><strong>Start Block</strong>: <code>0x0B</code> (vertical tab character)</li>
-        <li><strong>End Block</strong>: <code>0x1C</code> (file separator) followed by <code>0x0D</code> (carriage return)</li>
-      </ul>
-      <p>
-        Hermes handles this framing automatically. You just work with the HL7 message content.
-      </p>
-    </section>
+        <p>The wizard populates these fields:</p>
+        <ul>
+          <li>PID-3: Patient Identifier List (MRN)</li>
+          <li>PID-5: Patient Name</li>
+          <li>PID-7: Date of Birth</li>
+          <li>PID-8: Sex</li>
+        </ul>
 
-    <!-- Keyboard Shortcuts -->
-    <section id="keyboard-shortcuts">
-      <h2>Keyboard Shortcuts</h2>
-      <p>Quick reference for all keyboard shortcuts in the application.</p>
+        <h3 id="visit-wizard">Visit Wizard (PV1)</h3>
+        <p>
+          The Visit Wizard finds visit/encounter records for the patient
+          currently in your message.
+        </p>
+        <ol>
+          <li>
+            Ensure your message has patient information in the PID segment
+          </li>
+          <li>Click the <strong>Visit Wizard</strong> button on the PV1 tab</li>
+          <li>
+            The wizard automatically searches for visits for the current patient
+          </li>
+          <li>Select a visit from the results</li>
+          <li>Click <strong>Apply</strong> to populate PV1 fields</li>
+        </ol>
 
-      <h3>File Operations</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>N</kbd></td><td>New file</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>O</kbd></td><td>Open file</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save As</td></tr>
-        </tbody>
-      </table>
+        <p>The wizard populates these fields:</p>
+        <ul>
+          <li>PV1-2: Patient Class (Inpatient/Outpatient/Emergency)</li>
+          <li>PV1-3: Assigned Patient Location</li>
+          <li>PV1-19: Visit Number</li>
+          <li>PV1-44: Admit Date/Time</li>
+          <li>PV1-45: Discharge Date/Time</li>
+        </ul>
 
-      <h3>Edit Operations</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>X</kbd></td><td>Cut</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>C</kbd></td><td>Copy</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>V</kbd></td><td>Paste</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>A</kbd></td><td>Select All</td></tr>
-        </tbody>
-      </table>
+        <h3>Database Connection</h3>
+        <p>
+          Wizards require a connection to a database. Configure the
+          connection in
+          <strong>Settings</strong>:
+        </p>
+        <ul>
+          <li>
+            <strong>Host</strong>: Database server hostname or IP address.
+          </li>
+          <li><strong>Port</strong>: SQL Server port (default: 1433).</li>
+          <li>
+            <strong>Database</strong>: Database name (for example, "LAB").
+          </li>
+          <li>
+            <strong>User</strong>: SQL Server username (supports DOMAIN\user
+            format).
+          </li>
+          <li><strong>Password</strong>: Database password.</li>
+        </ul>
+      </section>
 
-      <h3>Find &amp; Replace</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>F</kbd></td><td>Open Find</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>H</kbd></td><td>Open Find &amp; Replace</td></tr>
-          <tr><td><kbd>Enter</kbd></td><td>Next match (in Find bar)</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Previous match (in Find bar)</td></tr>
-          <tr><td><kbd>Escape</kbd></td><td>Close Find bar</td></tr>
-        </tbody>
-      </table>
+      <!-- Tools -->
+      <section id="tools">
+        <h2>Tools</h2>
+        <p>
+          Hermes includes several tools to help you work with HL7 messages more
+          efficiently. Access these tools from the <strong>Tools</strong> menu
+          or use their keyboard shortcuts.
+        </p>
+      </section>
 
-      <h3>Navigation</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>J</kbd></td><td>Jump to Field</td></tr>
-          <tr><td><kbd>Tab</kbd></td><td>Next field (in message editor)</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Previous field (in message editor)</td></tr>
-        </tbody>
-      </table>
+      <!-- Find & Replace -->
+      <section id="find-replace">
+        <h3>Find &amp; Replace</h3>
+        <p>
+          Use Find &amp; Replace to search for text in your message and
+          optionally replace it with different text.
+        </p>
 
-      <h3>Tools</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>T</kbd></td><td>Open Communication Drawer (Send tab)</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>L</kbd></td><td>Open Communication Drawer (Listen tab)</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>D</kbd></td><td>Compare Messages</td></tr>
-        </tbody>
-      </table>
+        <h4>Opening the Find Bar</h4>
+        <ul>
+          <li>
+            Press <kbd>Cmd</kbd>+<kbd>F</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd
+              >F</kbd
+            >
+            (Windows/Linux) to open Find.
+          </li>
+          <li>
+            Press <kbd>Cmd</kbd>+<kbd>H</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd
+              >H</kbd
+            >
+            (Windows/Linux) to open Find &amp; Replace.
+          </li>
+          <li>
+            Or use the <strong>Edit</strong> menu, then select
+            <strong>Find</strong> or <strong>Find and Replace</strong>.
+          </li>
+        </ul>
 
-      <h3>Window</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Cmd</kbd>+<kbd>M</kbd></td><td>Minimize window</td></tr>
-          <tr><td><kbd>Cmd</kbd>+<kbd>W</kbd></td><td>Close window</td></tr>
-        </tbody>
-      </table>
+        <div class="tip">
+          <strong>Selection Pre-population</strong>
+          <p>
+            If you have text selected when opening Find, the search field is
+            automatically populated with your selection.
+          </p>
+        </div>
 
-      <h3>Message Editor</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>Tab</kbd></td><td>Jump to next HL7 field</td></tr>
-          <tr><td><kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Jump to previous HL7 field</td></tr>
-          <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Open Communication Drawer (Send tab)</td></tr>
-        </tbody>
-      </table>
+        <h4>Searching</h4>
+        <p>
+          Type your search term in the Find field. Matches are highlighted in
+          the message editor as you type:
+        </p>
+        <ul>
+          <li>
+            <strong
+              style="
+                background-color: var(--col-gold);
+                color: #000;
+                padding: 2px 4px;
+                border-radius: 2px;
+              "
+              >Gold</strong
+            >
+            highlighting shows all matches.
+          </li>
+          <li>
+            <strong
+              style="
+                background-color: var(--col-iris);
+                color: #000;
+                padding: 2px 4px;
+                border-radius: 2px;
+              "
+              >Purple</strong
+            >
+            highlighting shows the current match.
+          </li>
+        </ul>
 
-      <h3>Help</h3>
-      <table>
-        <thead>
-          <tr><th>Shortcut</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><kbd>F1</kbd></td><td>Open Help window</td></tr>
-        </tbody>
-      </table>
+        <p>The match counter shows your position (for example, "1 of 5").</p>
 
-      <div class="note">
-        <strong>Windows/Linux Users</strong>
-        <p>Replace <kbd>Cmd</kbd> with <kbd>Ctrl</kbd> for all shortcuts.</p>
-      </div>
-    </section>
+        <h4>Navigation</h4>
+        <ul>
+          <li>
+            Click the <strong>Next</strong> button or press <kbd>Enter</kbd> to
+            go to the next match.
+          </li>
+          <li>
+            Click the <strong>Previous</strong> button or press
+            <kbd>Shift</kbd>+<kbd>Enter</kbd> to go to the previous match.
+          </li>
+        </ul>
 
-    <!-- Message Types Reference -->
-    <section id="message-types">
-      <h2>Message Types Reference</h2>
-      <p>
-        Hermes supports the following HL7 message types. Required segments are marked with an
-        asterisk (*).
-      </p>
+        <h4>Case Sensitivity</h4>
+        <p>
+          Click the <strong>Aa</strong> button to toggle case-sensitive search.
+          When enabled, searching for "DOE" will not match "Doe" or "doe".
+        </p>
 
-      <h3>ADT - Admit/Discharge/Transfer</h3>
-      <p>ADT messages communicate patient movement and demographic events.</p>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Description</th><th>Segments</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>ADT^A01</td><td>Admit/visit notification</td><td>MSH*, PID*, PV1*, EVN, NK1, DG1, NTE</td></tr>
-          <tr><td>ADT^A02</td><td>Transfer a patient</td><td>MSH*, PID*, PV1*, EVN, NK1, DG1</td></tr>
-          <tr><td>ADT^A03</td><td>Discharge/end visit</td><td>MSH*, PID*, PV1*, EVN, NK1, DG1</td></tr>
-          <tr><td>ADT^A04</td><td>Register a patient</td><td>MSH*, PID*, EVN, PV1, NK1, DG1</td></tr>
-          <tr><td>ADT^A05</td><td>Pre-admit a patient</td><td>MSH*, PID*, PV1*, EVN, NK1</td></tr>
-          <tr><td>ADT^A08</td><td>Update patient information</td><td>MSH*, PID*, EVN, PV1, NK1, DG1</td></tr>
-          <tr><td>ADT^A11</td><td>Cancel admit</td><td>MSH*, PID*, PV1*, EVN</td></tr>
-          <tr><td>ADT^A12</td><td>Cancel transfer</td><td>MSH*, PID*, PV1*, EVN</td></tr>
-          <tr><td>ADT^A13</td><td>Cancel discharge</td><td>MSH*, PID*, PV1*, EVN</td></tr>
-          <tr><td>ADT^A23</td><td>Delete patient record</td><td>MSH*, PID*, EVN</td></tr>
-          <tr><td>ADT^A34</td><td>Merge patient information</td><td>MSH*, PID*, EVN, PV1</td></tr>
-          <tr><td>ADT^A40</td><td>Merge patient identifier list</td><td>MSH*, PID*, EVN, PV1</td></tr>
-          <tr><td>ADT^A49</td><td>Change patient identifier list</td><td>MSH*, PID*, EVN</td></tr>
-          <tr><td>ADT^A50</td><td>Change visit number</td><td>MSH*, PID*, PV1*, EVN</td></tr>
-        </tbody>
-      </table>
+        <h4>Replacing</h4>
+        <ol>
+          <li>Enter the replacement text in the Replace field</li>
+          <li>Navigate to the match you want to replace</li>
+          <li>Click <strong>Replace</strong> to replace the current match</li>
+          <li>
+            Or click <strong>Replace All</strong> to replace every match at once
+          </li>
+        </ol>
 
-      <h3>ORM - Order Message</h3>
-      <p>ORM messages communicate orders for tests, procedures, or services.</p>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Description</th><th>Segments</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>ORM^O01</td><td>Order message</td><td>MSH*, PID*, PV1*, ORC*, EVN, OBR, DG1, NTE, OBX</td></tr>
-        </tbody>
-      </table>
+        <div class="warning">
+          <strong>Caution</strong>
+          <p>
+            Replace All cannot be undone in a single step. Each replacement
+            creates a separate undo entry, so you may need to undo multiple
+            times to fully revert a Replace All operation.
+          </p>
+        </div>
 
-      <h3>ORU - Observation Result</h3>
-      <p>ORU messages communicate test results and observations.</p>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Description</th><th>Segments</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>ORU^R01</td><td>Observation result</td><td>MSH*, PID*, OBR*, PV1, ORC, OBX, NTE</td></tr>
-        </tbody>
-      </table>
+        <h4>Closing the Find Bar</h4>
+        <p>
+          Press <kbd>Escape</kbd> or click the <strong>×</strong> button to
+          close the Find bar.
+        </p>
+      </section>
 
-      <h3>ORR - Order Response</h3>
-      <p>ORR messages acknowledge or respond to orders.</p>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Description</th><th>Segments</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>ORR^O02</td><td>Order response</td><td>MSH*, PID*, ORC*, OBR</td></tr>
-        </tbody>
-      </table>
+      <!-- Jump to Field -->
+      <section id="jump-to-field">
+        <h3>Jump to Field</h3>
+        <p>
+          Jump to Field lets you navigate directly to any HL7 field by entering
+          its path. This is faster than scrolling or searching when you know
+          exactly which field you need.
+        </p>
 
-      <h3>DFT - Detailed Financial Transaction</h3>
-      <p>DFT messages communicate billing and charge information.</p>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Description</th><th>Segments</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>DFT^P03</td><td>Financial transaction</td><td>MSH*, PID*, EVN, PV1, OBR</td></tr>
-        </tbody>
-      </table>
-    </section>
+        <h4>Opening Jump to Field</h4>
+        <ul>
+          <li>
+            Press <kbd>Cmd</kbd>+<kbd>J</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd
+              >J</kbd
+            >
+            (Windows/Linux).
+          </li>
+          <li>
+            Or use the <strong>Edit</strong> menu, then select
+            <strong>Jump to Field</strong>.
+          </li>
+        </ul>
 
-    <!-- Troubleshooting -->
-    <section id="troubleshooting">
-      <h2>Troubleshooting</h2>
+        <h4>Field Path Syntax</h4>
+        <p>
+          Enter the field path using HL7 dot notation. The field will be
+          selected in the message editor.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Pattern</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PID.5</code></td>
+              <td>Fifth field of the PID segment</td>
+            </tr>
+            <tr>
+              <td><code>PID.5.1</code></td>
+              <td>First component of that field (last name)</td>
+            </tr>
+            <tr>
+              <td><code>PID[2].5</code></td>
+              <td>Fifth field of the <em>second</em> PID segment</td>
+            </tr>
+            <tr>
+              <td><code>MSH.9.1</code></td>
+              <td>Message type (e.g., "ADT")</td>
+            </tr>
+            <tr>
+              <td><code>MSH.9.2</code></td>
+              <td>Trigger event (e.g., "A01")</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <h3>Parse Errors in the Editor</h3>
-      <p>
-        If the editor shows text in <span style="color: var(--col-love);">red</span>, there's a
-        structural problem with your message.
-      </p>
-      <p>Common causes:</p>
-      <ul>
-        <li><strong>Missing MSH segment</strong>: Every message must start with MSH</li>
-        <li><strong>Incorrect MSH-1</strong>: The first field must be exactly <code>|</code></li>
-        <li><strong>Incorrect MSH-2</strong>: The encoding characters should be <code>^~\&amp;</code></li>
-        <li><strong>Line breaks in fields</strong>: Field values shouldn't contain newlines</li>
-        <li><strong>Missing segment identifier</strong>: Each line must start with a 3-letter segment ID</li>
-      </ul>
+        <div class="tip">
+          <strong>Common Fields</strong>
+          <p>Here are some frequently used field paths:</p>
+          <ul>
+            <li><code>PID.3</code> — Patient ID (MRN)</li>
+            <li><code>PID.5</code> — Patient Name</li>
+            <li><code>PV1.2</code> — Patient Class</li>
+            <li><code>PV1.3</code> — Assigned Patient Location</li>
+            <li><code>OBR.4</code> — Universal Service Identifier</li>
+          </ul>
+        </div>
 
-      <h3>Communication Errors</h3>
-      <p>If you can't send or receive messages:</p>
-      <ul>
-        <li><strong>Connection refused</strong>: Check that the remote system is running and listening on the specified port</li>
-        <li><strong>Timeout</strong>: The server may be slow to respond. Try increasing the timeout in the Send tab.</li>
-        <li><strong>Host not found</strong>: Verify the hostname is correct and DNS is resolving properly</li>
-        <li><strong>Port already in use</strong>: When starting the Listen server, another application may be using the port. Try a different port.</li>
-        <li><strong>Firewall blocking</strong>: Ensure your firewall allows connections on the MLLP port (typically 2575)</li>
-      </ul>
+        <h4>Error Handling</h4>
+        <p>
+          If the field path does not exist in the current message (for example,
+          asking for PID.5 when there is no PID segment), an error message is
+          displayed and you can correct your input.
+        </p>
+      </section>
 
-      <h3>Wizard Database Errors</h3>
-      <p>If wizards fail to load data:</p>
-      <ul>
-        <li><strong>Connection failed</strong>: Verify database credentials in Settings</li>
-        <li><strong>No results</strong>: The search term may not match any records. Try a broader search.</li>
-        <li><strong>Timeout</strong>: Large databases may take time. Wait for the query to complete.</li>
-      </ul>
+      <!-- Generate Control ID -->
+      <section id="generate-control-id">
+        <h3>Generate Control ID</h3>
+        <p>
+          The Generate Control ID tool creates a unique message control ID and
+          inserts it into the MSH-10 field. Every HL7 message should have a
+          unique control ID to identify it during processing and
+          acknowledgments.
+        </p>
 
-      <h3>File Won't Open</h3>
-      <ul>
-        <li><strong>Invalid format</strong>: The file may not be a valid HL7 message. Check that it starts with "MSH".</li>
-        <li><strong>Encoding issues</strong>: The file should be UTF-8 or ASCII encoded. Other encodings may cause problems.</li>
-        <li><strong>Permissions</strong>: Ensure you have read access to the file location.</li>
-      </ul>
+        <h4>Using Generate Control ID</h4>
+        <ul>
+          <li>
+            Use the <strong>Tools</strong> menu, then select
+            <strong>Generate Control ID</strong>.
+          </li>
+        </ul>
 
-      <h3>Changes Not Syncing</h3>
-      <p>
-        If changes in the segment tabs aren't appearing in the editor (or vice versa):
-      </p>
-      <ul>
-        <li>Click outside the field you're editing to trigger the update</li>
-        <li>Check for parse errors that might prevent syncing</li>
-        <li>Try reloading the file</li>
-      </ul>
+        <h4>What It Does</h4>
+        <p>
+          The tool generates a 20-character alphanumeric string (letters and
+          numbers) and places it in MSH-10 (Message Control ID). After
+          generation, the new ID is selected in the editor so you can see
+          exactly what was inserted.
+        </p>
 
-      <h3>Keyboard Shortcuts Not Working</h3>
-      <ul>
-        <li>Ensure the application window is focused</li>
-        <li>Some shortcuts only work in specific contexts (e.g., Tab field navigation only works in the message editor)</li>
-        <li>On Mac, check that you're using <kbd>Cmd</kbd> not <kbd>Ctrl</kbd></li>
-      </ul>
-    </section>
-  </main>
+        <div class="note">
+          <strong>When to Use</strong>
+          <p>
+            Generate a new control ID whenever you create a new message or when
+            resending a modified message. Receiving systems use this ID to
+            detect duplicates and track acknowledgments.
+          </p>
+        </div>
+      </section>
 
-  <script>
-    // Highlight current section in navigation
-    const sections = document.querySelectorAll('section[id]');
-    const navLinks = document.querySelectorAll('nav a[href^="#"]');
+      <!-- Insert Timestamp -->
+      <section id="insert-timestamp">
+        <h3>Insert Timestamp</h3>
+        <p>
+          HL7 uses a specific timestamp format (DTM) for date and time values.
+          Hermes provides two ways to insert properly formatted timestamps into
+          your message.
+        </p>
 
-    function updateActiveLink() {
-      const scrollPos = window.scrollY + 100;
+        <h4>HL7 Timestamp Format</h4>
+        <p>
+          HL7 timestamps follow the format
+          <code>YYYYMMDDHHmmss±ZZZZ</code> where:
+        </p>
+        <ul>
+          <li><code>YYYY</code> — Four-digit year</li>
+          <li><code>MM</code> — Two-digit month (01-12)</li>
+          <li><code>DD</code> — Two-digit day (01-31)</li>
+          <li><code>HH</code> — Two-digit hour in 24-hour format (00-23)</li>
+          <li><code>mm</code> — Two-digit minutes (00-59)</li>
+          <li><code>ss</code> — Two-digit seconds (00-59)</li>
+          <li>
+            <code>±ZZZZ</code> — UTC offset (for example, <code>-0500</code> for
+            Eastern Time, <code>+0000</code> for UTC)
+          </li>
+        </ul>
+        <p>Example: <code>20250115143000-0500</code> represents January 15, 2025 at 2:30:00 PM Eastern Time.</p>
 
-      sections.forEach(section => {
-        const top = section.offsetTop;
-        const bottom = top + section.offsetHeight;
-        const id = section.getAttribute('id');
-        const link = document.querySelector(`nav a[href="#${id}"]`);
+        <h4>Insert Current Timestamp</h4>
+        <p>
+          Inserts the current date and time at the cursor position. The
+          timestamp includes your system's UTC offset.
+        </p>
+        <ul>
+          <li>
+            Place your cursor in the field where you want the timestamp.
+          </li>
+          <li>
+            Use the <strong>Tools</strong> menu, then select
+            <strong>Insert Current Timestamp</strong>.
+          </li>
+          <li>
+            The current date/time replaces the field content and is selected in
+            the editor.
+          </li>
+        </ul>
 
-        if (link) {
-          if (scrollPos >= top && scrollPos < bottom) {
-            navLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+        <h4>Insert Timestamp...</h4>
+        <p>
+          Opens a dialog where you can specify a particular date, time, and
+          timezone.
+        </p>
+        <ul>
+          <li>
+            Place your cursor in the field where you want the timestamp.
+          </li>
+          <li>
+            Use the <strong>Tools</strong> menu, then select
+            <strong>Insert Timestamp...</strong>
+          </li>
+          <li>
+            In the dialog, select the <strong>Date</strong> and
+            <strong>Time</strong> using the pickers.
+          </li>
+          <li>
+            Choose a <strong>UTC Offset</strong> from the dropdown, or leave it
+            as "Local timezone" to use your system's offset.
+          </li>
+          <li>
+            Optionally uncheck <strong>Include UTC offset in timestamp</strong>
+            to omit the offset portion.
+          </li>
+          <li>Click <strong>Insert</strong> to insert the timestamp.</li>
+        </ul>
+
+        <div class="tip">
+          <strong>Omitting the UTC Offset</strong>
+          <p>
+            If you uncheck the offset option, receiving systems will interpret
+            the timestamp using the message header timestamp offset (MSH-7). If
+            MSH-7 also lacks an offset, the timestamp is assumed to be in the
+            local time of the receiving system.
+          </p>
+        </div>
+
+        <h4>Menu Availability</h4>
+        <p>
+          Both timestamp menu items are only enabled when your cursor is
+          positioned within a valid HL7 field. If your cursor is on a segment
+          name or between segments, the menu items will be disabled.
+        </p>
+      </section>
+
+      <!-- Compare Messages -->
+      <section id="compare-messages">
+        <h3>Compare Messages</h3>
+        <p>
+          The Compare Messages feature provides semantic diffing for HL7
+          messages. Unlike text-based diff tools, it understands HL7 structure
+          and identifies changes at the segment, field, component, and
+          subcomponent levels.
+        </p>
+
+        <h4>Opening Compare Messages</h4>
+        <ul>
+          <li>
+            Press <kbd>Cmd</kbd>+<kbd>D</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd
+              >D</kbd
+            >
+            (Windows/Linux).
+          </li>
+          <li>
+            Or use the <strong>Tools</strong> menu, then select
+            <strong>Compare Messages...</strong>
+          </li>
+        </ul>
+
+        <h4>Loading Messages</h4>
+        <p>
+          The comparison modal shows two side-by-side panes for the messages you
+          want to compare:
+        </p>
+        <ul>
+          <li><strong>Left (Original)</strong>: The baseline message.</li>
+          <li>
+            <strong>Right (Modified)</strong>: The message to compare against.
+          </li>
+        </ul>
+        <p>Each pane supports two loading methods:</p>
+        <ul>
+          <li>
+            <strong>From Editor</strong>: Loads the current message from the
+            main editor.
+          </li>
+          <li>
+            <strong>From File</strong>: Opens a file dialog to select an HL7
+            file from disk.
+          </li>
+        </ul>
+        <p>You can also paste messages directly into either pane.</p>
+
+        <h4>Understanding the Diff</h4>
+        <p>
+          Click <strong>Compare</strong> to analyze the differences. The results
+          show three types of changes:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Indicator</th>
+              <th>Color</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>+</code></td>
+              <td
+                style="
+                  background-color: #56949f;
+                  color: #000;
+                  padding: 2px 6px;
+                  border-radius: 2px;
+                "
+              >
+                Green
+              </td>
+              <td>
+                Added — element exists only in the right (modified) message
+              </td>
+            </tr>
+            <tr>
+              <td><code>-</code></td>
+              <td
+                style="
+                  background-color: #b4637a;
+                  color: #fff;
+                  padding: 2px 6px;
+                  border-radius: 2px;
+                "
+              >
+                Red
+              </td>
+              <td>
+                Removed — element exists only in the left (original) message
+              </td>
+            </tr>
+            <tr>
+              <td><code>~</code></td>
+              <td
+                style="
+                  background-color: #ea9d34;
+                  color: #000;
+                  padding: 2px 6px;
+                  border-radius: 2px;
+                "
+              >
+                Gold
+              </td>
+              <td>
+                Modified — element exists in both but with different values
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>Inline Highlighting</h4>
+        <p>
+          Changed values are highlighted directly in both message panes, making
+          it easy to see exactly where differences occur. The diff list below
+          the messages shows each change with its field path and values.
+        </p>
+
+        <h4>Summary Statistics</h4>
+        <p>
+          The diff results header shows a summary of changes: how many segments
+          were added, removed, or modified. This gives you a quick overview
+          before drilling into details.
+        </p>
+
+        <h4>Why Semantic Diffing?</h4>
+        <p>
+          Standard text diff tools treat HL7 messages as lines of text, which
+          makes their output difficult to interpret. A single field change
+          appears as an entire segment being different, and there is no
+          indication of which specific fields changed.
+        </p>
+        <p>Semantic diffing solves this by:</p>
+        <ul>
+          <li>
+            Matching segments by name and occurrence (PID to PID, not by line
+            number).
+          </li>
+          <li>
+            Drilling down to identify exactly which field or component changed.
+          </li>
+          <li>
+            Providing field paths (for example, "PID.5.1 changed from 'Smith' to
+            'Jones'").
+          </li>
+        </ul>
+
+        <div class="tip">
+          <strong>Use Cases</strong>
+          <ul>
+            <li>
+              <strong>Debugging transformations</strong>: Verify that an
+              interface engine modified only the expected fields.
+            </li>
+            <li>
+              <strong>Regression testing</strong>: Compare a message before and
+              after a code change.
+            </li>
+            <li>
+              <strong>Learning HL7</strong>: Understand what fields differ
+              between message types.
+            </li>
+            <li>
+              <strong>Troubleshooting</strong>: Compare a working message with a
+              failing one to spot differences.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- File Operations -->
+      <section id="file-operations">
+        <h2>File Operations</h2>
+
+        <h3>Creating a New Message</h3>
+        <p>
+          Click <strong>New</strong> in the toolbar or press <kbd>Cmd</kbd>+<kbd
+            >N</kbd
+          >
+          to create a new message. This creates a minimal MSH segment with
+          default values that you can customize.
+        </p>
+        <p>
+          If you have unsaved changes, you'll be prompted to save them first.
+        </p>
+
+        <h3>Opening Files</h3>
+        <p>
+          Click <strong>Open</strong> or press <kbd>Cmd</kbd>+<kbd>O</kbd> to
+          open an HL7 file. The application opens files with the
+          <code>.hl7</code> extension.
+        </p>
+
+        <h4>Open Recent</h4>
+        <p>
+          The <strong>File</strong> menu → <strong>Open Recent</strong> submenu
+          shows up to 10 recently opened files for quick access. Click a file to
+          open it, or choose <strong>Clear Recent</strong> to clear the list.
+        </p>
+
+        <h3>Saving Files</h3>
+        <ul>
+          <li>
+            <strong>Save</strong> (<kbd>Cmd</kbd>+<kbd>S</kbd>): Saves to the
+            current file. If the file has not been saved before, this acts like
+            Save As.
+          </li>
+          <li>
+            <strong>Save As</strong>
+            (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>): Always prompts for a
+            filename and location.
+          </li>
+        </ul>
+
+        <h4>Unsaved Changes Indicator</h4>
+        <p>
+          When you have unsaved changes, the window title shows a dot (•) and
+          the Save button becomes active. After saving, the indicator
+          disappears.
+        </p>
+
+        <h3>Auto-Save</h3>
+        <p>
+          Enable Auto-Save to automatically save your changes as you work. When
+          enabled, changes are saved 500 milliseconds after you stop typing.
+        </p>
+        <p>To enable Auto-Save:</p>
+        <ul>
+          <li>
+            Go to <strong>Settings</strong> and toggle
+            <strong>Auto-Save</strong>, or
+          </li>
+          <li>
+            Use the <strong>File</strong> menu, then select
+            <strong>Auto-Save</strong> (shows a checkmark when enabled).
+          </li>
+        </ul>
+
+        <div class="note">
+          <strong>New Files</strong>
+          <p>
+            Auto-Save only works for files that have been saved at least once.
+            New, unsaved documents will not be auto-saved. You must use Save or
+            Save As first.
+          </p>
+        </div>
+
+        <h3>Undo and Redo</h3>
+        <p>
+          The application maintains a complete history of your changes, allowing
+          you to undo and redo as needed.
+        </p>
+        <ul>
+          <li>
+            <strong>Undo</strong> (<kbd>Cmd</kbd>+<kbd>Z</kbd>): Reverts the
+            last change
+          </li>
+          <li>
+            <strong>Redo</strong>
+            (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>): Reapplies an undone
+            change
+          </li>
+        </ul>
+
+        <h4>How Undo Works</h4>
+        <p>The undo system is smart about grouping changes:</p>
+        <ul>
+          <li>
+            <strong>Typing</strong>: Rapid keystrokes (within 500ms) are grouped
+            into a single undo entry, so you do not have to undo each character
+            individually.
+          </li>
+          <li>
+            <strong>Form edits</strong>: Each change in the segment tabs creates
+            a separate undo entry for precise control.
+          </li>
+          <li>
+            <strong>Wizard changes</strong>: Applying a wizard creates a single
+            undo entry, so you can revert all wizard changes at once.
+          </li>
+        </ul>
+
+        <p>
+          The Undo/Redo buttons in the toolbar (and menu items) are disabled
+          when there is nothing to undo or redo.
+        </p>
+      </section>
+
+      <!-- Communication -->
+      <section id="communication">
+        <h2>Communication</h2>
+        <p>
+          Hermes can send and receive HL7 messages over the network using MLLP
+          (Minimal Lower Layer Protocol), the standard transport mechanism for
+          HL7 v2.x messages in healthcare systems. The Communication Drawer
+          provides a convenient, non-blocking interface for both sending and
+          receiving messages.
+        </p>
+
+        <h3>Opening the Communication Drawer</h3>
+        <p>
+          Click the <strong>Communication</strong> button in the toolbar to open
+          the drawer. The button shows the current state:
+        </p>
+        <ul>
+          <li><strong>Gray</strong>: Not listening, drawer closed.</li>
+          <li><strong>Green</strong>: Listen server is active.</li>
+          <li><strong>Purple</strong>: Drawer is open.</li>
+        </ul>
+        <p>
+          A badge with an unread count appears on the button when there are
+          unread received messages.
+        </p>
+
+        <h3 id="send-tab">Send Tab</h3>
+        <p>
+          The Send tab lets you send the current message to a remote MLLP server
+          and view the response.
+        </p>
+
+        <h4>Configuration</h4>
+        <ul>
+          <li>
+            <strong>Host</strong>: The server address to send to (IP address or
+            hostname).
+          </li>
+          <li>
+            <strong>Port</strong>: The MLLP port number (commonly 2575, but
+            varies by system).
+          </li>
+          <li>
+            <strong>Timeout</strong>: How long to wait for a response (in
+            seconds).
+          </li>
+        </ul>
+        <p>
+          These settings are saved automatically and persist across sessions.
+        </p>
+
+        <h4>Sending a Message</h4>
+        <ol>
+          <li>Configure the host, port, and timeout.</li>
+          <li>Click <strong>Send</strong>.</li>
+          <li>The status area shows connection progress.</li>
+          <li>
+            If successful, the response appears in the Response panel with
+            syntax highlighting.
+          </li>
+        </ol>
+
+        <h4>Understanding Responses</h4>
+        <p>
+          Most receiving systems respond with an ACK (acknowledgment) message.
+          Common ACK codes in MSA-1:
+        </p>
+        <ul>
+          <li>
+            <strong>AA</strong>: Application Accept - message was processed
+            successfully.
+          </li>
+          <li>
+            <strong>AE</strong>: Application Error - message had errors but was
+            understood.
+          </li>
+          <li>
+            <strong>AR</strong>: Application Reject - message was rejected.
+          </li>
+        </ul>
+
+        <h3 id="listen-tab">Listen Tab</h3>
+        <p>
+          The Listen tab runs an MLLP server to receive incoming HL7 messages
+          from other systems.
+        </p>
+
+        <h4>Starting the Server</h4>
+        <ol>
+          <li>Enter the <strong>Port</strong> to listen on (commonly 2575).</li>
+          <li>Click <strong>Start Listening</strong>.</li>
+          <li>The status shows "Listening on port X" when active.</li>
+        </ol>
+        <p>Click <strong>Stop Listening</strong> to shut down the server.</p>
+
+        <h4>Viewing Received Messages</h4>
+        <p>Received messages appear in the center list with:</p>
+        <ul>
+          <li><strong>Filled circle</strong> (●): Unread message.</li>
+          <li><strong>Empty circle</strong> (○): Read message.</li>
+          <li>
+            <strong>Message type</strong>: Extracted from MSH-9 (for example,
+            "ADT^A01").
+          </li>
+          <li><strong>Time</strong>: When the message was received.</li>
+        </ul>
+        <p>
+          Click a message to view it in the right panel with syntax
+          highlighting.
+        </p>
+
+        <h4>Loading Messages to Editor</h4>
+        <p>
+          Click <strong>Load to Editor</strong> to copy a received message into
+          the main editor. This is useful for modifying and resending messages
+          during testing.
+        </p>
+
+        <h3>Understanding MLLP</h3>
+        <p>
+          MLLP wraps HL7 messages with special characters to mark the start and
+          end:
+        </p>
+        <ul>
+          <li>
+            <strong>Start Block</strong>: <code>0x0B</code> (vertical tab
+            character).
+          </li>
+          <li>
+            <strong>End Block</strong>: <code>0x1C</code> (file separator)
+            followed by <code>0x0D</code> (carriage return).
+          </li>
+        </ul>
+        <p>
+          Hermes handles this framing automatically. You work only with the HL7
+          message content.
+        </p>
+      </section>
+
+      <!-- Keyboard Shortcuts -->
+      <section id="keyboard-shortcuts">
+        <h2>Keyboard Shortcuts</h2>
+        <p>Quick reference for all keyboard shortcuts in the application.</p>
+
+        <h3>File Operations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>N</kbd></td>
+              <td>New file</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>O</kbd></td>
+              <td>Open file</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>S</kbd></td>
+              <td>Save</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td>
+              <td>Save As</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Edit Operations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Z</kbd></td>
+              <td>Undo</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td>
+              <td>Redo</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>X</kbd></td>
+              <td>Cut</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>C</kbd></td>
+              <td>Copy</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>V</kbd></td>
+              <td>Paste</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>A</kbd></td>
+              <td>Select All</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Find &amp; Replace</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>F</kbd></td>
+              <td>Open Find</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>H</kbd></td>
+              <td>Open Find &amp; Replace</td>
+            </tr>
+            <tr>
+              <td><kbd>Enter</kbd></td>
+              <td>Next match (in Find bar)</td>
+            </tr>
+            <tr>
+              <td><kbd>Shift</kbd>+<kbd>Enter</kbd></td>
+              <td>Previous match (in Find bar)</td>
+            </tr>
+            <tr>
+              <td><kbd>Escape</kbd></td>
+              <td>Close Find bar</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Navigation</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>J</kbd></td>
+              <td>Jump to Field</td>
+            </tr>
+            <tr>
+              <td><kbd>Tab</kbd></td>
+              <td>Next field (in message editor)</td>
+            </tr>
+            <tr>
+              <td><kbd>Shift</kbd>+<kbd>Tab</kbd></td>
+              <td>Previous field (in message editor)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Tools</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>T</kbd></td>
+              <td>Open Communication Drawer (Send tab)</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>L</kbd></td>
+              <td>Open Communication Drawer (Listen tab)</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>D</kbd></td>
+              <td>Compare Messages</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Window</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>M</kbd></td>
+              <td>Minimize window</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>W</kbd></td>
+              <td>Close window</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Message Editor</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Tab</kbd></td>
+              <td>Jump to next HL7 field</td>
+            </tr>
+            <tr>
+              <td><kbd>Shift</kbd>+<kbd>Tab</kbd></td>
+              <td>Jump to previous HL7 field</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td>
+              <td>Open Communication Drawer (Send tab)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Help</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>F1</kbd></td>
+              <td>Open Help window</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          <strong>Windows/Linux Users</strong>
+          <p>Replace <kbd>Cmd</kbd> with <kbd>Ctrl</kbd> for all shortcuts.</p>
+        </div>
+      </section>
+
+      <!-- Message Types Reference -->
+      <section id="message-types">
+        <h2>Message Types Reference</h2>
+        <p>
+          Hermes supports the following HL7 message types. Required segments are
+          marked with an asterisk (*).
+        </p>
+
+        <h3>ADT - Admit/Discharge/Transfer</h3>
+        <p>ADT messages communicate patient movement and demographic events.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ADT^A01</td>
+              <td>Admit/visit notification</td>
+              <td>MSH*, PID*, PV1*, EVN, NK1, DG1, NTE</td>
+            </tr>
+            <tr>
+              <td>ADT^A02</td>
+              <td>Transfer a patient</td>
+              <td>MSH*, PID*, PV1*, EVN, NK1, DG1</td>
+            </tr>
+            <tr>
+              <td>ADT^A03</td>
+              <td>Discharge/end visit</td>
+              <td>MSH*, PID*, PV1*, EVN, NK1, DG1</td>
+            </tr>
+            <tr>
+              <td>ADT^A04</td>
+              <td>Register a patient</td>
+              <td>MSH*, PID*, EVN, PV1, NK1, DG1</td>
+            </tr>
+            <tr>
+              <td>ADT^A05</td>
+              <td>Pre-admit a patient</td>
+              <td>MSH*, PID*, PV1*, EVN, NK1</td>
+            </tr>
+            <tr>
+              <td>ADT^A08</td>
+              <td>Update patient information</td>
+              <td>MSH*, PID*, EVN, PV1, NK1, DG1</td>
+            </tr>
+            <tr>
+              <td>ADT^A11</td>
+              <td>Cancel admit</td>
+              <td>MSH*, PID*, PV1*, EVN</td>
+            </tr>
+            <tr>
+              <td>ADT^A12</td>
+              <td>Cancel transfer</td>
+              <td>MSH*, PID*, PV1*, EVN</td>
+            </tr>
+            <tr>
+              <td>ADT^A13</td>
+              <td>Cancel discharge</td>
+              <td>MSH*, PID*, PV1*, EVN</td>
+            </tr>
+            <tr>
+              <td>ADT^A23</td>
+              <td>Delete patient record</td>
+              <td>MSH*, PID*, EVN</td>
+            </tr>
+            <tr>
+              <td>ADT^A34</td>
+              <td>Merge patient information</td>
+              <td>MSH*, PID*, EVN, PV1</td>
+            </tr>
+            <tr>
+              <td>ADT^A40</td>
+              <td>Merge patient identifier list</td>
+              <td>MSH*, PID*, EVN, PV1</td>
+            </tr>
+            <tr>
+              <td>ADT^A49</td>
+              <td>Change patient identifier list</td>
+              <td>MSH*, PID*, EVN</td>
+            </tr>
+            <tr>
+              <td>ADT^A50</td>
+              <td>Change visit number</td>
+              <td>MSH*, PID*, PV1*, EVN</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>ORM - Order Message</h3>
+        <p>
+          ORM messages communicate orders for tests, procedures, or services.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORM^O01</td>
+              <td>Order message</td>
+              <td>MSH*, PID*, PV1*, ORC*, EVN, OBR, DG1, NTE, OBX</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>ORU - Observation Result</h3>
+        <p>ORU messages communicate test results and observations.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORU^R01</td>
+              <td>Observation result</td>
+              <td>MSH*, PID*, OBR*, PV1, ORC, OBX, NTE</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>ORR - Order Response</h3>
+        <p>ORR messages acknowledge or respond to orders.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORR^O02</td>
+              <td>Order response</td>
+              <td>MSH*, PID*, ORC*, OBR</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>DFT - Detailed Financial Transaction</h3>
+        <p>DFT messages communicate billing and charge information.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Segments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DFT^P03</td>
+              <td>Financial transaction</td>
+              <td>MSH*, PID*, EVN, PV1, OBR</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+
+        <h3>Parse Errors in the Editor</h3>
+        <p>
+          If the editor shows text in
+          <span style="color: var(--col-love)">red</span>, there is a structural
+          problem with your message.
+        </p>
+        <p>Common causes:</p>
+        <ul>
+          <li>
+            <strong>Missing MSH segment</strong>: Every message must start with
+            MSH.
+          </li>
+          <li>
+            <strong>Incorrect MSH-1</strong>: The first field must be exactly
+            <code>|</code>.
+          </li>
+          <li>
+            <strong>Incorrect MSH-2</strong>: The encoding characters should be
+            <code>^~\&amp;</code>.
+          </li>
+          <li>
+            <strong>Line breaks in fields</strong>: Field values should not
+            contain newlines.
+          </li>
+          <li>
+            <strong>Missing segment identifier</strong>: Each line must start
+            with a 3-letter segment ID.
+          </li>
+        </ul>
+
+        <h3>Communication Errors</h3>
+        <p>If you cannot send or receive messages:</p>
+        <ul>
+          <li>
+            <strong>Connection refused</strong>: Check that the remote system is
+            running and listening on the specified port.
+          </li>
+          <li>
+            <strong>Timeout</strong>: The server may be slow to respond. Try
+            increasing the timeout value in the Send tab.
+          </li>
+          <li>
+            <strong>Host not found</strong>: Verify the hostname is correct and
+            DNS is resolving properly.
+          </li>
+          <li>
+            <strong>Port already in use</strong>: When starting the Listen
+            server, another application may be using the port. Try a different
+            port.
+          </li>
+          <li>
+            <strong>Firewall blocking</strong>: Ensure your firewall allows
+            connections on the MLLP port (typically 2575).
+          </li>
+        </ul>
+
+        <h3>Wizard Database Errors</h3>
+        <p>If wizards fail to load data:</p>
+        <ul>
+          <li>
+            <strong>Connection failed</strong>: Verify database credentials in
+            Settings.
+          </li>
+          <li>
+            <strong>No results</strong>: The search term may not match any
+            records. Try a broader search.
+          </li>
+          <li>
+            <strong>Timeout</strong>: Large databases may take time to respond.
+            Wait for the query to complete.
+          </li>
+        </ul>
+
+        <h3>File Won't Open</h3>
+        <ul>
+          <li>
+            <strong>Invalid format</strong>: The file may not contain a valid
+            HL7 message. Check that it starts with "MSH".
+          </li>
+          <li>
+            <strong>Encoding issues</strong>: The file should be UTF-8 or ASCII
+            encoded. Other encodings may cause problems.
+          </li>
+          <li>
+            <strong>Permissions</strong>: Ensure you have read access to the
+            file.
+          </li>
+        </ul>
+
+        <h3>Changes Not Syncing</h3>
+        <p>
+          If changes in the segment tabs are not appearing in the editor (or
+          vice versa):
+        </p>
+        <ul>
+          <li>
+            Click outside the field you are editing to trigger the update.
+          </li>
+          <li>Check for parse errors that might prevent syncing.</li>
+          <li>Try reloading the file.</li>
+        </ul>
+
+        <h3>Keyboard Shortcuts Not Working</h3>
+        <ul>
+          <li>Ensure the application window is focused.</li>
+          <li>
+            Some shortcuts only work in specific contexts (for example, Tab
+            field navigation only works in the message editor).
+          </li>
+          <li>
+            On Mac, check that you are using <kbd>Cmd</kbd> rather than
+            <kbd>Ctrl</kbd>.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script>
+      // Highlight current section in navigation
+      const sections = document.querySelectorAll("section[id]");
+      const navLinks = document.querySelectorAll('nav a[href^="#"]');
+
+      function updateActiveLink() {
+        const scrollPos = window.scrollY + 100;
+
+        sections.forEach((section) => {
+          const top = section.offsetTop;
+          const bottom = top + section.offsetHeight;
+          const id = section.getAttribute("id");
+          const link = document.querySelector(`nav a[href="#${id}"]`);
+
+          if (link) {
+            if (scrollPos >= top && scrollPos < bottom) {
+              navLinks.forEach((l) => l.classList.remove("active"));
+              link.classList.add("active");
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    window.addEventListener('scroll', updateActiveLink);
-    window.addEventListener('load', updateActiveLink);
-  </script>
-</body>
+      window.addEventListener("scroll", updateActiveLink);
+      window.addEventListener("load", updateActiveLink);
+    </script>
+  </body>
 </html>
