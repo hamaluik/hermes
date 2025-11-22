@@ -44,11 +44,15 @@
  * Defaults are chosen to match typical development environments:
  * - sendHostname: "127.0.0.1" (localhost testing)
  * - sendPort: 2575 (standard HL7 MLLP port)
+ * - listenPort: 2575 (standard HL7 MLLP port for listen server)
  * - wizardDbPort: 1433 (SQL Server default port)
  * - tabsFollowCursor: true (better UX for most users)
  * - autoSaveEnabled: false (explicit opt-in, matches VS Code default)
  * - themeSetting: "auto" (follows system preference, most intuitive default)
  * - editorHeight: 200px (fits typical screen layouts)
+ * - commDrawerVisible: false (drawer starts collapsed)
+ * - commDrawerHeight: 300px (comfortable height for send/listen tabs)
+ * - commDrawerTab: "send" (most common workflow starts with sending)
  * - recentFiles: [] (empty list, populated as user opens files)
  */
 
@@ -92,6 +96,12 @@ export class Settings {
   // Callback to notify when recent files change (for menu updates)
   onRecentFilesChanged: ((files: string[]) => void) | null = null;
 
+  // Communication drawer settings
+  private _commDrawerVisible: boolean = false;
+  private _commDrawerHeight: number = 300;
+  private _commDrawerTab: "send" | "listen" = "send";
+  private _listenPort: number = 2575;
+
   /**
    * Initializes settings by loading from persistent store.
    *
@@ -122,6 +132,10 @@ export class Settings {
           store.get<string>("wizardDbUser"),
           store.get<string>("wizardDbPassword"),
           store.get<string[]>("recentFiles"),
+          store.get<boolean>("commDrawerVisible"),
+          store.get<number>("commDrawerHeight"),
+          store.get<"send" | "listen">("commDrawerTab"),
+          store.get<number>("listenPort"),
         ]);
       })
       .then(
@@ -141,6 +155,10 @@ export class Settings {
           wizardDbUser,
           wizardDbPassword,
           recentFiles,
+          commDrawerVisible,
+          commDrawerHeight,
+          commDrawerTab,
+          listenPort,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
@@ -157,6 +175,10 @@ export class Settings {
           this._wizardDbUser = wizardDbUser ?? "";
           this._wizardDbPassword = wizardDbPassword ?? "";
           this._recentFiles = recentFiles ?? [];
+          this._commDrawerVisible = commDrawerVisible ?? false;
+          this._commDrawerHeight = commDrawerHeight ?? 300;
+          this._commDrawerTab = commDrawerTab ?? "send";
+          this._listenPort = listenPort ?? 2575;
 
           // Notify listeners that settings are loaded (for initial menu population)
           if (this.onRecentFilesChanged) {
@@ -439,5 +461,65 @@ export class Settings {
   /** Clears the recent files list */
   clearRecentFiles() {
     this.recentFiles = [];
+  }
+
+  /** Whether the communication drawer is visible */
+  get commDrawerVisible(): boolean {
+    return this._commDrawerVisible;
+  }
+  set commDrawerVisible(value: boolean) {
+    console.debug("Setting commDrawerVisible to:", value);
+    this._commDrawerVisible = value;
+    if (this.store) {
+      this.store.set("commDrawerVisible", value).catch((error) => {
+        console.error("Error saving commDrawerVisible setting:", error);
+        logError("Failed to save commDrawerVisible setting");
+      });
+    }
+  }
+
+  /** Height of the communication drawer in pixels */
+  get commDrawerHeight(): number {
+    return this._commDrawerHeight;
+  }
+  set commDrawerHeight(value: number) {
+    console.debug("Setting commDrawerHeight to:", value);
+    this._commDrawerHeight = value;
+    if (this.store) {
+      this.store.set("commDrawerHeight", value).catch((error) => {
+        console.error("Error saving commDrawerHeight setting:", error);
+        logError("Failed to save commDrawerHeight setting");
+      });
+    }
+  }
+
+  /** Active tab in the communication drawer ("send" or "listen") */
+  get commDrawerTab(): "send" | "listen" {
+    return this._commDrawerTab;
+  }
+  set commDrawerTab(value: "send" | "listen") {
+    console.debug("Setting commDrawerTab to:", value);
+    this._commDrawerTab = value;
+    if (this.store) {
+      this.store.set("commDrawerTab", value).catch((error) => {
+        console.error("Error saving commDrawerTab setting:", error);
+        logError("Failed to save commDrawerTab setting");
+      });
+    }
+  }
+
+  /** Port for the MLLP listen server */
+  get listenPort(): number {
+    return this._listenPort;
+  }
+  set listenPort(value: number) {
+    console.debug("Setting listenPort to:", value);
+    this._listenPort = value;
+    if (this.store) {
+      this.store.set("listenPort", value).catch((error) => {
+        console.error("Error saving listenPort setting:", error);
+        logError("Failed to save listenPort setting");
+      });
+    }
   }
 }

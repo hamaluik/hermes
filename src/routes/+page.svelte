@@ -86,11 +86,9 @@
   import ToolbarSeparator from "$lib/toolbar_separator.svelte";
   import IconSendReceive from "$lib/icons/IconSendReceive.svelte";
   import { get } from "svelte/store";
-  import MessageSendModal from "$lib/message_send_modal.svelte";
-  import IconListen from "$lib/icons/IconListen.svelte";
-  import ListenModal from "$lib/listen_modal.svelte";
   import NotificationIcon from "$lib/notification_icon.svelte";
   import { listenToListenResponse } from "../backend/listen";
+  import CommunicationDrawer from "$lib/communication_drawer.svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import HeaderWizard from "$lib/wizards/header_wizard.svelte";
@@ -116,7 +114,6 @@
   let toolbarHeight: string | undefined = $state(undefined);
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
   let showSettings = $state(false);
-  let showSend = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
 
   // Wizard visibility flags - wizards provide database-driven auto-population for specific segments
@@ -124,7 +121,9 @@
   let showPatientWizard = $state(false);
   let showVisitWizard = $state(false);
 
-  let showListeningModal = $state(false);
+  // Communication drawer state (initialized from settings)
+  let showCommDrawer = $state(data.settings.commDrawerVisible);
+  let commDrawerTab: "send" | "listen" = $state(data.settings.commDrawerTab);
 
   // Listen server state - tracks whether we're actively listening for incoming HL7 messages
   // and how many received messages haven't been viewed yet
@@ -162,6 +161,7 @@
 
   const MIN_EDITOR_HEIGHT = 100;
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6);
+
 
   /**
    * Centralized message update function
@@ -610,6 +610,15 @@
     invoke("set_redo_enabled", { enabled: history.canRedo });
   });
 
+  // Sync communication drawer state to settings
+  $effect(() => {
+    data.settings.commDrawerVisible = showCommDrawer;
+  });
+
+  $effect(() => {
+    data.settings.commDrawerTab = commDrawerTab;
+  });
+
   /**
    * Auto-Save Effect
    *
@@ -673,10 +682,6 @@
       });
   };
 
-  const handleListen = () => {
-    showListeningModal = true;
-  };
-
   /**
    * Opens the find/replace bar
    *
@@ -723,6 +728,16 @@
     currentMatchIndex = 0;
     editorElement?.focus();
   }
+
+  /**
+   * Loads a received message into the editor
+   * Used by the Listen tab's "Load to Editor" button
+   */
+  function handleLoadToEditor(receivedMessage: string) {
+    updateMessage(receivedMessage);
+    // Optionally close the drawer after loading
+    // showCommDrawer = false;
+  }
 </script>
 
 <Toolbar bind:toolbarHeight>
@@ -745,49 +760,19 @@
   <ToolbarButton title="Redo" onclick={history.canRedo ? handleRedo : undefined}>
     <IconRedo />
   </ToolbarButton>
-  <!--
-    Send/Receive and Listen Toolbar Buttons (DISABLED)
-
-    These toolbar buttons are commented out pending completion of their respective features:
-
-    1. Send/Receive Button:
-       - Opens MessageSendModal to send messages via MLLP
-       - Backend functionality is complete (see send_receive.ts)
-       - Modal UI is complete (see message_send_modal.svelte)
-       - Commented out to simplify initial UI during development
-       - Can be enabled by uncommenting when ready for production use
-
-    2. Listen Button:
-       - Opens ListenModal to manage incoming message server
-       - Backend functionality is complete (see listen.ts)
-       - Modal UI is incomplete (see listen_modal.svelte for details)
-       - Shows notification badge for unread messages
-       - Button state changes based on listening status (pine when active, subtle when inactive)
-
-    To enable these features:
-    1. For Send/Receive: Simply uncomment the block below
-    2. For Listen: First complete the ListenModal UI (add host/port config, message list,
-       message viewing), then uncomment the block
-
-    Both features are currently accessible programmatically (e.g., via Ctrl+Enter for send)
-    but hidden from the toolbar to avoid user confusion about incomplete functionality.
-  -->
-  <!-- <ToolbarSeparator /> -->
-  <!-- <ToolbarButton -->
-  <!--   title="Send/Receive" -->
-  <!--   onclick={() => { -->
-  <!--     showSend = true; -->
-  <!--   }} -->
-  <!-- > -->
-  <!--   <IconSendReceive /> -->
-  <!-- </ToolbarButton> -->
-  <!-- <ToolbarButton title="Listen" onclick={handleListen}> -->
-  <!--   <NotificationIcon count={unreadMessageCount}> -->
-  <!--     <span class={listening ? "listening" : "notListening"}> -->
-  <!--       <IconListen /> -->
-  <!--     </span> -->
-  <!--   </NotificationIcon> -->
-  <!-- </ToolbarButton> -->
+  <ToolbarSeparator />
+  <ToolbarButton
+    title="Communication"
+    onclick={() => {
+      showCommDrawer = !showCommDrawer;
+    }}
+  >
+    <NotificationIcon count={unreadMessageCount}>
+      <span class={showCommDrawer ? "commActive" : listening ? "listening" : "notListening"}>
+        <IconSendReceive />
+      </span>
+    </NotificationIcon>
+  </ToolbarButton>
   <ToolbarSpacer />
   <ToolbarButton title="Help" onclick={() => invoke("open_help_window")}>
     <IconHelp />
@@ -801,8 +786,8 @@
     <IconSettings />
   </ToolbarButton>
 </Toolbar>
+<div class="app-content" style="--toolbar-height: {toolbarHeight ?? '1px'};">
 <main
-  style="--toolbar-height: {toolbarHeight ?? '1px'};"
   class:resizing={isResizing}
 >
   <div class="tabs-scroll-container">
@@ -914,7 +899,8 @@
       cursorPos = pos;
     }}
     onctrlenter={() => {
-      showSend = true;
+      showCommDrawer = true;
+      commDrawerTab = "send";
     }}
     getSelection={(fn) => {
       getEditorSelection = fn;
@@ -949,13 +935,18 @@
     }}
   />
 </main>
-<SettingsModal settings={data.settings} bind:show={showSettings} />
-<ListenModal
-  bind:show={showListeningModal}
+<CommunicationDrawer
+  settings={data.settings}
+  {message}
   listening={data.listening}
   listenedMessages={data.listenedMessages}
+  bind:expanded={showCommDrawer}
+  bind:activeTab={commDrawerTab}
+  height={data.settings.commDrawerHeight}
+  onLoadToEditor={handleLoadToEditor}
 />
-<MessageSendModal bind:show={showSend} settings={data.settings} {message} />
+</div>
+<SettingsModal settings={data.settings} bind:show={showSettings} />
 <HeaderWizard
   bind:show={showHeaderWizard}
   {message}
@@ -982,14 +973,22 @@
 />
 
 <style>
+  .app-content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--toolbar-height, 0px));
+    max-height: calc(100vh - var(--toolbar-height, 0px));
+    overflow: hidden;
+  }
+
   main {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
     gap: 1rem;
-    height: calc(100vh - var(--toolbar-height, 0px));
-    max-height: calc(100vh - var(--toolbar-height, 0px));
+    flex: 1;
+    min-height: 0;
 
     padding: 1rem;
 
@@ -1084,6 +1083,10 @@
         color: var(--col-surface);
       }
     }
+  }
+
+  span.commActive {
+    color: var(--col-iris);
   }
 
   span.listening {
