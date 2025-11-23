@@ -39,8 +39,8 @@
     onclose?: () => void;
   } = $props();
 
-  let searchInput: HTMLInputElement;
-  let replaceInput: HTMLInputElement;
+  let searchInput: HTMLInputElement | undefined = $state();
+  let replaceInput: HTMLInputElement | undefined = $state();
   let query = $state("");
   let replacement = $state("");
   let caseSensitive = $state(false);
