@@ -78,6 +78,8 @@
     onchange,
     oncursorchange,
     onctrlenter,
+    onmovesegmentup,
+    onmovesegmentdown,
     readonly,
     placeholder,
     height,
@@ -92,6 +94,8 @@
     onchange?: (message: string, coalesce?: boolean) => void;
     oncursorchange?: (cursorPos: number) => void;
     onctrlenter?: () => void;
+    onmovesegmentup?: () => void;
+    onmovesegmentdown?: () => void;
     readonly?: boolean;
     placeholder?: string;
     height?: number;
@@ -225,6 +229,12 @@
    * Ctrl/Cmd+Enter: Quick send shortcut
    *   - Common pattern in messaging UIs (Slack, Discord, etc.)
    *   - Allows sending without leaving the keyboard to click "Send"
+   *
+   * Cmd+Shift+Arrow: Move segment up/down
+   *   - Must be intercepted here because Cmd+Shift+Arrow is a standard macOS shortcut
+   *     for extending text selection to the document start/end
+   *   - The textarea consumes these events before Tauri's menu accelerators can handle them
+   *   - We preventDefault() and delegate to parent callbacks for the actual segment manipulation
    */
   async function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Tab") {
@@ -253,6 +263,14 @@
     ) {
       event.preventDefault();
       onctrlenter();
+    } else if (event.shiftKey && event.metaKey && event.key === "ArrowUp" && onmovesegmentup) {
+      // intercept before macOS text selection behaviour
+      event.preventDefault();
+      onmovesegmentup();
+    } else if (event.shiftKey && event.metaKey && event.key === "ArrowDown" && onmovesegmentdown) {
+      // intercept before macOS text selection behaviour
+      event.preventDefault();
+      onmovesegmentdown();
     }
   }
 

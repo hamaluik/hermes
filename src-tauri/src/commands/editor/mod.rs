@@ -23,10 +23,12 @@ mod cursor;
 mod data;
 mod export;
 mod import;
+mod segment;
 mod syntax_highlight;
 
 pub use cursor::*;
 pub use data::*;
 pub use export::*;
 pub use import::*;
+pub use segment::*;
 pub use syntax_highlight::*;

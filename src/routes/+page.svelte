@@ -71,6 +71,12 @@
   } from "$lib/shared/data";
   import { exportToJson, exportToYaml, exportToToml } from "$lib/editor/export";
   import { importFromJson, importFromYaml, importFromToml } from "$lib/editor/import";
+  import {
+    getSegmentIndexAtCursor,
+    deleteSegment,
+    moveSegment,
+    duplicateSegment,
+  } from "$lib/editor/segment";
   import Toolbar from "$lib/toolbar/toolbar.svelte";
   import ToolbarButton from "$lib/toolbar/toolbar_button.svelte";
   import IconNew from "$lib/icons/IconNew.svelte";
@@ -485,6 +491,10 @@
     let unlistenMenuImportJson: UnlistenFn | undefined = undefined;
     let unlistenMenuImportYaml: UnlistenFn | undefined = undefined;
     let unlistenMenuImportToml: UnlistenFn | undefined = undefined;
+    let unlistenMenuDeleteSegment: UnlistenFn | undefined = undefined;
+    let unlistenMenuMoveSegmentUp: UnlistenFn | undefined = undefined;
+    let unlistenMenuMoveSegmentDown: UnlistenFn | undefined = undefined;
+    let unlistenMenuDuplicateSegment: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -555,6 +565,19 @@
       showJumpToField = true;
     }).then((fn) => {
       unlistenMenuJumpToField = fn;
+    });
+    // Segment operations
+    listen("menu-edit-delete-segment", () => handleDeleteSegment()).then((fn) => {
+      unlistenMenuDeleteSegment = fn;
+    });
+    listen("menu-edit-move-segment-up", () => handleMoveSegmentUp()).then((fn) => {
+      unlistenMenuMoveSegmentUp = fn;
+    });
+    listen("menu-edit-move-segment-down", () => handleMoveSegmentDown()).then((fn) => {
+      unlistenMenuMoveSegmentDown = fn;
+    });
+    listen("menu-edit-duplicate-segment", () => handleDuplicateSegment()).then((fn) => {
+      unlistenMenuDuplicateSegment = fn;
     });
     // View menu: Zoom controls
     listen("menu-view-zoom-in", () => handleZoomIn()).then((fn) => {
@@ -692,6 +715,10 @@
       unlistenMenuFind?.();
       unlistenMenuFindReplace?.();
       unlistenMenuJumpToField?.();
+      unlistenMenuDeleteSegment?.();
+      unlistenMenuMoveSegmentUp?.();
+      unlistenMenuMoveSegmentDown?.();
+      unlistenMenuDuplicateSegment?.();
       unlistenMenuZoomIn?.();
       unlistenMenuZoomOut?.();
       unlistenMenuResetZoom?.();
@@ -1127,6 +1154,61 @@
     // Optionally close the drawer after loading
     // showCommDrawer = false;
   }
+
+  /**
+   * Applies the result of a segment operation: updates message and cursor
+   */
+  function applySegmentOperation(result: { message: string; cursor: number } | null) {
+    if (!result) return;
+    updateMessage(result.message);
+    // position cursor at the result location
+    setTimeout(() => {
+      if (editorElement) {
+        editorElement.focus();
+        editorElement.setSelectionRange(result.cursor, result.cursor);
+      }
+    }, 0);
+  }
+
+  /**
+   * Deletes the segment under the cursor (Cmd+Shift+K)
+   */
+  async function handleDeleteSegment() {
+    const segmentIndex = await getSegmentIndexAtCursor(message, cursorPos);
+    if (segmentIndex === null || segmentIndex === 0) return; // cannot delete MSH
+    const result = await deleteSegment(message, segmentIndex);
+    applySegmentOperation(result);
+  }
+
+  /**
+   * Moves the segment under the cursor up (Cmd+Shift+↑)
+   */
+  async function handleMoveSegmentUp() {
+    const segmentIndex = await getSegmentIndexAtCursor(message, cursorPos);
+    if (segmentIndex === null || segmentIndex <= 1) return; // cannot move MSH or into MSH position
+    const result = await moveSegment(message, segmentIndex, "up");
+    applySegmentOperation(result);
+  }
+
+  /**
+   * Moves the segment under the cursor down (Cmd+Shift+↓)
+   */
+  async function handleMoveSegmentDown() {
+    const segmentIndex = await getSegmentIndexAtCursor(message, cursorPos);
+    if (segmentIndex === null || segmentIndex === 0) return; // cannot move MSH
+    const result = await moveSegment(message, segmentIndex, "down");
+    applySegmentOperation(result);
+  }
+
+  /**
+   * Duplicates the segment under the cursor (Cmd+Shift+D)
+   */
+  async function handleDuplicateSegment() {
+    const segmentIndex = await getSegmentIndexAtCursor(message, cursorPos);
+    if (segmentIndex === null || segmentIndex === 0) return; // cannot duplicate MSH
+    const result = await duplicateSegment(message, segmentIndex);
+    applySegmentOperation(result);
+  }
 </script>
 
 <Toolbar bind:toolbarHeight>
@@ -1266,6 +1348,8 @@
       showCommDrawer = true;
       commDrawerTab = "send";
     }}
+    onmovesegmentup={() => handleMoveSegmentUp()}
+    onmovesegmentdown={() => handleMoveSegmentDown()}
     getSelection={(fn) => {
       getEditorSelection = fn;
     }}

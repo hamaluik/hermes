@@ -148,6 +148,10 @@ pub fn run() {
             commands::import_from_json,
             commands::import_from_yaml,
             commands::import_from_toml,
+            commands::get_segment_index_at_cursor,
+            commands::delete_segment,
+            commands::move_segment,
+            commands::duplicate_segment,
         ])
         .setup(|app| {
             let menu_items =

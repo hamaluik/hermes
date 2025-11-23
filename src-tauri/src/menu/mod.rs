@@ -238,6 +238,10 @@ pub fn setup_menu_event_handler(app: &App) {
             "edit-find" => Some("menu-edit-find"),
             "edit-find-replace" => Some("menu-edit-find-replace"),
             "edit-jump-to-field" => Some("menu-edit-jump-to-field"),
+            "edit-delete-segment" => Some("menu-edit-delete-segment"),
+            "edit-move-segment-up" => Some("menu-edit-move-segment-up"),
+            "edit-move-segment-down" => Some("menu-edit-move-segment-down"),
+            "edit-duplicate-segment" => Some("menu-edit-duplicate-segment"),
             "view-zoom-in" => Some("menu-view-zoom-in"),
             "view-zoom-out" => Some("menu-view-zoom-out"),
             "view-reset-zoom" => Some("menu-view-reset-zoom"),
@@ -399,6 +403,26 @@ fn build_edit_menu(
         .accelerator("CmdOrCtrl+J")
         .build(app)?;
 
+    let delete_segment_menu_item = MenuItemBuilder::new("D&elete Segment")
+        .id("edit-delete-segment")
+        .accelerator("CmdOrCtrl+Shift+K")
+        .build(app)?;
+
+    let move_segment_up_menu_item = MenuItemBuilder::new("Move Segment &Up")
+        .id("edit-move-segment-up")
+        .accelerator("CmdOrCtrl+Shift+Up")
+        .build(app)?;
+
+    let move_segment_down_menu_item = MenuItemBuilder::new("Move Segment Do&wn")
+        .id("edit-move-segment-down")
+        .accelerator("CmdOrCtrl+Shift+Down")
+        .build(app)?;
+
+    let duplicate_segment_menu_item = MenuItemBuilder::new("Duplicate Se&gment")
+        .id("edit-duplicate-segment")
+        .accelerator("CmdOrCtrl+Shift+D")
+        .build(app)?;
+
     let menu = SubmenuBuilder::new(app, "&Edit")
         .item(undo_menu_item)
         .item(redo_menu_item)
@@ -410,6 +434,11 @@ fn build_edit_menu(
         .item(&find_menu_item)
         .item(&find_replace_menu_item)
         .item(&jump_to_field_menu_item)
+        .separator()
+        .item(&delete_segment_menu_item)
+        .item(&move_segment_up_menu_item)
+        .item(&move_segment_down_menu_item)
+        .item(&duplicate_segment_menu_item)
         .separator()
         .item(&PredefinedMenuItem::select_all(app, None)?)
         .build()?;

@@ -401,6 +401,7 @@
             <li><a href="#message-editor">Message Editor</a></li>
             <li><a href="#segment-tabs">Segment Tabs</a></li>
             <li><a href="#adding-segments">Adding Segments</a></li>
+            <li><a href="#segment-operations">Segment Operations</a></li>
           </ul>
         </li>
         <li>
@@ -1048,6 +1049,66 @@
           Some segments can appear multiple times (like OBX for multiple
           results). When you have repeated segments, tabs are numbered: "OBX
           (1)", "OBX (2)", etc.
+        </p>
+
+        <h3 id="segment-operations">Segment Operations</h3>
+        <p>
+          Keyboard shortcuts allow you to manipulate entire segments without
+          manual cut/paste operations. These are particularly useful when
+          working with repeating segments like OBX or NK1, which often need
+          duplication with minor edits, or when reordering segments during
+          message construction.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Operation</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td>
+              <td>Delete Segment</td>
+              <td>Removes the segment under the cursor</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd></td>
+              <td>Move Segment Up</td>
+              <td>Swaps the segment with the one above it</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd></td>
+              <td>Move Segment Down</td>
+              <td>Swaps the segment with the one below it</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td>
+              <td>Duplicate Segment</td>
+              <td>Duplicates the segment directly below its current position</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          After each operation, the cursor follows the affected segment so you
+          can continue editing without repositioning.
+        </p>
+
+        <div class="warning">
+          <strong>MSH Protection</strong>
+          <p>
+            The MSH segment cannot be deleted, moved, or duplicated. Every HL7
+            message requires exactly one MSH as the first segment—these
+            operations would create invalid messages.
+          </p>
+        </div>
+
+        <p>
+          These operations are also available from the
+          <strong>Edit</strong> menu if you prefer using the mouse.
         </p>
       </section>
 
@@ -2235,6 +2296,34 @@
             <tr>
               <td><kbd>Cmd</kbd>+<kbd>A</kbd></td>
               <td>Select All</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Segment Operations</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd></td>
+              <td>Delete segment</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd></td>
+              <td>Move segment up</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>↓</kbd></td>
+              <td>Move segment down</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td>
+              <td>Duplicate segment</td>
             </tr>
           </tbody>
         </table>
