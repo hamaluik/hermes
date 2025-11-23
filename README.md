@@ -215,56 +215,63 @@ For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md
 
 ```
 hermes/
-├── src/                          # Frontend (Svelte/TypeScript)
-│   ├── routes/                   # SvelteKit routes
-│   │   └── +page.svelte         # Main application page
-│   ├── lib/                      # Reusable components
-│   │   ├── message_editor.svelte
-│   │   ├── message_send_modal.svelte
-│   │   ├── listen_modal.svelte
-│   │   ├── settings_modal.svelte
-│   │   ├── cursor_description.svelte
-│   │   ├── tabs.svelte
-│   │   ├── toolbar*.svelte
-│   │   ├── forms/               # Form components
-│   │   ├── components/          # Generic UI components
-│   │   └── icons/               # SVG icon components
-│   ├── backend/                 # TypeScript bridges to Tauri
-│   │   ├── send_receive.ts
-│   │   ├── listen.ts
-│   │   ├── data.ts
-│   │   ├── schema.ts
-│   │   ├── cursor.ts
-│   │   ├── description.ts
-│   │   └── syntax_highlight.ts
-│   └── settings.ts              # Settings management
+├── src/                           # Frontend (Svelte/TypeScript)
+│   ├── routes/                    # SvelteKit routes
+│   │   └── +page.svelte          # Main application page
+│   ├── lib/                       # Feature-based organisation
+│   │   ├── communication/         # MLLP send/receive
+│   │   │   ├── communication_drawer.svelte
+│   │   │   ├── send_tab.svelte
+│   │   │   ├── listen_tab.svelte
+│   │   │   ├── connection_preset.ts
+│   │   │   ├── connection_presets_modal.svelte
+│   │   │   ├── send_receive.ts
+│   │   │   └── listen.ts
+│   │   ├── editor/                # Core editor
+│   │   │   ├── message_editor.svelte
+│   │   │   ├── cursor_description.svelte
+│   │   │   ├── history.ts
+│   │   │   ├── cursor.ts
+│   │   │   ├── description.ts
+│   │   │   └── syntax_highlight.ts
+│   │   ├── diff/                  # Message comparison
+│   │   ├── find_replace/          # Search functionality
+│   │   ├── forms/                 # Form inputs
+│   │   ├── validation/            # Validation UI and logic
+│   │   ├── settings/              # Settings UI
+│   │   ├── modals/                # Standalone modals
+│   │   ├── shared/                # Cross-feature utilities
+│   │   ├── tabs/                  # Tab navigation
+│   │   ├── toolbar/               # Toolbar components
+│   │   ├── components/            # Generic UI primitives
+│   │   └── icons/                 # SVG icon components
+│   └── settings.ts                # Settings persistence
 │
-├── src-tauri/                   # Backend (Rust/Tauri)
+├── src-tauri/                     # Backend (Rust/Tauri)
 │   ├── src/
-│   │   ├── lib.rs              # Main entry point
-│   │   ├── commands/           # Tauri commands
-│   │   │   ├── syntax_highlight.rs
-│   │   │   ├── locate_cursor.rs
-│   │   │   ├── field_description.rs
-│   │   │   ├── schema.rs
-│   │   │   ├── data.rs
-│   │   │   ├── send_receive.rs
-│   │   │   └── listen.rs
-│   │   ├── schema/             # HL7 schema caching
-│   │   └── spec/               # HL7 spec utilities
-│   ├── Cargo.toml              # Rust dependencies
-│   └── tauri.conf.json         # Tauri configuration
+│   │   ├── lib.rs                # App setup, plugin config
+│   │   ├── menu/                 # Native menu system
+│   │   ├── commands/             # Tauri commands by feature
+│   │   │   ├── communication/    # send.rs, listen.rs
+│   │   │   ├── editor/           # cursor.rs, data.rs, syntax_highlight.rs
+│   │   │   ├── validation/       # validate.rs, diff.rs
+│   │   │   └── support/          # field_description.rs, schema.rs
+│   │   ├── schema/               # HL7 schema caching
+│   │   └── spec/                 # HL7 specifications
+│   ├── data/                     # Segment schemas (*.toml)
+│   ├── Cargo.toml                # Rust dependencies
+│   └── tauri.conf.json           # Tauri configuration
 │
-├── static/                      # Static assets
-├── package.json                 # Node.js dependencies
-├── vite.config.ts              # Vite configuration
-├── svelte.config.js            # Svelte configuration
-├── tsconfig.json               # TypeScript configuration
-├── README.md                    # This file
-├── ARCHITECTURE.md              # Detailed architecture docs
-├── CONTRIBUTING.md              # Development guidelines
-├── CLAUDE.md                    # Claude Code instructions
-└── HELP.md                      # User documentation
+├── static/                        # Static assets (help.html, global.css)
+├── package.json                   # Node.js dependencies
+├── vite.config.ts                # Vite configuration
+├── svelte.config.js              # Svelte configuration
+├── tsconfig.json                 # TypeScript configuration
+├── README.md                      # This file
+├── ARCHITECTURE.md                # Detailed architecture docs
+├── CONTRIBUTING.md                # Development guidelines
+├── CLAUDE.md                      # Claude Code instructions
+└── HELP.md                        # User documentation
 ```
 
 ## Key Technologies
@@ -319,14 +326,15 @@ Quick overview:
 ### Adding New Features
 
 1. **New Tauri Command**:
-   - Add command function in `src-tauri/src/commands/`
+   - Add command function in appropriate feature directory under `src-tauri/src/commands/`
+   - Export from feature's mod.rs and commands/mod.rs
    - Register command in `src-tauri/src/lib.rs`
-   - Create TypeScript bridge in `src/backend/`
+   - Create TypeScript bridge co-located with feature in `src/lib/<feature>/`
    - Use from Svelte components
 
 2. **New UI Component**:
-   - Create `.svelte` file in `src/lib/`
-   - Import and use in routes or other components
+   - Create `.svelte` file in appropriate feature directory under `src/lib/`
+   - Import using `$lib/` for cross-directory or relative paths within feature
    - Follow existing component patterns for consistency
 
 ## Troubleshooting

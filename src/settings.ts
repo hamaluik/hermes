@@ -57,13 +57,14 @@
  * - themeSetting: "auto" (follows system preference, most intuitive default)
  * - editorHeight: 200px (fits typical screen layouts)
  * - commDrawerVisible: false (drawer starts collapsed)
- * - commDrawerHeight: 300px (comfortable height for send/listen tabs)
+ * - commDrawerHeight: 320px (comfortable height for send/listen tabs)
  * - commDrawerTab: "send" (most common workflow starts with sending)
  * - recentFiles: [] (empty list, populated as user opens files)
  */
 
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { error as logError } from "@tauri-apps/plugin-log";
+import type { ConnectionPreset } from "$lib/communication/connection_preset";
 
 export class Settings {
   store: Store | null = null;
@@ -103,7 +104,7 @@ export class Settings {
 
   // Communication drawer settings
   private _commDrawerVisible: boolean = false;
-  private _commDrawerHeight: number = 300;
+  private _commDrawerHeight: number = 320;
   private _commDrawerTab: "send" | "listen" = "send";
   private _listenPort: number = 2575;
 
@@ -126,6 +127,13 @@ export class Settings {
    * its local state with the persisted value.
    */
   onListenSettingsChanged: ((port: number) => void) | null = null;
+
+  // Connection presets for quick switching between environments (Dev, QA, Prod)
+  private _connectionPresets: ConnectionPreset[] = [];
+
+  // Callback to notify when connection presets change
+  onConnectionPresetsChanged: ((presets: ConnectionPreset[]) => void) | null =
+    null;
 
   /**
    * Initializes settings by loading from persistent store.
@@ -157,6 +165,7 @@ export class Settings {
           store.get<"send" | "listen">("commDrawerTab"),
           store.get<number>("listenPort"),
           store.get<number>("zoomLevel"),
+          store.get<ConnectionPreset[]>("connectionPresets"),
         ]);
       })
       .then(
@@ -176,6 +185,7 @@ export class Settings {
           commDrawerTab,
           listenPort,
           zoomLevel,
+          connectionPresets,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
@@ -188,10 +198,11 @@ export class Settings {
           this._sendWaitTimeoutSeconds = sendWaitTimeoutSeconds ?? 5;
           this._recentFiles = recentFiles ?? [];
           this._commDrawerVisible = commDrawerVisible ?? false;
-          this._commDrawerHeight = commDrawerHeight ?? 300;
+          this._commDrawerHeight = commDrawerHeight ?? 320;
           this._commDrawerTab = commDrawerTab ?? "send";
           this._listenPort = listenPort ?? 2575;
           this._zoomLevel = zoomLevel ?? 1.0;
+          this._connectionPresets = connectionPresets ?? [];
 
           // Notify listeners that settings are loaded (for initial menu population)
           if (this.onRecentFilesChanged) {
@@ -215,6 +226,9 @@ export class Settings {
           }
           if (this.onZoomChanged) {
             this.onZoomChanged(this._zoomLevel);
+          }
+          if (this.onConnectionPresetsChanged) {
+            this.onConnectionPresetsChanged(this._connectionPresets);
           }
         },
       )
@@ -490,6 +504,24 @@ export class Settings {
     }
     if (this.onZoomChanged) {
       this.onZoomChanged(value);
+    }
+  }
+
+  /** Saved connection presets for quick switching between environments */
+  get connectionPresets(): ConnectionPreset[] {
+    return this._connectionPresets;
+  }
+  set connectionPresets(value: ConnectionPreset[]) {
+    console.debug("Setting connectionPresets to:", value);
+    this._connectionPresets = value;
+    if (this.store) {
+      this.store.set("connectionPresets", value).catch((error) => {
+        console.error("Error saving connectionPresets setting:", error);
+        logError("Failed to save connectionPresets setting");
+      });
+    }
+    if (this.onConnectionPresetsChanged) {
+      this.onConnectionPresetsChanged(value);
     }
   }
 }

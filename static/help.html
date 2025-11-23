@@ -423,6 +423,7 @@
         <li>
           <a href="#communication">Communication</a>
           <ul>
+            <li><a href="#connection-presets">Connection Presets</a></li>
             <li><a href="#send-tab">Send Tab</a></li>
             <li><a href="#listen-tab">Listen Tab</a></li>
           </ul>
@@ -1970,6 +1971,72 @@
           receiving messages.
         </p>
 
+        <h3 id="connection-presets">Connection Presets</h3>
+        <p>
+          Connection Presets let you save named host/port combinations for
+          environments you frequently connect to, such as Development, QA, and
+          Production servers. This eliminates the need to retype connection
+          details when switching between systems.
+        </p>
+
+        <h4>Using Presets</h4>
+        <p>
+          In the Send tab, a <strong>Preset</strong> dropdown appears above the
+          Host and Port fields. Select a preset to instantly populate the
+          connection details.
+        </p>
+        <ul>
+          <li>
+            <strong>Custom</strong>: Shown when the current host/port
+            combination does not match any saved preset.
+          </li>
+          <li>
+            <strong>Preset names</strong>: Your saved presets appear in the
+            dropdown. Selecting one fills in the Host and Port fields.
+          </li>
+        </ul>
+        <p>
+          If you manually edit the Host or Port fields, the dropdown
+          automatically switches to "Custom" since the values no longer match a
+          saved preset.
+        </p>
+
+        <h4>Managing Presets</h4>
+        <p>
+          Click the gear icon next to the Preset dropdown to open the Connection
+          Presets modal. From here you can:
+        </p>
+        <ul>
+          <li>
+            <strong>Add a preset</strong>: Enter a name, hostname, and port,
+            then click <strong>Add</strong>.
+          </li>
+          <li>
+            <strong>Edit a preset</strong>: Click on an existing preset to load
+            its values into the form, modify them, then click
+            <strong>Update</strong>.
+          </li>
+          <li>
+            <strong>Delete a preset</strong>: Click the trash icon next to a
+            preset to remove it.
+          </li>
+        </ul>
+        <p>
+          Click <strong>Save</strong> to apply your changes, or
+          <strong>Cancel</strong> to discard them. Once saved, presets
+          persist across application restarts.
+        </p>
+
+        <div class="tip">
+          <strong>Naming Conventions</strong>
+          <p>
+            Use clear, descriptive names for your presets. Common patterns
+            include environment names ("Development", "QA", "Production"),
+            system names ("Lab Interface", "ADT Server"), or combined names
+            ("Prod - Lab Results").
+          </p>
+        </div>
+
         <h3>Opening the Communication Drawer</h3>
         <p>
           Click the <strong>Communication</strong> button in the toolbar to open
@@ -1993,6 +2060,11 @@
 
         <h4>Configuration</h4>
         <ul>
+          <li>
+            <strong>Preset</strong>: Select a saved connection preset, or use
+            "Custom" to enter values manually. See
+            <a href="#connection-presets">Connection Presets</a> for details.
+          </li>
           <li>
             <strong>Host</strong>: The server address to send to (IP address or
             hostname).

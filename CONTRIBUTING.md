@@ -233,21 +233,35 @@ pub fn syntax_highlight(
 ```
 src/
 ├── routes/              # SvelteKit pages
-├── lib/                 # Components
-│   ├── components/      # Generic UI components
-│   ├── forms/          # Form-specific components
-│   └── icons/          # SVG icon components
-├── backend/            # Tauri command wrappers
-└── settings.ts         # Settings management
+├── lib/                 # Feature-based organisation
+│   ├── communication/   # MLLP send/receive (components + Tauri bridges)
+│   ├── editor/          # Message editor (components + bridges)
+│   ├── diff/            # Message comparison
+│   ├── find_replace/    # Search functionality
+│   ├── validation/      # Validation UI and logic
+│   ├── settings/        # Settings UI
+│   ├── modals/          # Standalone modals
+│   ├── shared/          # Cross-feature utilities
+│   ├── tabs/            # Tab navigation
+│   ├── toolbar/         # Toolbar components
+│   ├── forms/           # Form inputs
+│   ├── components/      # Generic UI primitives
+│   └── icons/           # SVG icon components
+└── settings.ts          # Settings persistence
 ```
 
 **Backend:**
 ```
 src-tauri/src/
-├── lib.rs              # Entry point
-├── commands/           # Tauri commands (one file per feature)
-├── schema/             # Schema caching system
-└── spec/               # HL7 specifications
+├── lib.rs               # Entry point
+├── menu/                # Native menu system
+├── commands/            # Tauri commands (organised by feature)
+│   ├── communication/   # send.rs, listen.rs
+│   ├── editor/          # cursor.rs, data.rs, syntax_highlight.rs
+│   ├── validation/      # validate.rs, diff.rs
+│   └── support/         # field_description.rs, schema.rs
+├── schema/              # Schema caching system
+└── spec/                # HL7 specifications
 ```
 
 ### Module Organization
@@ -265,11 +279,11 @@ src-tauri/src/
 ### Naming Conventions for Features
 
 When adding a new feature:
-1. **Backend**: Create `src-tauri/src/commands/feature_name.rs`
-2. **Frontend bridge**: Create `src/backend/feature_name.ts`
-3. **UI component**: Create `src/lib/feature_name.svelte`
-4. **Tauri command**: Use `snake_case` (e.g., `get_field_description`)
-5. **TypeScript function**: Use `camelCase` (e.g., `getFieldDescription`)
+1. **Backend**: Create `src-tauri/src/commands/feature_name/` directory
+2. **Frontend**: Create `src/lib/feature_name/` directory containing both components and Tauri bridges
+3. **Tauri command**: Use `snake_case` (e.g., `get_field_description`)
+4. **TypeScript function**: Use `camelCase` (e.g., `getFieldDescription`)
+5. **Import convention**: Use `$lib/` for cross-directory, relative paths within feature
 
 ## Adding Features
 
@@ -278,7 +292,7 @@ When adding a new feature:
 **Step 1: Create Rust command**
 
 ```rust
-// src-tauri/src/commands/my_feature.rs
+// src-tauri/src/commands/my_feature/my_command.rs
 #[tauri::command]
 pub async fn my_feature_command(
     param: String,
@@ -292,6 +306,10 @@ pub async fn my_feature_command(
 **Step 2: Export and register**
 
 ```rust
+// src-tauri/src/commands/my_feature/mod.rs
+mod my_command;
+pub use my_command::my_feature_command;
+
 // src-tauri/src/commands/mod.rs
 pub mod my_feature;
 pub use my_feature::my_feature_command;
@@ -303,10 +321,10 @@ pub use my_feature::my_feature_command;
 ])
 ```
 
-**Step 3: Create TypeScript bridge**
+**Step 3: Create TypeScript bridge (co-located with feature)**
 
 ```typescript
-// src/backend/my_feature.ts
+// src/lib/my_feature/my_feature.ts
 import { invoke } from '@tauri-apps/api/core';
 
 export async function myFeatureCommand(param: string): Promise<string> {
@@ -318,7 +336,10 @@ export async function myFeatureCommand(param: string): Promise<string> {
 
 ```svelte
 <script lang="ts">
-  import { myFeatureCommand } from '$backend/my_feature';
+  // relative import within same feature directory
+  import { myFeatureCommand } from './my_feature';
+  // or use $lib for cross-directory imports
+  // import { myFeatureCommand } from '$lib/my_feature/my_feature';
 
   async function handleClick() {
     const result = await myFeatureCommand('test');
@@ -329,11 +350,11 @@ export async function myFeatureCommand(param: string): Promise<string> {
 
 ### Adding a New UI Component
 
-1. Create component file in appropriate directory
+1. Create component file in appropriate feature directory under `src/lib/`
 2. Define props interface using TypeScript
 3. Use Svelte 5 runes for state
 4. Add styles scoped to component
-5. Export from `$lib` if needed elsewhere
+5. Use relative imports within feature, `$lib/` for cross-directory
 
 ### Adding New HL7 Message Types
 

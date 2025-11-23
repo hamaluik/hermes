@@ -38,25 +38,21 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Components (src/lib/)                                       │   │
-│  │  • message_editor.svelte - Raw HL7 text editor               │   │
-│  │  • tabs.svelte - Segment tab navigation                      │   │
-│  │  • forms/segment_tab.svelte - Form-based segment editing     │   │
-│  │  • *_modal.svelte - Modals for send/receive/settings         │   │
-│  │  • cursor_description.svelte - Field info display            │   │
-│  │  • toolbar*.svelte - Toolbar buttons and controls            │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Backend Bridges (src/backend/)                              │   │
-│  │  TypeScript modules that wrap Tauri command invocations:     │   │
-│  │  • send_receive.ts - MLLP send operations                    │   │
-│  │  • listen.ts - MLLP receive operations                       │   │
-│  │  • data.ts - Message parsing/rendering                       │   │
-│  │  • schema.ts - Schema queries                                │   │
-│  │  • cursor.ts - Cursor position tracking                      │   │
-│  │  • description.ts - Field descriptions                       │   │
-│  │  • syntax_highlight.ts - Message highlighting                │   │
+│  │  Feature Modules (src/lib/)                                   │   │
+│  │  Each feature folder contains components and Tauri bridges:   │   │
+│  │  • communication/ - Drawer, send/listen tabs, presets         │   │
+│  │  • editor/ - Message editor, cursor tracking, history         │   │
+│  │  • diff/ - Message comparison                                 │   │
+│  │  • find_replace/ - Search functionality                       │   │
+│  │  • validation/ - Validation panel and logic                   │   │
+│  │  • forms/ - Form inputs (input_field, toggle_switch)          │   │
+│  │  • modals/ - Standalone modals (jump_to_field, timestamp)     │   │
+│  │  • settings/ - Settings modal, theme toggle                   │   │
+│  │  • tabs/ - Segment tab navigation                             │   │
+│  │  • toolbar/ - Toolbar buttons and controls                    │   │
+│  │  • components/ - Generic UI primitives (modal, modal_header)  │   │
+│  │  • icons/ - SVG icon components                               │   │
+│  │  • shared/ - Cross-feature utilities (schema.ts, data.ts)     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -95,15 +91,17 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Commands (src-tauri/src/commands/)                          │   │
-│  │  Tauri-exposed functions:                                    │   │
-│  │  • syntax_highlight.rs - Colorize HL7 messages               │   │
-│  │  • locate_cursor.rs - Find cursor in HL7 structure           │   │
-│  │  • field_description.rs - Get field metadata                 │   │
-│  │  • schema.rs - Query message/segment schemas                 │   │
-│  │  • data.rs - Parse/render HL7 messages                       │   │
-│  │  • send_receive.rs - MLLP client (send messages)             │   │
-│  │  • listen.rs - MLLP server (receive messages)                │   │
-│  │  • menu.rs - Dynamic menu state (enable/disable Save)        │   │
+│  │  Tauri-exposed functions organised by feature:               │   │
+│  │  • communication/ - send.rs, listen.rs (MLLP operations)     │   │
+│  │  • editor/ - cursor.rs, data.rs, syntax_highlight.rs         │   │
+│  │  • validation/ - validate.rs, diff.rs                        │   │
+│  │  • support/ - field_description.rs, schema.rs                │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Menu (src-tauri/src/menu/)                                  │   │
+│  │  • mod.rs - Menu building and event routing                  │   │
+│  │  • state.rs - Dynamic menu state (enable/disable items)      │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -115,8 +113,7 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Spec Module (src-tauri/src/spec/)                           │   │
-│  │  • std_spec.rs - Standard HL7 field descriptions             │   │
-│  │  •  - HL7 system-specific extensions                         │   │
+│  │  • std_spec.rs - Standard HL7 v2.5.1 field descriptions      │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -142,15 +139,22 @@ The frontend is built using Svelte 5 with SvelteKit, leveraging modern reactive 
 │   ├── ToolbarButton (New, Open, Save, etc.)
 │   ├── ToolbarSeparator
 │   └── ToolbarSpacer
+├── FindReplaceBar (Search/Replace)
 ├── Tabs (Segment Navigation)
 │   └── Tab (foreach segment)
 ├── SegmentTab (Active Segment Form)
 │   └── InputField (foreach field)
 ├── MessageEditor (Raw HL7 Text)
 │   └── Copy to Clipboard Button
+├── ValidationPanel (Validation results)
 ├── CursorDescription (Field Info Panel)
-├── MessageSendModal
-├── ListenModal
+├── CommunicationDrawer
+│   ├── SendTab (MLLP client)
+│   └── ListenTab (MLLP server)
+├── ConnectionPresetsModal (Preset management)
+├── DiffModal (Message comparison)
+├── JumpToFieldModal
+├── InsertTimestampModal
 └── SettingsModal
 ```
 
@@ -177,10 +181,10 @@ Hermes uses Svelte's built-in reactivity system (runes in Svelte 5) for state ma
 
 ### TypeScript Bridges
 
-Backend bridge modules in `src/backend/` provide type-safe wrappers around Tauri commands:
+TypeScript bridges for Tauri commands are co-located with their components in feature directories under `src/lib/`. This keeps related code together:
 
 ```typescript
-// Example: src/backend/send_receive.ts
+// Example: src/lib/communication/send_receive.ts
 import { invoke } from '@tauri-apps/api/core';
 
 export async function sendMessage(
@@ -195,7 +199,7 @@ export async function sendMessage(
 
 Key benefits:
 - Type safety for command parameters and return values
-- Centralized error handling
+- Feature cohesion: UI and backend bridges in same directory
 - Easier testing and mocking
 - Documentation via TypeScript types
 
@@ -671,9 +675,10 @@ export async function setSetting(key: string, value: any): Promise<void> {
 
 ### Adding a New Tauri Command
 
-1. **Define command function** in appropriate module under `src-tauri/src/commands/`:
+1. **Define command function** in the appropriate feature directory under `src-tauri/src/commands/`:
 
 ```rust
+// src-tauri/src/commands/my_feature/my_command.rs
 #[tauri::command]
 pub async fn my_new_command(
     param: String,
@@ -684,12 +689,16 @@ pub async fn my_new_command(
 }
 ```
 
-2. **Export from module**:
+2. **Export from feature module**:
 
 ```rust
+// In commands/my_feature/mod.rs
+mod my_command;
+pub use my_command::my_new_command;
+
 // In commands/mod.rs
-pub mod my_module;
-pub use my_module::my_new_command;
+pub mod my_feature;
+pub use my_feature::my_new_command;
 ```
 
 3. **Register in lib.rs**:
@@ -701,10 +710,10 @@ pub use my_module::my_new_command;
 ])
 ```
 
-4. **Create TypeScript bridge** in `src/backend/`:
+4. **Create TypeScript bridge** co-located with the feature in `src/lib/`:
 
 ```typescript
-// src/backend/my_module.ts
+// src/lib/my_feature/my_command.ts
 import { invoke } from '@tauri-apps/api/core';
 
 export async function myNewCommand(param: string): Promise<ReturnType> {
@@ -716,7 +725,9 @@ export async function myNewCommand(param: string): Promise<ReturnType> {
 
 ```svelte
 <script lang="ts">
-  import { myNewCommand } from '$backend/my_module';
+  import { myNewCommand } from './my_command';
+  // Or use $lib for cross-directory imports:
+  // import { myNewCommand } from '$lib/my_feature/my_command';
 
   async function handleClick() {
     const result = await myNewCommand('value');

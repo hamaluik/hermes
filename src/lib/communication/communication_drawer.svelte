@@ -43,7 +43,7 @@
     listenedMessages,
     expanded = $bindable(true),
     activeTab = $bindable<Tab>("send"),
-    height = 300,
+    height = 320,
     onLoadToEditor,
   }: {
     settings: Settings;

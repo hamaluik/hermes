@@ -6,12 +6,10 @@
 
   Layout:
   ┌─────────────────────┬───────────────────────────────┐
-  │ Host: [127.0.0.1]   │ Response                      │
-  │ Port: [2575    ]    │ ─────────────────────────────  │
-  │ Timeout: [5] sec    │ MSH|^~\&|ACK|...              │
-  │                     │                               │
-  │ [Send Message]      │                               │
-  │                     │                               │
+  │ [Preset ▼] [⚙]     │ Response                      │
+  │ Host: [127.0.0.1]   │ ─────────────────────────────  │
+  │ Port: [2575    ]    │ MSH|^~\&|ACK|...              │
+  │ Timeout: [5] [Send] │                               │
   │ ● Status...         │                               │
   └─────────────────────┴───────────────────────────────┘
 
@@ -26,8 +24,11 @@
   import IconSend from "$lib/icons/IconSend.svelte";
   import IconSpinner from "$lib/icons/IconSpinner.svelte";
   import IconSendError from "$lib/icons/IconSendError.svelte";
+  import IconSettings from "$lib/icons/IconSettings.svelte";
   import { sendMessage, type SendRequest } from "./send_receive";
   import MessageEditor from "$lib/editor/message_editor.svelte";
+  import type { ConnectionPreset } from "./connection_preset";
+  import ConnectionPresetsModal from "./connection_presets_modal.svelte";
 
   type SendState = "idle" | "sending" | "error";
 
@@ -44,6 +45,15 @@
   let port: number = $state(settings.sendPort);
   let timeout: number = $state(settings.sendWaitTimeoutSeconds);
 
+  // Connection presets
+  let presets: ConnectionPreset[] = $state(settings.connectionPresets);
+  let showPresetsModal: boolean = $state(false);
+
+  // Find matching preset for current host/port, or null for custom
+  const selectedPresetId = $derived(
+    presets.find((p) => p.hostname === hostname && p.port === port)?.id ?? null,
+  );
+
   // Register callback to sync state after settings load from disk
   onMount(() => {
     settings.onSendSettingsChanged = (h, p, t) => {
@@ -51,11 +61,32 @@
       port = p;
       timeout = t;
     };
+    settings.onConnectionPresetsChanged = (p) => {
+      presets = p;
+    };
   });
 
   onDestroy(() => {
     settings.onSendSettingsChanged = null;
+    settings.onConnectionPresetsChanged = null;
   });
+
+  function handlePresetChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const presetId = select.value;
+    if (presetId) {
+      const preset = presets.find((p) => p.id === presetId);
+      if (preset) {
+        hostname = preset.hostname;
+        port = preset.port;
+      }
+    }
+  }
+
+  function handlePresetsSave(newPresets: ConnectionPreset[]) {
+    settings.connectionPresets = newPresets;
+    presets = newPresets;
+  }
 
   // State machine
   let sendState: SendState = $state("idle" as SendState);
@@ -144,8 +175,37 @@
   );
 </script>
 
+<ConnectionPresetsModal
+  bind:show={showPresetsModal}
+  {presets}
+  onSave={handlePresetsSave}
+/>
+
 <div class="send-tab">
   <div class="controls">
+    <div class="form-row preset-row">
+      <label for="send-preset">Preset</label>
+      <div class="preset-select-row">
+        <select
+          id="send-preset"
+          value={selectedPresetId ?? ""}
+          onchange={handlePresetChange}
+        >
+          <option value="">Custom</option>
+          {#each presets as preset (preset.id)}
+            <option value={preset.id}>{preset.name}</option>
+          {/each}
+        </select>
+        <button
+          class="manage-button"
+          onclick={() => (showPresetsModal = true)}
+          title="Manage presets"
+        >
+          <IconSettings />
+        </button>
+      </div>
+    </div>
+
     <div class="form-row">
       <label for="send-hostname">Host</label>
       <input
@@ -180,32 +240,32 @@
 
     <div class="form-row">
       <label for="send-timeout">Timeout</label>
-      <div class="input-with-suffix">
-        <input
-          type="number"
-          id="send-timeout"
-          bind:value={timeout}
-          min="1"
-          max="300"
-          placeholder="5"
-        />
-        <span class="suffix">sec</span>
+      <div class="timeout-send-row">
+        <div class="input-with-suffix">
+          <input
+            type="number"
+            id="send-timeout"
+            bind:value={timeout}
+            min="1"
+            max="300"
+            placeholder="5"
+          />
+          <span class="suffix">sec</span>
+        </div>
+        <button
+          class="send-button"
+          onclick={handleSend}
+          disabled={!canSend}
+        >
+          {#if sendState === "sending"}
+            <IconSpinner />
+          {:else}
+            <IconSend />
+            Send
+          {/if}
+        </button>
       </div>
     </div>
-
-    <button
-      class="send-button"
-      onclick={handleSend}
-      disabled={!canSend}
-    >
-      {#if sendState === "sending"}
-        <IconSpinner />
-        Sending...
-      {:else}
-        <IconSend />
-        Send
-      {/if}
-    </button>
 
     {#if statusText || error}
       <div class="status" class:error={sendState === "error"}>
@@ -304,6 +364,61 @@
         margin: 0;
       }
     }
+
+    select {
+      width: 100%;
+      padding: 0.375rem 0.5rem;
+      font-size: 0.875rem;
+      background: var(--col-surface);
+      border: 1px solid var(--col-highlightMed);
+      border-radius: 4px;
+      color: var(--col-text);
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: var(--col-iris);
+      }
+    }
+  }
+
+  .preset-row {
+    .preset-select-row {
+      display: flex;
+      gap: 0.25rem;
+
+      select {
+        flex: 1;
+      }
+    }
+  }
+
+  .manage-button {
+    padding: 0.375rem;
+    background: var(--col-surface);
+    border: 1px solid var(--col-highlightMed);
+    border-radius: 4px;
+    color: var(--col-subtle);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: var(--col-text);
+      border-color: var(--col-iris);
+    }
+
+    :global(svg) {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .timeout-send-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .input-with-suffix {
@@ -312,7 +427,7 @@
     gap: 0.5ch;
 
     input {
-      flex: 1;
+      width: 3.5rem;
     }
 
     .suffix {
@@ -322,8 +437,8 @@
   }
 
   .send-button {
-    margin-top: 0.5rem;
-    padding: 0.5rem 1rem;
+    flex: 1;
+    padding: 0.375rem 0.5rem;
     background: var(--col-pine);
     color: var(--col-base);
     border: none;
