@@ -8,7 +8,7 @@
 
   On mount, the tab:
   1. Retrieves the "tabs" context (writable store from parent)
-  2. Adds its own metadata (id, label, wizard callback) to the store
+  2. Adds its own metadata (id, label) to the store
   3. If no tab is currently active, activates itself (first tab wins)
 
   This allows tabs to be declared in markup without manually managing a tab list
@@ -37,12 +37,10 @@
   let {
     id,
     label,
-    onWizard,
     children,
   }: {
     id: string;
     label: string;
-    onWizard?: () => void;
     children: Snippet;
   } = $props();
 
@@ -55,10 +53,8 @@
    * on unmount. Auto-activates if this is the first tab.
    */
   onMount(() => {
-    const items: Writable<
-      { id: string; label: string; onWizard?: () => void }[]
-    > = getContext("tabs");
-    items.set([...get(items), { id, label, onWizard }]);
+    const items: Writable<{ id: string; label: string }[]> = getContext("tabs");
+    items.set([...get(items), { id, label }]);
 
     if (get(activeId) === null) {
       activeId.set(id);

@@ -91,9 +91,8 @@ pub enum SendResponse {
 /// * **MSH.10 (Message Control ID)**: If value is "{auto}" or "{random}", replaced with
 ///   a 20-character random alphanumeric string
 ///
-/// These placeholders are set by the interface wizard when `overridesegment=true`,
-/// allowing users to compose message templates without worrying about generating
-/// unique control IDs or current timestamps.
+/// These placeholders allow users to compose message templates without worrying
+/// about generating unique control IDs or current timestamps.
 ///
 /// # Event Flow
 /// 1. Validate and resolve the target address

@@ -404,14 +404,6 @@
           </ul>
         </li>
         <li>
-          <a href="#wizards">Wizards</a>
-          <ul>
-            <li><a href="#header-wizard">Header Wizard</a></li>
-            <li><a href="#patient-wizard">Patient Wizard</a></li>
-            <li><a href="#visit-wizard">Visit Wizard</a></li>
-          </ul>
-        </li>
-        <li>
           <a href="#tools">Tools</a>
           <ul>
             <li><a href="#find-replace">Find &amp; Replace</a></li>
@@ -521,11 +513,6 @@
           <li>
             <strong>Create a new message</strong>: Click <strong>New</strong> or
             press <kbd>Cmd</kbd>+<kbd>N</kbd> to start with a blank MSH segment.
-          </li>
-          <li>
-            <strong>Select a message type</strong>: Use the
-            <strong>Header Wizard</strong> button on the MSH tab to choose your
-            message type and populate header fields.
           </li>
           <li>
             <strong>Add segments</strong>: Click the <strong>+</strong> button
@@ -1061,115 +1048,6 @@
           results). When you have repeated segments, tabs are numbered: "OBX
           (1)", "OBX (2)", etc.
         </p>
-      </section>
-
-      <!-- Wizards -->
-      <section id="wizards">
-        <h2>Wizards</h2>
-        <p>
-          Wizards help you populate message fields with real data from the
-          HL7 system database. They appear as buttons on certain segment tabs
-          (MSH, PID, PV1) when a database connection is configured.
-        </p>
-
-        <h3 id="header-wizard">Header Wizard (MSH)</h3>
-        <p>
-          The Header Wizard helps you configure the message header with proper
-          interface settings and message type information.
-        </p>
-        <ol>
-          <li>
-            Click the <strong>Header Wizard</strong> button on the MSH tab
-          </li>
-          <li>
-            Select an <strong>interface</strong> from the dropdown (populated
-            from HL7 system configuration)
-          </li>
-          <li>Choose the <strong>message type</strong> (ADT, ORM, etc.)</li>
-          <li>
-            Select the <strong>trigger event</strong> (A01, A02, O01, etc.)
-          </li>
-          <li>Click <strong>Apply</strong> to populate the MSH fields</li>
-        </ol>
-
-        <h4>Override Mode</h4>
-        <p>
-          By default, the wizard merges new data with existing fields (empty
-          fields are filled, existing data is preserved). Enable
-          <strong>Override</strong> to replace all fields with wizard data, even
-          if they already have values.
-        </p>
-
-        <h3 id="patient-wizard">Patient Wizard (PID)</h3>
-        <p>
-          The Patient Wizard searches the database for patient records and
-          populates demographic fields.
-        </p>
-        <ol>
-          <li>
-            Click the <strong>Patient Wizard</strong> button on the PID tab
-          </li>
-          <li>
-            Enter a <strong>search term</strong> (patient name, MRN, or ID)
-          </li>
-          <li>Select a patient from the results table</li>
-          <li>Click <strong>Apply</strong> to populate PID fields</li>
-        </ol>
-
-        <p>The wizard populates these fields:</p>
-        <ul>
-          <li>PID-3: Patient Identifier List (MRN)</li>
-          <li>PID-5: Patient Name</li>
-          <li>PID-7: Date of Birth</li>
-          <li>PID-8: Sex</li>
-        </ul>
-
-        <h3 id="visit-wizard">Visit Wizard (PV1)</h3>
-        <p>
-          The Visit Wizard finds visit/encounter records for the patient
-          currently in your message.
-        </p>
-        <ol>
-          <li>
-            Ensure your message has patient information in the PID segment
-          </li>
-          <li>Click the <strong>Visit Wizard</strong> button on the PV1 tab</li>
-          <li>
-            The wizard automatically searches for visits for the current patient
-          </li>
-          <li>Select a visit from the results</li>
-          <li>Click <strong>Apply</strong> to populate PV1 fields</li>
-        </ol>
-
-        <p>The wizard populates these fields:</p>
-        <ul>
-          <li>PV1-2: Patient Class (Inpatient/Outpatient/Emergency)</li>
-          <li>PV1-3: Assigned Patient Location</li>
-          <li>PV1-19: Visit Number</li>
-          <li>PV1-44: Admit Date/Time</li>
-          <li>PV1-45: Discharge Date/Time</li>
-        </ul>
-
-        <h3>Database Connection</h3>
-        <p>
-          Wizards require a connection to a HL7 system database. Configure the
-          connection in
-          <strong>Settings</strong>:
-        </p>
-        <ul>
-          <li>
-            <strong>Host</strong>: Database server hostname or IP address.
-          </li>
-          <li><strong>Port</strong>: SQL Server port (default: 1433).</li>
-          <li>
-            <strong>Database</strong>: Database name.
-          </li>
-          <li>
-            <strong>User</strong>: SQL Server username (supports DOMAIN\user
-            format).
-          </li>
-          <li><strong>Password</strong>: Database password.</li>
-        </ul>
       </section>
 
       <!-- Tools -->
@@ -1971,10 +1849,6 @@
             <strong>Form edits</strong>: Each change in the segment tabs creates
             a separate undo entry for precise control.
           </li>
-          <li>
-            <strong>Wizard changes</strong>: Applying a wizard creates a single
-            undo entry, so you can revert all wizard changes at once.
-          </li>
         </ul>
 
         <p>
@@ -2671,23 +2545,6 @@
           <li>
             <strong>Firewall blocking</strong>: Ensure your firewall allows
             connections on the MLLP port (typically 2575).
-          </li>
-        </ul>
-
-        <h3>Wizard Database Errors</h3>
-        <p>If wizards fail to load data:</p>
-        <ul>
-          <li>
-            <strong>Connection failed</strong>: Verify database credentials in
-            Settings.
-          </li>
-          <li>
-            <strong>No results</strong>: The search term may not match any
-            records. Try a broader search.
-          </li>
-          <li>
-            <strong>Timeout</strong>: Large databases may take time to respond.
-            Wait for the query to complete.
           </li>
         </ul>
 

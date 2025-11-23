@@ -4,7 +4,7 @@
  * ## Why This Exists
  *
  * The HL7 message editor needs undo/redo that works across multiple edit sources:
- * raw text typing, form field changes, wizards, and segment additions. A centralised
+ * raw text typing, form field changes, and segment additions. A centralised
  * history manager ensures consistent behaviour regardless of how the message is modified.
  *
  * ## Design Decision: Function vs Effect
@@ -16,7 +16,7 @@
  *    from history, pushing the restored state back onto the stack.
  *
  * 2. **Different edit types need different handling** - Typing should coalesce into
- *    single undo entries, while wizard changes should be discrete. An effect can't
+ *    single undo entries, while form changes should be discrete. An effect can't
  *    distinguish between these.
  *
  * 3. **File operations need to skip history** - Opening a file or creating a new
@@ -35,7 +35,6 @@
  * Discrete entries (coalesce: false) are created for:
  * - Paste operations
  * - Form field changes (segment tabs)
- * - Wizard applications
  * - Adding new segments
  *
  * ## Usage

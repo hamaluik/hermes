@@ -6,7 +6,7 @@ note = "Primary patient identifier within the healthcare facility."
 maxlength = 20
 placeholder = "123456789"
 required = true
-template = "WIZARD42"
+template = "SAMPLE42"
 
 [[fields]]
 field = 2
@@ -150,7 +150,7 @@ group = "Address"
 name = "Address 1"
 maxlength = 28
 placeholder = "123 Main St"
-template = "7 Wizard Lane"
+template = "7 Sample Lane"
 
 [[fields]]
 field = 11

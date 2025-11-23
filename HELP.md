@@ -230,104 +230,6 @@ editor, helping you understand the structure and purpose of each field.
 
 ---
 
-## Wizards
-
-Wizards help you quickly populate segments with data from your database.
-Currently, three wizards are available:
-
-- **Header Wizard** (MSH segment)
-- **Patient Wizard** (PID segment)
-- **Visit Wizard** (PV1 segment)
-
-### Setting Up Database Connection
-
-Before using wizards, configure your database connection:
-
-1. Click the **Settings** button in the toolbar
-2. Under "Database Connection", enter:
-   - **Host**: Your database server address
-   - **Port**: Database port (default: 1433)
-   - **Database**: Database name
-   - **Username**: Your database username
-   - **Password**: Your database password
-3. Close the settings - your configuration is saved automatically
-
-### Using the Header Wizard (MSH)
-
-The Header Wizard helps you populate message routing information from interface
-configurations stored in your database.
-
-1. Navigate to the **MSH tab**
-2. Click the **magic wand icon** (✨) on the tab
-3. The wizard will auto-detect the message type and trigger event from your
-current message
-4. Or, manually select:
-   - **Message Type**: ADT or ORM
-   - **Trigger Event**: Context-specific options (e.g., A01, A04, A08 for ADT)
-5. Click **Search**
-6. Select an interface from the results table showing:
-   - Interface name
-   - Sending Application
-   - Sending Facility
-   - Receiving Application
-   - Receiving Facility
-7. Toggle **Override Segment** if you want to replace all MSH data (otherwise,
-fields are merged)
-8. Click **Apply** to update your message
-
-### Using the Patient Wizard (PID)
-
-The Patient Wizard searches for patients and populates patient demographic
-information.
-
-1. Navigate to the **PID tab**
-2. Click the **magic wand icon** (✨)
-3. Enter at least one search criterion:
-   - **Patient Name**
-   - **Patient ID**
-   - **Patient MRN**
-4. Click **Search**
-5. Select a patient from the results table showing:
-   - Patient ID
-   - MRN
-   - Last Name
-   - First Name
-   - Date of Birth
-   - Sex
-6. Toggle **Override Segment** if you want to replace all PID data
-7. Click **Apply** to update your message
-
-### Using the Visit Wizard (PV1)
-
-The Visit Wizard finds visit/encounter information based on the patient in your
-current message.
-
-1. Navigate to the **PV1 tab**
-2. Click the **magic wand icon** (✨)
-3. The wizard automatically searches for visits matching the patient in your PID
-segment
-4. Select a visit from the results table showing:
-   - Sequence number
-   - Location
-   - Type (Inpatient/Outpatient/Emergency)
-   - Account Number
-   - Admission Date
-   - Discharge Date
-5. Toggle **Override Segment** if you want to replace all PV1 data
-6. Click **Apply** to update your message
-
-### Wizard Tips
-
-- **Override Segment**: When enabled, the wizard replaces all data in the
-  segment. When disabled, it only fills in empty fields and merges data
-  carefully.
-- **Auto-population**: The Header Wizard can detect your message type and
-  trigger event from the current message to streamline the search.
-- **No Results**: If your search returns no results, try adjusting your search
-  criteria or verify your database connection.
-
----
-
 ## File Operations
 
 All file operations are available through both the toolbar buttons and the native
@@ -464,16 +366,6 @@ Access settings by clicking the **Settings** button in the toolbar.
   to the tab for that segment
 - Disable this if you prefer to manually control which tab is active
 
-### Database Connection
-
-Configure the database connection used by the wizards:
-
-- **Host**: Database server address
-- **Port**: Database port number (default: 1433)
-- **Database**: Name of the database
-- **Username**: Your database login
-- **Password**: Your database password
-
 All settings are saved automatically with a short delay after you change them.
 
 ---
@@ -516,15 +408,6 @@ All settings are saved automatically with a short delay after you change them.
 - **Copy and modify**: Start with an existing message that's similar to what you
   need, then modify it
 
-### Working with Wizards
-
-- **Configure once**: Set up your database connection in Settings once, and all
-  wizards will use it
-- **Override wisely**: Use the "Override Segment" toggle carefully - when
-  disabled, wizards preserve your manual edits
-- **Patient-first workflow**: When building ADT messages, use the Patient Wizard
-  first, then the Visit Wizard automatically searches for that patient's visits
-
 ### Understanding Field Structure
 
 - **Watch the cursor panel**: As you navigate the message editor, the cursor
@@ -563,11 +446,6 @@ All settings are saved automatically with a short delay after you change them.
   implementation guide for required fields and formats
 
 ### Troubleshooting
-
-**Wizard shows "No results":**
-- Verify your database connection settings
-- Check that your search criteria matches data in the database
-- Ensure the database is accessible from your network
 
 **Fields not validating correctly:**
 - Check that required fields are filled in

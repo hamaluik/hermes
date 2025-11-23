@@ -2,7 +2,7 @@
 //!
 //! This application provides a Tauri-based GUI for HL7 message manipulation, primarily
 //! targeting development and testing workflows. It supports message editing, syntax
-//! highlighting, field descriptions, database wizards, and MLLP network communication.
+//! highlighting, field descriptions, and MLLP network communication.
 //!
 //! # Module Organisation
 //!
@@ -13,7 +13,6 @@
 //!   - `editor/` - Cursor tracking, data manipulation, syntax highlighting
 //!   - `validation/` - Message validation and comparison
 //!   - `support/` - Field descriptions and schema queries
-//!   - `wizards/` - Database-driven auto-fill
 //! - [`menu`] - Native menu building and state management
 //! - [`schema`] - HL7 schema caching from TOML files
 //! - [`spec`] - HL7 standard field descriptions
@@ -140,12 +139,6 @@ pub fn run() {
             menu::update_recent_files_menu,
             menu::set_insert_timestamp_enabled,
             menu::open_help_window,
-            commands::wizards::wizard_apply_interface,
-            commands::wizards::wizard_query_interfaces,
-            commands::wizards::wizard_apply_patient,
-            commands::wizards::wizard_search_patients,
-            commands::wizards::wizard_apply_visit,
-            commands::wizards::wizard_search_visits,
             commands::compare_messages,
             commands::validate_light,
             commands::validate_full,

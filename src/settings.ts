@@ -52,7 +52,6 @@
  * - sendHostname: "127.0.0.1" (localhost testing)
  * - sendPort: 2575 (standard HL7 MLLP port)
  * - listenPort: 2575 (standard HL7 MLLP port for listen server)
- * - wizardDbPort: 1433 (SQL Server default port)
  * - tabsFollowCursor: true (better UX for most users)
  * - autoSaveEnabled: false (explicit opt-in, matches VS Code default)
  * - themeSetting: "auto" (follows system preference, most intuitive default)
@@ -95,13 +94,6 @@ export class Settings {
   private _sendTransformControlId: boolean = true;
   private _sendTransformTimestamp: boolean = true;
   private _sendWaitTimeoutSeconds: number = 5;
-
-  // Wizard database connection settings for the database integration
-  private _wizardDbHost: string = "";
-  private _wizardDbPort: number = 1433;
-  private _wizardDbDatabase: string = "";
-  private _wizardDbUser: string = "";
-  private _wizardDbPassword: string = "";
 
   // Recent files list (most recent first, max 10 entries)
   private _recentFiles: string[] = [];
@@ -159,11 +151,6 @@ export class Settings {
           store.get<boolean>("sendTransformControlId"),
           store.get<boolean>("sendTransformTimestamp"),
           store.get<number>("sendWaitTimeoutSeconds"),
-          store.get<string>("wizardDbHost"),
-          store.get<number>("wizardDbPort"),
-          store.get<string>("wizardDbDatabase"),
-          store.get<string>("wizardDbUser"),
-          store.get<string>("wizardDbPassword"),
           store.get<string[]>("recentFiles"),
           store.get<boolean>("commDrawerVisible"),
           store.get<number>("commDrawerHeight"),
@@ -183,11 +170,6 @@ export class Settings {
           sendTransformControlId,
           sendTransformTimestamp,
           sendWaitTimeoutSeconds,
-          wizardDbHost,
-          wizardDbPort,
-          wizardDbDatabase,
-          wizardDbUser,
-          wizardDbPassword,
           recentFiles,
           commDrawerVisible,
           commDrawerHeight,
@@ -204,11 +186,6 @@ export class Settings {
           this._sendTransformControlId = sendTransformControlId ?? true;
           this._sendTransformTimestamp = sendTransformTimestamp ?? true;
           this._sendWaitTimeoutSeconds = sendWaitTimeoutSeconds ?? 5;
-          this._wizardDbHost = wizardDbHost ?? "";
-          this._wizardDbPort = wizardDbPort ?? 1433;
-          this._wizardDbDatabase = wizardDbDatabase ?? "";
-          this._wizardDbUser = wizardDbUser ?? "";
-          this._wizardDbPassword = wizardDbPassword ?? "";
           this._recentFiles = recentFiles ?? [];
           this._commDrawerVisible = commDrawerVisible ?? false;
           this._commDrawerHeight = commDrawerHeight ?? 300;
@@ -399,80 +376,6 @@ export class Settings {
       this.store.set("sendWaitTimeoutSeconds", value).catch((error) => {
         console.error("Error saving sendWaitTimeoutSeconds setting:", error);
         logError("Failed to save sendWaitTimeoutSeconds setting");
-      });
-    }
-  }
-
-  /**
-   * Database hostname for wizard queries.
-   * Wizards query the database database to populate message fields with real data.
-   */
-  get wizardDbHost(): string {
-    return this._wizardDbHost;
-  }
-  set wizardDbHost(value: string) {
-    console.debug("Setting wizardDbHost to:", value);
-    this._wizardDbHost = value;
-    if (this.store) {
-      this.store.set("wizardDbHost", value).catch((error) => {
-        console.error("Error saving wizardDbHost setting:", error);
-        logError("Failed to save wizardDbHost setting");
-      });
-    }
-  }
-
-  get wizardDbPort(): number {
-    return this._wizardDbPort;
-  }
-  set wizardDbPort(value: number) {
-    console.debug("Setting wizardDbPort to:", value);
-    this._wizardDbPort = value;
-    if (this.store) {
-      this.store.set("wizardDbPort", value).catch((error) => {
-        console.error("Error saving wizardDbPort setting:", error);
-        logError("Failed to save wizardDbPort setting");
-      });
-    }
-  }
-
-  get wizardDbDatabase(): string {
-    return this._wizardDbDatabase;
-  }
-  set wizardDbDatabase(value: string) {
-    console.debug("Setting wizardDbDatabase to:", value);
-    this._wizardDbDatabase = value;
-    if (this.store) {
-      this.store.set("wizardDbDatabase", value).catch((error) => {
-        console.error("Error saving wizardDbDatabase setting:", error);
-        logError("Failed to save wizardDbDatabase setting");
-      });
-    }
-  }
-
-  get wizardDbUser(): string {
-    return this._wizardDbUser;
-  }
-  set wizardDbUser(value: string) {
-    console.debug("Setting wizardDbUser to:", value);
-    this._wizardDbUser = value;
-    if (this.store) {
-      this.store.set("wizardDbUser", value).catch((error) => {
-        console.error("Error saving wizardDbUser setting:", error);
-        logError("Failed to save wizardDbUser setting");
-      });
-    }
-  }
-
-  get wizardDbPassword(): string {
-    return this._wizardDbPassword;
-  }
-  set wizardDbPassword(value: string) {
-    console.debug("Setting wizardDbPassword to:", value);
-    this._wizardDbPassword = value;
-    if (this.store) {
-      this.store.set("wizardDbPassword", value).catch((error) => {
-        console.error("Error saving wizardDbPassword setting:", error);
-        logError("Failed to save wizardDbPassword setting");
       });
     }
   }

@@ -45,7 +45,7 @@
 <script lang="ts">
   import type { Settings } from "../../settings";
   import IconSave from "$lib/icons/IconSave.svelte";
-  import WizardToggle from "$lib/wizards/shared/wizard_toggle.svelte";
+  import ToggleSwitch from "$lib/forms/toggle_switch.svelte";
   import ThemeToggle from "./theme_toggle.svelte";
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
@@ -107,9 +107,9 @@
       <label for="themeSetting">Theme</label>
       <ThemeToggle id="themeSetting" bind:value={themeSetting} />
       <label for="autoSaveEnabled">Auto-Save</label>
-      <WizardToggle id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
+      <ToggleSwitch id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
       <label for="tabsFollowCursor">Tabs Follow Cursor</label>
-      <WizardToggle id="tabsFollowCursor" bind:checked={tabsFollowCursor} />
+      <ToggleSwitch id="tabsFollowCursor" bind:checked={tabsFollowCursor} />
     </form>
   </main>
   <ModalFooter>

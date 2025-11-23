@@ -8,7 +8,7 @@
   ## Context API Usage
 
   We provide two contexts to child components:
-  - "tabs": Writable store of tab metadata (id, label, wizard callback)
+  - "tabs": Writable store of tab metadata (id, label)
   - "activeId": Writable store of currently active tab ID
 
   Child Tab components subscribe to activeId to know when they're active, and push
@@ -45,8 +45,6 @@
 <script lang="ts">
   import { setContext, type Snippet } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
-  import IconWizard from "$lib/icons/IconWizard.svelte";
-
   let {
     setactive = $bindable(),
     addMenu,
@@ -57,8 +55,8 @@
     children: Snippet;
   } = $props();
 
-  const tabs: Writable<{ id: string; label: string; onWizard?: () => void }[]> =
-    writable<{ id: string; label: string; onWizard?: () => void }[]>([]);
+  const tabs: Writable<{ id: string; label: string }[]> =
+    writable<{ id: string; label: string }[]>([]);
   const activeId = writable<string | null>(null);
   let activeTabIsMissing: boolean = $state(false);
 
@@ -112,7 +110,7 @@
 
 <div class="tabs">
   <ul>
-    {#each $tabs as { id, label, onWizard }}
+    {#each $tabs as { id, label }}
       <li class="tab" class:active={id === $activeId}>
         <button
           onclick={() => {
@@ -121,18 +119,6 @@
         >
           {label}
         </button>
-        {#if onWizard && id === $activeId}
-          <button
-            class="wizard"
-            aria-label="Open Wizard"
-            title="Open Wizard"
-            onclick={() => {
-              onWizard?.();
-            }}
-          >
-            <IconWizard />
-          </button>
-        {/if}
       </li>
     {/each}
     {#if addMenu}
@@ -221,22 +207,6 @@
     .tab.active button {
       background-color: var(--col-primary);
       color: var(--col-text);
-    }
-
-    .tab button.wizard {
-      width: 2em;
-      height: 2em;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem;
-      margin: 0 0.5rem 0 -1rem;
-      width: auto;
-    }
-
-    .tab button.wizard:hover {
-      color: var(--col-gold);
-      cursor: pointer;
     }
 
     .add-menu {

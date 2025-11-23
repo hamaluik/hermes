@@ -2,7 +2,7 @@
   Theme Toggle - 3-Way Switch Component
 
   A segmented toggle control for selecting between Light, Auto (system), and Dark themes.
-  Designed to match the visual style of the existing WizardToggle component.
+  Designed to match the visual style of the existing ToggleSwitch component.
 
   ## Why Radio Buttons?
 

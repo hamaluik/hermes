@@ -33,17 +33,11 @@
   manager before applying changes. This enables undo/redo across all edit sources:
   - Raw text typing (coalesced into single undo entries)
   - Form field changes (discrete entries)
-  - Wizard applications (discrete entries)
   - Segment additions (discrete entries)
 
   History is cleared on File > New and File > Open to start fresh. The history manager
   uses Svelte 5 runes for reactive `canUndo`/`canRedo` state that drives toolbar buttons
   and native Edit menu item states.
-
-  ### Wizard Integration
-  Certain segments (MSH, PID, PV1) have wizards that can auto-populate fields from a
-  connected database. Wizards are accessible via buttons in the tab UI and maintain
-  their own modal dialogs for the search/selection workflow.
 
   ### File Management
   Messages can be opened from and saved to .hl7 files. The component tracks whether
@@ -97,9 +91,6 @@
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import HeaderWizard from "$lib/wizards/header/header_wizard.svelte";
-  import PatientWizard from "$lib/wizards/patient/patient_wizard.svelte";
-  import VisitWizard from "$lib/wizards/visit/visit_wizard.svelte";
   import { createHistoryManager } from "$lib/editor/history.svelte";
   import IconUndo from "$lib/icons/IconUndo.svelte";
   import IconRedo from "$lib/icons/IconRedo.svelte";
@@ -126,11 +117,6 @@
   let setActiveTab: ((id: string) => void) | undefined = $state(undefined);
   let showSettings = $state(false);
   let currentFilePath: string | undefined = $state(undefined);
-
-  // Wizard visibility flags - wizards provide database-driven auto-population for specific segments
-  let showHeaderWizard = $state(false);
-  let showPatientWizard = $state(false);
-  let showVisitWizard = $state(false);
 
   // Communication drawer state (initialized from settings)
   let showCommDrawer = $state(data.settings.commDrawerVisible);
@@ -1152,37 +1138,11 @@
           {/each}
         </ul>
       {/snippet}
-      <!--
-        Wizard Integration
-
-        Tabs for MSH, PID, and PV1 segments have wizard buttons that open modal dialogs.
-        These wizards query a connected the database database to auto-populate segment
-        fields with real patient/visit/interface data, saving users from manual data entry.
-
-        The onWizard callback is conditionally defined based on segment type:
-        - MSH: Header wizard (interface selection, trigger event, etc.)
-        - PID: Patient wizard (patient search and selection)
-        - PV1: Visit wizard (visit search and selection)
-        - Others: undefined (no wizard button shown)
-      -->
       {#each messageSegments as key, index}
         {#if schemas[key]}
           <Tab
             id={key}
             label={tabLabel(index)}
-            onWizard={key === "MSH"
-              ? () => {
-                  showHeaderWizard = true;
-                }
-              : key === "PID"
-                ? () => {
-                    showPatientWizard = true;
-                  }
-                : key === "PV1"
-                  ? () => {
-                      showVisitWizard = true;
-                    }
-                  : undefined}
           >
             <SegmentTab
               segment={key}
@@ -1308,30 +1268,6 @@
 />
 </div>
 <SettingsModal settings={data.settings} bind:show={showSettings} />
-<HeaderWizard
-  bind:show={showHeaderWizard}
-  {message}
-  onchange={(m: string) => {
-    updateMessage(m);
-  }}
-  settings={data.settings}
-/>
-<PatientWizard
-  bind:show={showPatientWizard}
-  {message}
-  onchange={(m: string) => {
-    updateMessage(m);
-  }}
-  settings={data.settings}
-/>
-<VisitWizard
-  bind:show={showVisitWizard}
-  {message}
-  onchange={(m: string) => {
-    updateMessage(m);
-  }}
-  settings={data.settings}
-/>
 <JumpToFieldModal
   bind:show={showJumpToField}
   {message}

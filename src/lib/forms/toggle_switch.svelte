@@ -11,108 +11,77 @@
 
   Visual states:
   - Unchecked: Grey background, circle on left
-  - Checked: Pine (green) background, circle slides right
-  - Disabled: Muted colours, cursor changes to not-allowed
-  - Focused: Blue outline for keyboard navigation
+  - Checked: Iris (purple) background, circle slides right
+  - Focused: Iris outline for keyboard navigation
+  - Hover: Slightly lighter background
 -->
 <script lang="ts">
   let {
     checked = $bindable(false),
     id,
-    onchange,
-    disabled,
-    onfocus,
-    onblur,
   }: {
     checked: boolean;
     id: string;
-    onchange?: (checked: boolean) => void;
-    disabled?: boolean;
-    onfocus?: (event: Event) => void;
-    onblur?: (event: Event) => void;
   } = $props();
-
-  const toggle = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    checked = input.checked;
-    onchange?.(checked);
-  };
 </script>
 
 <label class="toggle-switch">
-  <input
-    type="checkbox"
-    {id}
-    {checked}
-    onchange={toggle}
-    {disabled}
-    {onfocus}
-    {onblur}
-  />
-  <span class="slider"></span>
+  <input type="checkbox" {id} bind:checked />
+  <span class="toggle-slider"></span>
 </label>
 
 <style>
   .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 2.125rem;
-    height: 1.25rem;
-  }
+    width: 3em;
+    height: 1.75em;
 
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
+    input[type="checkbox"] {
+      opacity: 0;
+      width: 0;
+      height: 0;
 
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--col-subtle);
-    transition: 0.4s;
-    border-radius: 1.25rem;
-  }
+      &:checked + .toggle-slider {
+        background-color: var(--col-iris);
+      }
 
-  input:focus + .slider {
-    outline: 2px solid var(--col-iris);
-  }
+      &:checked + .toggle-slider::before {
+        transform: translateX(1.25em);
+      }
 
-  input:checked + .slider {
-    background-color: var(--col-pine);
-  }
+      &:focus + .toggle-slider {
+        box-shadow: 0 0 0 2px var(--col-iris);
+      }
+    }
 
-  input:disabled + .slider {
-    background-color: var(--col-subtle);
-    cursor: not-allowed;
-  }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--col-highlightMed);
+      transition: 0.2s;
+      border-radius: 1.75em;
+      border: 1px solid var(--col-highlightHigh);
 
-  /* the circle inside the slider */
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 0.875rem;
-    width: 0.875rem;
-    left: 0.1875rem;
-    bottom: 0.1875rem;
-    background-color: var(--col-text);
-    transition: 0.4s;
-    border-radius: 50%;
-  }
+      &::before {
+        position: absolute;
+        content: "";
+        height: 1.25em;
+        width: 1.25em;
+        left: 0.25em;
+        bottom: 0.125em;
+        background-color: var(--col-base);
+        transition: 0.2s;
+        border-radius: 50%;
+      }
 
-  input:checked + .slider:before {
-    background-color: var(--col-foam);
-  }
-
-  input:disabled + .slider:before {
-    background-color: var(--col-muted);
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(0.875rem);
+      &:hover {
+        background-color: var(--col-highlightHigh);
+      }
+    }
   }
 </style>

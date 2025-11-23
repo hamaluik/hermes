@@ -236,8 +236,7 @@ src/
 ├── lib/                 # Components
 │   ├── components/      # Generic UI components
 │   ├── forms/          # Form-specific components
-│   ├── icons/          # SVG icon components
-│   └── wizards/        # Wizard modal components
+│   └── icons/          # SVG icon components
 ├── backend/            # Tauri command wrappers
 └── settings.ts         # Settings management
 ```
@@ -247,7 +246,6 @@ src/
 src-tauri/src/
 ├── lib.rs              # Entry point
 ├── commands/           # Tauri commands (one file per feature)
-│   └── wizards/        # Database wizard commands
 ├── schema/             # Schema caching system
 └── spec/               # HL7 specifications
 ```
@@ -327,149 +325,6 @@ export async function myFeatureCommand(param: string): Promise<string> {
     console.log(result);
   }
 </script>
-```
-
-### Adding a New Wizard
-
-Wizards follow a specific pattern for database integration.
-
-**Backend (Rust):**
-
-```rust
-// src-tauri/src/commands/wizards/my_wizard.rs
-
-#[derive(Serialize, Deserialize)]
-pub struct MyWizardResult {
-    pub id: String,
-    pub name: String,
-    // ... other fields
-}
-
-#[tauri::command]
-pub async fn search_my_wizard(
-    search_param: String,
-    db_host: String,
-    db_port: u16,
-    db_name: String,
-    db_user: String,
-    db_pass: String,
-) -> Result<Vec<MyWizardResult>, String> {
-    // Connect to database
-    let mut client = connect_to_db(db_host, db_port, db_name, db_user, db_pass).await?;
-
-    // Execute query
-    let query = "SELECT id, name FROM table WHERE param = @p1";
-    let rows = client.query(query, &[&search_param]).await
-        .map_err(|e| format!("Query error: {}", e))?
-        .into_first_result().await
-        .map_err(|e| format!("Result error: {}", e))?;
-
-    // Map to results
-    let results = rows.into_iter()
-        .map(|row| MyWizardResult {
-            id: row.get("id").unwrap(),
-            name: row.get("name").unwrap(),
-        })
-        .collect();
-
-    Ok(results)
-}
-
-#[tauri::command]
-pub fn apply_my_wizard(
-    message: String,
-    result: MyWizardResult,
-    override_segment: bool,
-) -> Result<String, String> {
-    // Parse message
-    let mut msg = hl7_parser::parse(&message)
-        .map_err(|e| format!("Parse error: {}", e))?;
-
-    // Find or create segment
-    let segment = find_or_create_segment(&mut msg, "SEG");
-
-    // Populate fields
-    set_field(segment, "SEG.1", &result.id);
-    set_field(segment, "SEG.2", &result.name);
-
-    // Serialize back
-    Ok(msg.to_string())
-}
-```
-
-**Frontend (Svelte):**
-
-```svelte
-<!-- src/lib/wizards/my_wizard.svelte -->
-<script lang="ts">
-  import { searchMyWizard, applyMyWizard } from '$backend/wizards/my_wizard';
-  import Modal from '$lib/components/modal.svelte';
-  import ModalHeader from '$lib/components/modal_header.svelte';
-  import ModalFooter from '$lib/components/modal_footer.svelte';
-
-  interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    message: string;
-    onApply: (newMessage: string) => void;
-  }
-
-  let { isOpen, onClose, message, onApply }: Props = $props();
-
-  let searchParam = $state('');
-  let results = $state<MyWizardResult[]>([]);
-  let selectedResult = $state<MyWizardResult | null>(null);
-  let overrideSegment = $state(false);
-
-  async function handleSearch() {
-    // Get DB settings
-    const dbConfig = await getDatabaseSettings();
-
-    // Search
-    results = await searchMyWizard(
-      searchParam,
-      dbConfig.host,
-      dbConfig.port,
-      dbConfig.database,
-      dbConfig.username,
-      dbConfig.password
-    );
-  }
-
-  async function handleApply() {
-    if (!selectedResult) return;
-
-    const newMessage = await applyMyWizard(
-      message,
-      selectedResult,
-      overrideSegment
-    );
-
-    onApply(newMessage);
-    onClose();
-  }
-</script>
-
-<Modal {isOpen} {onClose}>
-  <ModalHeader title="My Wizard" {onClose} />
-
-  <div class="search-form">
-    <input bind:value={searchParam} placeholder="Search..." />
-    <button onclick={handleSearch}>Search</button>
-  </div>
-
-  <table>
-    <!-- Results table -->
-  </table>
-
-  <ModalFooter>
-    <label>
-      <input type="checkbox" bind:checked={overrideSegment} />
-      Override Segment
-    </label>
-    <button onclick={handleApply}>Apply</button>
-  </ModalFooter>
-</Modal>
 ```
 
 ### Adding a New UI Component
@@ -621,13 +476,6 @@ Fix reported errors before committing.
 - Check logs for parse errors
 - Ensure file is in correct location
 
-### Database Connection Failing
-
-- Verify SQL Server is accessible
-- Check firewall settings
-- Ensure credentials are correct
-- Review error messages in logs
-
 ## Best Practices
 
 ### Code Quality
@@ -648,9 +496,7 @@ Fix reported errors before committing.
 ### Security
 
 1. **Sanitize Inputs**: Validate all user inputs
-2. **SQL Injection**: Use parameterized queries (already done via tiberius)
-3. **Secrets**: Never commit database passwords or API keys
-4. **Network**: Validate host/port before connecting
+2. **Network**: Validate host/port before connecting
 
 ### Maintainability
 
@@ -662,7 +508,7 @@ Fix reported errors before committing.
 ### Git Workflow
 
 1. **Commit Messages**: Use clear, descriptive messages
-   - Good: `feat: add patient wizard for PID segment population`
+   - Good: `feat: add MLLP listen server for receiving messages`
    - Bad: `update stuff`
 
 2. **Commit Frequency**: Commit logical units of work

@@ -60,7 +60,7 @@
   let error: string | null = $state(null);
 
   /**
-   * Port validation matching database wizard inputs.
+   * Port validation.
    * Port: Standard TCP port range (1-65535)
    */
   const isPortValid = $derived(port >= 1 && port <= 65535);

@@ -42,7 +42,6 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  │  • message_editor.svelte - Raw HL7 text editor               │   │
 │  │  • tabs.svelte - Segment tab navigation                      │   │
 │  │  • forms/segment_tab.svelte - Form-based segment editing     │   │
-│  │  • wizards/*.svelte - Database wizard UIs                    │   │
 │  │  • *_modal.svelte - Modals for send/receive/settings         │   │
 │  │  • cursor_description.svelte - Field info display            │   │
 │  │  • toolbar*.svelte - Toolbar buttons and controls            │   │
@@ -58,7 +57,6 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  │  • cursor.ts - Cursor position tracking                      │   │
 │  │  • description.ts - Field descriptions                       │   │
 │  │  • syntax_highlight.ts - Message highlighting                │   │
-│  │  • wizards/*.ts - Wizard backend calls                       │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -106,7 +104,6 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  │  • send_receive.rs - MLLP client (send messages)             │   │
 │  │  • listen.rs - MLLP server (receive messages)                │   │
 │  │  • menu.rs - Dynamic menu state (enable/disable Save)        │   │
-│  │  • wizards/ - Database query commands                        │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -128,7 +125,6 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  │  • hl7-definitions - Field definitions and metadata          │   │
 │  │  • hl7-mllp-codec - MLLP protocol codec                      │   │
 │  │  • tokio - Async runtime for networking                      │   │
-│  │  • tiberius - SQL Server database client                     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -149,15 +145,13 @@ The frontend is built using Svelte 5 with SvelteKit, leveraging modern reactive 
 ├── Tabs (Segment Navigation)
 │   └── Tab (foreach segment)
 ├── SegmentTab (Active Segment Form)
-│   ├── InputField (foreach field)
-│   └── WizardButton (for MSH, PID, PV1)
+│   └── InputField (foreach field)
 ├── MessageEditor (Raw HL7 Text)
 │   └── Copy to Clipboard Button
 ├── CursorDescription (Field Info Panel)
 ├── MessageSendModal
 ├── ListenModal
 └── SettingsModal
-    └── DatabaseConnectionForm
 ```
 
 ### State Management
@@ -630,99 +624,6 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, window: Window) 
 }
 ```
 
-## Database Integration
-
-### Database Connection
-
-Wizards connect to SQL Server using the `tiberius` crate:
-
-```rust
-use tiberius::{Client, Config, AuthMethod};
-
-async fn connect_to_database(
-    host: &str,
-    port: u16,
-    database: &str,
-    username: &str,
-    password: &str,
-) -> Result<Client<Compat<TcpStream>>, Error> {
-    let mut config = Config::new();
-    config.host(host);
-    config.port(port);
-    config.database(database);
-    config.authentication(AuthMethod::sql_server(username, password));
-
-    let tcp = TcpStream::connect(config.get_addr()).await?;
-    let client = Client::connect(config, tcp.compat()).await?;
-
-    Ok(client)
-}
-```
-
-### Wizard Queries
-
-Each wizard executes SQL queries to fetch data:
-
-```rust
-// Example: Patient Wizard
-pub async fn search_patients(
-    name: Option<String>,
-    id: Option<String>,
-    mrn: Option<String>,
-    db_config: DatabaseConfig,
-) -> Result<Vec<Patient>, String> {
-    let mut client = connect(&db_config).await?;
-
-    let query = r#"
-        SELECT PatientID, MRN, LastName, FirstName, DateOfBirth, Sex
-        FROM Patients
-        WHERE (@name IS NULL OR LastName LIKE @name)
-          AND (@id IS NULL OR PatientID = @id)
-          AND (@mrn IS NULL OR MRN = @mrn)
-    "#;
-
-    let rows = client
-        .query(query, &[&name, &id, &mrn])
-        .await?
-        .into_first_result()
-        .await?;
-
-    // Map rows to Patient structs
-    let patients = rows.into_iter()
-        .map(|row| Patient {
-            id: row.get("PatientID"),
-            mrn: row.get("MRN"),
-            // ...
-        })
-        .collect();
-
-    Ok(patients)
-}
-```
-
-### Data Population
-
-After user selects a result, the wizard populates the HL7 segment:
-
-```rust
-pub fn populate_segment(
-    segment: &mut Segment,
-    patient: &Patient,
-    override_segment: bool,
-) {
-    if override_segment {
-        // Replace all fields
-        segment.fields.clear();
-    }
-
-    // Set specific fields
-    set_field(segment, "PID.3", &patient.mrn);
-    set_field(segment, "PID.5.1", &patient.last_name);
-    set_field(segment, "PID.5.2", &patient.first_name);
-    // ...
-}
-```
-
 ## State Management
 
 ### Backend State (AppData)
@@ -823,23 +724,6 @@ export async function myNewCommand(param: string): Promise<ReturnType> {
   }
 </script>
 ```
-
-### Adding a New Wizard
-
-1. **Backend**:
-   - Create `src-tauri/src/commands/wizards/my_wizard.rs`
-   - Implement search and populate functions
-   - Register command in `lib.rs`
-
-2. **Frontend**:
-   - Create `src/lib/wizards/my_wizard.svelte`
-   - Add search form and results table
-   - Handle selection and apply logic
-   - Create TypeScript bridge in `src/backend/wizards/my_wizard.ts`
-
-3. **Integration**:
-   - Add wizard button to relevant segment tab
-   - Wire up modal visibility and data flow
 
 ### Adding Support for New HL7 Versions
 

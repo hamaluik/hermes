@@ -8,7 +8,6 @@
 //! - [`editor`] - Cursor tracking, data manipulation, syntax highlighting
 //! - [`validation`] - Message validation and semantic comparison
 //! - [`support`] - Field descriptions and schema queries
-//! - [`wizards`] - Database-driven auto-fill for segments
 //!
 //! # Adding New Commands
 //!
@@ -23,7 +22,6 @@ mod communication;
 mod editor;
 mod support;
 mod validation;
-pub mod wizards;
 
 pub use communication::*;
 pub use editor::*;

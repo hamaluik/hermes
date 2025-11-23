@@ -64,8 +64,8 @@
   let error: string | null = $state(null);
 
   /**
-   * Validation patterns matching database wizard inputs.
-   * Host: Standard hostname/IP format (with optional port :1433 or instance \\SQLEXPRESS)
+   * Validation patterns for network inputs.
+   * Host: Standard hostname/IP format
    * Port: Standard TCP port range (1-65535)
    */
   const hostPattern = /^[a-zA-Z0-9]([a-zA-Z0-9\-\.:]*[a-zA-Z0-9])?$/;

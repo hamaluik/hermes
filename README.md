@@ -27,7 +27,6 @@ The application bridges the gap between manual HL7 message creation and automate
 - **Visual message editing** through segment tabs with field validation
 - **Raw text editing** with syntax highlighting
 - **MLLP protocol support** for sending and receiving messages
-- **Database integration** via wizards for populating patient, visit, and interface data
 - **Real-time field documentation** to help developers understand HL7 structure
 
 ## Features
@@ -44,12 +43,6 @@ The application bridges the gap between manual HL7 message creation and automate
 - Listen for incoming HL7 messages
 - Configurable host, port, and timeout settings
 - Response handling and logging
-
-### Database Integration
-- **Header Wizard**: Populate MSH segment from interface configurations
-- **Patient Wizard**: Search and populate patient demographic data
-- **Visit Wizard**: Populate visit/encounter information
-- SQL Server connection with configurable credentials
 
 ### File Management
 - Native File menu with standard keyboard shortcuts (Cmd/Ctrl+N, O, S)
@@ -176,7 +169,6 @@ Hermes follows a command-response pattern with event-driven communication betwee
 │  │  Components                       │  │
 │  │  - Segment tabs                   │  │
 │  │  - Message editor                 │  │
-│  │  - Wizards                        │  │
 │  │  - Modals                         │  │
 │  └───────────────────────────────────┘  │
 │  ┌───────────────────────────────────┐  │
@@ -194,7 +186,6 @@ Hermes follows a command-response pattern with event-driven communication betwee
 │  │  - MLLP send/receive             │  │
 │  │  - Schema queries                 │  │
 │  │  - Syntax highlighting           │  │
-│  │  - Wizards                        │  │
 │  └───────────────────────────────────┘  │
 │  ┌───────────────────────────────────┐  │
 │  │  Schema & Spec                    │  │
@@ -217,7 +208,6 @@ Hermes follows a command-response pattern with event-driven communication betwee
 - **Schema Caching**: Pre-loads HL7 definitions from `messages.toml` at startup for instant lookups
 - **Event-Driven I/O**: Network operations (send/receive) use events for progress updates
 - **Persistent Settings**: Tauri store plugin saves user preferences across sessions
-- **Database Wizards**: SQL Server integration for populating real test data
 
 For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -236,7 +226,6 @@ hermes/
 │   │   ├── cursor_description.svelte
 │   │   ├── tabs.svelte
 │   │   ├── toolbar*.svelte
-│   │   ├── wizards/             # Wizard components
 │   │   ├── forms/               # Form components
 │   │   ├── components/          # Generic UI components
 │   │   └── icons/               # SVG icon components
@@ -247,8 +236,7 @@ hermes/
 │   │   ├── schema.ts
 │   │   ├── cursor.ts
 │   │   ├── description.ts
-│   │   ├── syntax_highlight.ts
-│   │   └── wizards/             # Wizard backend calls
+│   │   └── syntax_highlight.ts
 │   └── settings.ts              # Settings management
 │
 ├── src-tauri/                   # Backend (Rust/Tauri)
@@ -261,8 +249,7 @@ hermes/
 │   │   │   ├── schema.rs
 │   │   │   ├── data.rs
 │   │   │   ├── send_receive.rs
-│   │   │   ├── listen.rs
-│   │   │   └── wizards/        # Database wizards
+│   │   │   └── listen.rs
 │   │   ├── schema/             # HL7 schema caching
 │   │   └── spec/               # HL7 spec utilities
 │   ├── Cargo.toml              # Rust dependencies
@@ -295,7 +282,6 @@ hermes/
 - **hl7-parser**: HL7 message parsing
 - **hl7-definitions**: HL7 field definitions
 - **hl7-mllp-codec**: MLLP protocol implementation
-- **tiberius**: SQL Server client
 
 ### Tauri Plugins
 - `tauri-plugin-clipboard-manager`: Clipboard operations
@@ -314,7 +300,6 @@ Topics covered:
 - HL7 message structure primer
 - Interface walkthrough
 - Message editing (tabs and raw editor)
-- Wizards for database integration
 - File operations
 - Settings configuration
 - Keyboard shortcuts
@@ -344,11 +329,6 @@ Quick overview:
    - Import and use in routes or other components
    - Follow existing component patterns for consistency
 
-3. **New Wizard**:
-   - Backend: Add wizard module in `src-tauri/src/commands/wizards/`
-   - Frontend: Create wizard component in `src/lib/wizards/`
-   - Bridge: Add TypeScript calls in `src/backend/wizards/`
-
 ## Troubleshooting
 
 ### Build Issues
@@ -373,12 +353,6 @@ cargo build
 **Frontend and backend out of sync**
 - Restart `pnpm tauri dev`
 - Clear browser cache if running in dev mode
-
-**Database wizards not working**
-- Verify database connection settings in Settings modal
-- Check network connectivity to SQL Server
-- Ensure database credentials are correct
-- Review logs for SQL errors
 
 **Changes not appearing**
 - Vite hot-reload should work automatically
