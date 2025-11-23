@@ -7,6 +7,8 @@
 //!
 //! - [`cursor`] - Cursor position tracking and field navigation (Tab/Shift-Tab)
 //! - [`data`] - Segment parsing/rendering, field queries, timestamps, templates
+//! - [`export`] - Export messages to JSON, YAML, TOML formats
+//! - [`import`] - Import messages from JSON, YAML, TOML formats
 //! - [`syntax_highlight`] - HTML generation with CSS classes for HL7 elements
 //!
 //! # Editing Flow
@@ -20,9 +22,11 @@
 mod cursor;
 mod data;
 mod export;
+mod import;
 mod syntax_highlight;
 
 pub use cursor::*;
 pub use data::*;
 pub use export::*;
+pub use import::*;
 pub use syntax_highlight::*;

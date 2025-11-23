@@ -101,6 +101,26 @@ pub fn build_menu(app: &App) -> color_eyre::Result<MenuItems> {
         )
         .build()?;
 
+    // Build the "Import From" submenu for importing from different formats
+    let import_submenu = SubmenuBuilder::new(app, "&Import From")
+        .id("file-import")
+        .item(
+            &MenuItemBuilder::new("&JSON...")
+                .id("file-import-json")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("&YAML...")
+                .id("file-import-yaml")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("&TOML...")
+                .id("file-import-toml")
+                .build(app)?,
+        )
+        .build()?;
+
     // Build the File menu with standard file operations
     let file_menu = SubmenuBuilder::new(app, "&File")
         .item(
@@ -126,6 +146,7 @@ pub fn build_menu(app: &App) -> color_eyre::Result<MenuItems> {
                 .build(app)?,
         )
         .item(&export_submenu)
+        .item(&import_submenu)
         .separator()
         .item(&auto_save_menu_item)
         .build()?;
@@ -208,6 +229,9 @@ pub fn setup_menu_event_handler(app: &App) {
             "file-export-json" => Some("menu-file-export-json"),
             "file-export-yaml" => Some("menu-file-export-yaml"),
             "file-export-toml" => Some("menu-file-export-toml"),
+            "file-import-json" => Some("menu-file-import-json"),
+            "file-import-yaml" => Some("menu-file-import-yaml"),
+            "file-import-toml" => Some("menu-file-import-toml"),
             "file-auto-save" => Some("menu-file-auto-save"),
             "edit-undo" => Some("menu-edit-undo"),
             "edit-redo" => Some("menu-edit-redo"),

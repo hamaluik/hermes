@@ -5,21 +5,30 @@
  * The output is a clean hierarchical structure optimised for readability,
  * without internal parser metadata like byte ranges.
  *
+ * Use cases:
+ * - Version control: structured diffs are more readable than pipe-delimited
+ * - External tool integration: other systems can consume JSON/YAML more easily
+ * - Programmatic editing: modify specific fields without parsing HL7 syntax
+ *
  * Output structure:
  * - Segments → object keys (repeated segments become arrays)
  * - Fields → 1-based string indices, empty fields omitted
  * - Components → 1-based indices; simple fields become plain strings
  * - Field repetitions → arrays
  *
+ * Note: For MSH, field "1" contains the field separator (|) and field "2"
+ * contains the encoding characters (^~\&). See import.ts for re-import details.
+ *
  * @example
  * // For message: MSH|^~\&|APP|||20231215||ADT^A01
  * // JSON output:
  * // {
  * //   "MSH": {
- * //     "1": "^~\\&",
- * //     "2": "APP",
- * //     "6": "20231215",
- * //     "8": { "1": "ADT", "2": "A01" }
+ * //     "1": "|",
+ * //     "2": "^~\\&",
+ * //     "3": "APP",
+ * //     "7": "20231215",
+ * //     "9": { "1": "ADT", "2": "A01" }
  * //   }
  * // }
  */

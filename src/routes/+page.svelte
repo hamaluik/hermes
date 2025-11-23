@@ -70,6 +70,7 @@
     getCurrentHl7Timestamp,
   } from "$lib/shared/data";
   import { exportToJson, exportToYaml, exportToToml } from "$lib/editor/export";
+  import { importFromJson, importFromYaml, importFromToml } from "$lib/editor/import";
   import Toolbar from "$lib/toolbar/toolbar.svelte";
   import ToolbarButton from "$lib/toolbar/toolbar_button.svelte";
   import IconNew from "$lib/icons/IconNew.svelte";
@@ -481,6 +482,9 @@
     let unlistenMenuExportJson: UnlistenFn | undefined = undefined;
     let unlistenMenuExportYaml: UnlistenFn | undefined = undefined;
     let unlistenMenuExportToml: UnlistenFn | undefined = undefined;
+    let unlistenMenuImportJson: UnlistenFn | undefined = undefined;
+    let unlistenMenuImportYaml: UnlistenFn | undefined = undefined;
+    let unlistenMenuImportToml: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -519,6 +523,15 @@
     });
     listen("menu-file-export-toml", () => handleExport("toml")).then((fn) => {
       unlistenMenuExportToml = fn;
+    });
+    listen("menu-file-import-json", () => handleImport("json")).then((fn) => {
+      unlistenMenuImportJson = fn;
+    });
+    listen("menu-file-import-yaml", () => handleImport("yaml")).then((fn) => {
+      unlistenMenuImportYaml = fn;
+    });
+    listen("menu-file-import-toml", () => handleImport("toml")).then((fn) => {
+      unlistenMenuImportToml = fn;
     });
     listen("menu-file-auto-save", () => {
       // Toggle the auto-save setting when menu item is clicked
@@ -695,6 +708,9 @@
       unlistenMenuExportJson?.();
       unlistenMenuExportYaml?.();
       unlistenMenuExportToml?.();
+      unlistenMenuImportJson?.();
+      unlistenMenuImportYaml?.();
+      unlistenMenuImportToml?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -1001,6 +1017,57 @@
     } catch (error) {
       console.error(`Error exporting to ${format}:`, error);
       messageDialog(`${error}`, { title: `Export Error`, kind: "error" });
+    }
+  };
+
+  /**
+   * Imports a message from a different format (JSON, YAML, or TOML).
+   *
+   * Shows an open dialog with the appropriate file extension filter, reads
+   * the file, converts it using the backend, and loads the result as a new message.
+   */
+  const handleImport = async (format: "json" | "yaml" | "toml") => {
+    const formatConfig = {
+      json: { name: "JSON Files", extension: "json", title: "Import from JSON" },
+      yaml: { name: "YAML Files", extension: "yaml", title: "Import from YAML" },
+      toml: { name: "TOML Files", extension: "toml", title: "Import from TOML" },
+    };
+
+    const config = formatConfig[format];
+
+    const filePath = await openDialog({
+      filters: [{ name: config.name, extensions: [config.extension] }],
+      title: config.title,
+      multiple: false,
+    });
+
+    if (!filePath) {
+      return;
+    }
+
+    try {
+      const content = await readTextFile(filePath);
+      let imported: string;
+      switch (format) {
+        case "json":
+          imported = await importFromJson(content);
+          break;
+        case "yaml":
+          imported = await importFromYaml(content);
+          break;
+        case "toml":
+          imported = await importFromToml(content);
+          break;
+      }
+
+      // treat imported message as a new unsaved message
+      history.clear();
+      message = imported;
+      savedMessage = message;
+      currentFilePath = undefined;
+    } catch (error) {
+      console.error(`Error importing from ${format}:`, error);
+      messageDialog(`${error}`, { title: `Import Error`, kind: "error" });
     }
   };
 

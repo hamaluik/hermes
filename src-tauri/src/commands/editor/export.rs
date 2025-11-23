@@ -5,6 +5,12 @@
 //! internal parser metadata (byte ranges, source references) that would clutter
 //! the exported data.
 //!
+//! # Why Export to These Formats?
+//!
+//! - **Version control**: JSON/YAML diffs are more readable than pipe-delimited HL7
+//! - **External tools**: Other systems can consume structured data more easily
+//! - **Programmatic editing**: Modify specific fields without parsing HL7 syntax
+//!
 //! # Output Structure
 //!
 //! The export produces a hierarchical representation where:
@@ -16,6 +22,18 @@
 //!   no subcomponents) are represented as plain strings.
 //! - **Subcomponents** follow the same pattern as components.
 //! - **Field repetitions** (separated by `~`) become arrays.
+//!
+//! # MSH Field Numbering
+//!
+//! For MSH, the hl7-parser library includes the field separator as the first field:
+//! - Index "1" = field separator (`|`)
+//! - Index "2" = encoding characters (`^~\&`)
+//! - Index "3" = sending application
+//! - etc.
+//!
+//! This differs from how HL7 documentation numbers MSH fields (where MSH.1 is
+//! traditionally considered implicit). The import module handles this by skipping
+//! field "1" during reconstruction.
 //!
 //! # Example
 //!
@@ -31,14 +49,15 @@
 //! ```json
 //! {
 //!   "MSH": {
-//!     "1": "^~\\&",
-//!     "2": "APP",
-//!     "3": "FAC",
-//!     "6": "20231215",
-//!     "8": { "1": "ADT", "2": "A01" },
-//!     "9": "123",
-//!     "10": "P",
-//!     "11": "2.5.1"
+//!     "1": "|",
+//!     "2": "^~\\&",
+//!     "3": "APP",
+//!     "4": "FAC",
+//!     "7": "20231215",
+//!     "9": { "1": "ADT", "2": "A01" },
+//!     "10": "123",
+//!     "11": "P",
+//!     "12": "2.5.1"
 //!   },
 //!   "PID": {
 //!     "3": "12345",

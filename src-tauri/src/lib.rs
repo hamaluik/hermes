@@ -145,6 +145,9 @@ pub fn run() {
             commands::export_to_json,
             commands::export_to_yaml,
             commands::export_to_toml,
+            commands::import_from_json,
+            commands::import_from_yaml,
+            commands::import_from_toml,
         ])
         .setup(|app| {
             let menu_items =
