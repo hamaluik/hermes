@@ -660,12 +660,12 @@ mod tests {
         assert_eq!(result.summary.segments_modified, 1);
         assert!(result.summary.total_field_changes > 0);
 
-        // Find the PID.3 change
+        // Find the PID.3 change (path includes subcomponent level)
         let pid_segment = result.segments.iter().find(|s| s.name == "PID").unwrap();
         let pid3_change = pid_segment
             .fields
             .iter()
-            .find(|f| f.path == "PID.3.1")
+            .find(|f| f.path == "PID.3.1.1")
             .unwrap();
         assert_eq!(pid3_change.diff_type, DiffType::Modified);
         assert_eq!(pid3_change.left_value.as_deref(), Some("12345"));

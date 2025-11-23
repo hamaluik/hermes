@@ -592,16 +592,6 @@ fn get_field_value(
 mod tests {
     use super::*;
 
-    fn make_test_state() -> AppData {
-        use crate::schema::cache::SchemaCache;
-        use tauri::menu::{CheckMenuItemBuilder, MenuItemBuilder, SubmenuBuilder};
-        use tokio::sync::Mutex;
-
-        // we can't easily create AppData in tests without a full Tauri app context
-        // so these tests are more for documentation purposes
-        unimplemented!("Tests require Tauri app context")
-    }
-
     #[test]
     fn test_datetime_validation_date() {
         let mut issues = Vec::new();

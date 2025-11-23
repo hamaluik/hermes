@@ -240,10 +240,8 @@ fn value_to_field(value: &Value, delimiters: &Delimiters) -> Result<String, Stri
         Value::Bool(b) => Ok(b.to_string()),
         Value::Array(arr) => {
             // field repetitions
-            let parts: Result<Vec<String>, String> = arr
-                .iter()
-                .map(|v| value_to_repeat(v, delimiters))
-                .collect();
+            let parts: Result<Vec<String>, String> =
+                arr.iter().map(|v| value_to_repeat(v, delimiters)).collect();
             Ok(parts?.join(&delimiters.repetition.to_string()))
         }
         Value::Object(_) => {
