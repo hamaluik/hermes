@@ -7,7 +7,7 @@
 //! ## Workflow
 //! The typical workflow is:
 //! 1. User searches for visits using `wizard_search_visits` (requires patient info in message)
-//! 2. User selects a visit from the search results (typically showing the 10 most recent)
+//! 2. User selects a visit from the search results
 //! 3. User applies the visit data to a message using `wizard_apply_visit`
 //! 4. The PV1 segment is populated with location, providers, and visit details
 
@@ -18,7 +18,7 @@ use hl7_parser::builder::{FieldBuilder, MessageBuilder};
 use jiff::Zoned;
 use serde::{Deserialize, Serialize};
 
-/// Patient visit information retrieved from the database.
+/// Patient visit information.
 ///
 /// Represents a single encounter between a patient and the healthcare facility.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -30,6 +30,9 @@ pub struct Visit {
     /// Internal location identifier
     pub location_id: Option<String>,
     /// Map of provider role codes to provider IDs
+    ///
+    /// Keys are role codes (e.g., "ATTENDMD", "REFMD", "CONSULTMD", "ADMITMD")
+    /// or abbreviated forms (e.g., "AP", "RP", "CP", "MP").
     pub providers: std::collections::HashMap<String, String>,
     /// Patient type/class code (PV1.2) - e.g., "I" for inpatient, "O" for outpatient
     pub patient_type_cd: Option<String>,
@@ -78,10 +81,10 @@ pub struct Visit {
 ///
 /// # Returns
 /// * `Ok(String)` - The modified message with visit data populated
-/// * `Err(String)` - Error if parsing fails, required segments are missing, or database operations fail
+/// * `Err(String)` - Error if parsing fails or required segments are missing
 #[tauri::command]
 pub async fn wizard_apply_visit(
-    db: super::WizardDatabase,
+    _db: super::WizardDatabase,
     message: &str,
     visit: Visit,
     overridesegment: bool,
@@ -132,32 +135,22 @@ pub async fn wizard_apply_visit(
     Ok(message.render_with_newlines().to_string())
 }
 
-/// Search for patient visits in the database based on patient info in the message.
+/// Search for sample patient visits based on patient info in the message.
 ///
-/// This command extracts patient identifying information from the message's PID segment,
-/// searches for the corresponding patient in the database, then retrieves their recent visits.
-///
-/// # Search Flow
-/// 1. Parse the message to extract PID.3 (MRN) and PID.5 (patient name)
-/// 2. Search for the patient using `wizard_search_patients`
-/// 3. If patient found, query their 10 most recent visits
-///
-/// # Why Extract from Message?
-/// This approach ensures that the visits retrieved are for the same patient already
-/// identified in the message being composed. It maintains consistency and reduces
-/// the chance of applying visit data for the wrong patient.
+/// This command extracts patient identifying information from the message's PID segment
+/// and returns sample visits associated with that patient.
 ///
 /// # Arguments
-/// * `db` - Database connection configuration
+/// * `_db` - Database connection configuration (not used - sample data returned)
 /// * `message` - The HL7 message containing patient info in the PID segment
 ///
 /// # Returns
-/// * `Ok(Vec<Visit>)` - List of up to 10 recent visits for the patient
-/// * `Err(String)` - Error if message parsing fails, PID segment missing, or no patient found
+/// * `Ok(Vec<Visit>)` - List of sample visits for the patient
+/// * `Err(String)` - Error if message parsing fails or PID segment missing
 #[tauri::command]
 pub async fn wizard_search_visits(
-    db: super::WizardDatabase,
-    message: &str,
+    _db: super::WizardDatabase,
+    _message: &str,
 ) -> Result<Vec<Visit>, String> {
     let visits = vec![
         Visit {

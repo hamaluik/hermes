@@ -419,9 +419,15 @@
             <li><a href="#generate-control-id">Generate Control ID</a></li>
             <li><a href="#insert-timestamp">Insert Timestamp</a></li>
             <li><a href="#compare-messages">Compare Messages</a></li>
+            <li><a href="#validation">Validation</a></li>
           </ul>
         </li>
-        <li><a href="#file-operations">File Operations</a></li>
+        <li>
+          <a href="#file-operations">File Operations</a>
+          <ul>
+            <li><a href="#export-as">Export As</a></li>
+          </ul>
+        </li>
         <li>
           <a href="#communication">Communication</a>
           <ul>
@@ -946,7 +952,7 @@
 
         <h4>Syntax Highlighting</h4>
         <p>
-          The editor uses color coding to help you understand message structure
+          The editor uses colour coding to help you understand message structure
           at a glance:
         </p>
         <ul>
@@ -1062,7 +1068,7 @@
         <h2>Wizards</h2>
         <p>
           Wizards help you populate message fields with real data from the
-          database. They appear as buttons on certain segment tabs
+          HL7 system database. They appear as buttons on certain segment tabs
           (MSH, PID, PV1) when a database connection is configured.
         </p>
 
@@ -1146,7 +1152,7 @@
 
         <h3>Database Connection</h3>
         <p>
-          Wizards require a connection to a database. Configure the
+          Wizards require a connection to a HL7 system database. Configure the
           connection in
           <strong>Settings</strong>:
         </p>
@@ -1156,7 +1162,7 @@
           </li>
           <li><strong>Port</strong>: SQL Server port (default: 1433).</li>
           <li>
-            <strong>Database</strong>: Database name (for example, "LAB").
+            <strong>Database</strong>: Database name.
           </li>
           <li>
             <strong>User</strong>: SQL Server username (supports DOMAIN\user
@@ -1548,14 +1554,14 @@
 
         <h4>Understanding the Diff</h4>
         <p>
-          Click <strong>Compare</strong> to analyze the differences. The results
+          Click <strong>Compare</strong> to analyse the differences. The results
           show three types of changes:
         </p>
         <table>
           <thead>
             <tr>
               <th>Indicator</th>
-              <th>Color</th>
+              <th>Colour</th>
               <th>Meaning</th>
             </tr>
           </thead>
@@ -1670,6 +1676,195 @@
         </div>
       </section>
 
+      <!-- Validation -->
+      <section id="validation">
+        <h3>Validation</h3>
+        <p>
+          The Validation feature checks your HL7 message against schema
+          definitions to identify structural errors, missing required fields,
+          and values that do not conform to expected formats. Validation issues
+          are displayed in a collapsible panel below the editor and highlighted
+          inline in the message text.
+        </p>
+
+        <h4>Validation Modes</h4>
+        <p>Hermes provides two validation modes:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>When It Runs</th>
+              <th>What It Checks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Light</strong></td>
+              <td>Automatically, 500ms after you stop typing</td>
+              <td>Parse errors, required fields</td>
+            </tr>
+            <tr>
+              <td><strong>Full</strong></td>
+              <td>On demand via menu or keyboard shortcut</td>
+              <td>
+                All light checks plus: length limits, pattern matching, allowed
+                values, required segments, date formats
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>Running Full Validation</h4>
+        <ul>
+          <li>
+            Press <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (Mac) or
+            <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (Windows/Linux).
+          </li>
+          <li>
+            Or use the <strong>Tools</strong> menu, then select
+            <strong>Validate Message</strong>.
+          </li>
+        </ul>
+
+        <h4>Understanding the Validation Panel</h4>
+        <p>
+          The Validation Panel appears below the message editor when validation
+          results are available. Click the panel header to expand or collapse
+          it.
+        </p>
+        <p>The panel header shows a summary of issues found:</p>
+        <ul>
+          <li>
+            <strong
+              style="
+                background-color: var(--col-love);
+                color: #fff;
+                padding: 2px 6px;
+                border-radius: 3px;
+              "
+              >Errors</strong
+            >
+            — Critical issues that likely prevent message processing.
+          </li>
+          <li>
+            <strong
+              style="
+                background-color: var(--col-gold);
+                color: #000;
+                padding: 2px 6px;
+                border-radius: 3px;
+              "
+              >Warnings</strong
+            >
+            — Potential problems that may cause issues with some systems.
+          </li>
+          <li>
+            <strong
+              style="
+                background-color: var(--col-foam);
+                color: #000;
+                padding: 2px 6px;
+                border-radius: 3px;
+              "
+              >Info</strong
+            >
+            — Informational notes about the message.
+          </li>
+        </ul>
+
+        <h4>Navigating to Issues</h4>
+        <p>
+          Double-click any issue in the panel to navigate to the problematic
+          field in the message editor. The field content will be selected for
+          easy editing.
+        </p>
+        <p>
+          Issues without a navigable location (such as missing required
+          segments) appear slightly dimmed and cannot be double-clicked.
+        </p>
+
+        <h4>Inline Highlighting</h4>
+        <p>
+          Validation issues are also highlighted directly in the message editor,
+          using colour-coded underlines that match the issue severity. This lets
+          you see problems in context while editing.
+        </p>
+
+        <h4>Types of Issues Detected</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Rule</th>
+              <th>Description</th>
+              <th>Mode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Parse Error</td>
+              <td>Message structure is invalid or incomplete</td>
+              <td>Light</td>
+            </tr>
+            <tr>
+              <td>Required Field</td>
+              <td>A required field is missing or empty</td>
+              <td>Light</td>
+            </tr>
+            <tr>
+              <td>Required Segment</td>
+              <td>A required segment is missing from the message</td>
+              <td>Full</td>
+            </tr>
+            <tr>
+              <td>Min Length</td>
+              <td>Field value is shorter than the minimum length</td>
+              <td>Full</td>
+            </tr>
+            <tr>
+              <td>Max Length</td>
+              <td>Field value exceeds the maximum length</td>
+              <td>Full</td>
+            </tr>
+            <tr>
+              <td>Pattern</td>
+              <td>Field value does not match the expected format</td>
+              <td>Full</td>
+            </tr>
+            <tr>
+              <td>Allowed Values</td>
+              <td>Field value is not in the list of permitted values</td>
+              <td>Full</td>
+            </tr>
+            <tr>
+              <td>Invalid Date</td>
+              <td>Date or datetime field has an invalid format</td>
+              <td>Full</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          <strong>Validation and Message Type</strong>
+          <p>
+            Validation is context-aware. Required segments and some field rules
+            depend on the message type in MSH-9. For example, an ADT^A01 message
+            requires PID and PV1 segments, but these might not be required for
+            other message types.
+          </p>
+        </div>
+
+        <div class="note">
+          <strong>Schema Coverage</strong>
+          <p>
+            Validation rules are based on the HL7 segment schemas included with
+            Hermes. Not all fields have defined constraints. If a field passes
+            validation, it does not guarantee the receiving system will accept
+            it—always test with your actual interface partners.
+          </p>
+        </div>
+      </section>
+
       <!-- File Operations -->
       <section id="file-operations">
         <h2>File Operations</h2>
@@ -1680,7 +1875,7 @@
             >N</kbd
           >
           to create a new message. This creates a minimal MSH segment with
-          default values that you can customize.
+          default values that you can customise.
         </p>
         <p>
           If you have unsaved changes, you'll be prompted to save them first.
@@ -1786,6 +1981,108 @@
           The Undo/Redo buttons in the toolbar (and menu items) are disabled
           when there is nothing to undo or redo.
         </p>
+
+        <h3 id="export-as">Export As</h3>
+        <p>
+          The Export As feature converts your HL7 message to other structured
+          formats. This is useful for sharing message data with systems that
+          do not understand HL7, for documentation purposes, or for further
+          processing with standard data tools.
+        </p>
+
+        <h4>Supported Formats</h4>
+        <p>
+          Use the <strong>File</strong> menu &rarr;
+          <strong>Export As</strong> submenu to export your message:
+        </p>
+        <ul>
+          <li>
+            <strong>JSON</strong>: JavaScript Object Notation. Widely supported
+            and ideal for web APIs and scripting.
+          </li>
+          <li>
+            <strong>YAML</strong>: A human-friendly format often used for
+            configuration files. More readable than JSON for complex data.
+          </li>
+          <li>
+            <strong>TOML</strong>: Tom's Obvious Minimal Language. A simple
+            configuration format with clear syntax.
+          </li>
+        </ul>
+        <p>
+          Each option opens a save dialog where you can choose the destination
+          file.
+        </p>
+
+        <h4>Output Structure</h4>
+        <p>
+          The exported data follows a hierarchical structure that mirrors HL7
+          organisation:
+        </p>
+        <ul>
+          <li>
+            <strong>Segments</strong> become top-level keys. If a segment
+            appears multiple times (for example, multiple OBX segments), its
+            value becomes an array.
+          </li>
+          <li>
+            <strong>Fields</strong> use 1-based numeric indices as keys. Empty
+            fields are omitted to keep the output concise.
+          </li>
+          <li>
+            <strong>Components</strong> also use 1-based numeric indices. Simple
+            fields containing only a single value are represented as plain
+            strings, while fields with multiple components become nested objects.
+          </li>
+          <li>
+            <strong>Repetitions</strong> (fields with multiple values separated
+            by <code>~</code>) become arrays.
+          </li>
+        </ul>
+
+        <h4>Example</h4>
+        <p>Given this HL7 message:</p>
+        <pre><span class="seg">MSH</span><span class="sep">|</span>^~\&amp;<span class="sep">|</span>APP<span class="sep">|</span>FAC<span class="sep">|||</span>20231215<span class="sep">||</span>ADT^A01<span class="sep">|</span>123<span class="sep">|</span>P<span class="sep">|</span>2.5.1
+<span class="seg">PID</span><span class="sep">|||</span>12345<span class="sep">||</span>DOE^JOHN</pre>
+        <p>The JSON export produces:</p>
+        <pre>{
+  "MSH": {
+    "1": "^~\\&amp;",
+    "2": "APP",
+    "3": "FAC",
+    "6": "20231215",
+    "8": { "1": "ADT", "2": "A01" },
+    "9": "123",
+    "10": "P",
+    "11": "2.5.1"
+  },
+  "PID": {
+    "3": "12345",
+    "5": { "1": "DOE", "2": "JOHN" }
+  }
+}</pre>
+
+        <div class="tip">
+          <strong>Use Cases</strong>
+          <ul>
+            <li>
+              <strong>Documentation</strong>: Include message examples in
+              technical specifications or test plans.
+            </li>
+            <li>
+              <strong>Data analysis</strong>: Process message data with tools
+              like jq, Python, or spreadsheet applications.
+            </li>
+            <li>
+              <strong>Integration testing</strong>: Compare expected versus
+              actual message content using standard diff tools.
+            </li>
+            <li>
+              <strong>Learning</strong>: Visualise HL7 structure in a more
+              approachable format.
+            </li>
+          </ul>
+        </div>
       </section>
 
       <!-- Communication -->
@@ -1805,7 +2102,7 @@
           the drawer. The button shows the current state:
         </p>
         <ul>
-          <li><strong>Gray</strong>: Not listening, drawer closed.</li>
+          <li><strong>Grey</strong>: Not listening, drawer closed.</li>
           <li><strong>Green</strong>: Listen server is active.</li>
           <li><strong>Purple</strong>: Drawer is open.</li>
         </ul>
@@ -1884,7 +2181,7 @@
         <p>Click <strong>Stop Listening</strong> to shut down the server.</p>
 
         <h4>Viewing Received Messages</h4>
-        <p>Received messages appear in the center list with:</p>
+        <p>Received messages appear in the centre list with:</p>
         <ul>
           <li><strong>Filled circle</strong> (●): Unread message.</li>
           <li><strong>Empty circle</strong> (○): Read message.</li>
@@ -2072,6 +2369,10 @@
             <tr>
               <td><kbd>Cmd</kbd>+<kbd>D</kbd></td>
               <td>Compare Messages</td>
+            </tr>
+            <tr>
+              <td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd></td>
+              <td>Validate Message (Full)</td>
             </tr>
           </tbody>
         </table>

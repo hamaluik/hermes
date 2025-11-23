@@ -1,7 +1,7 @@
 //! Interface wizard for populating HL7 message MSH segments with interface configuration.
 //!
 //! This wizard provides two main capabilities:
-//! 1. **Query**: Retrieve interface configurations from the database
+//! 1. **Query**: Retrieve sample interface configurations
 //! 2. **Apply**: Populate a message's MSH (and EVN) segments with interface settings
 //!
 //! ## Workflow
@@ -23,7 +23,7 @@ use hl7_parser::{
 };
 use serde::{Deserialize, Serialize};
 
-/// HL7 interface configuration retrieved from the database.
+/// HL7 interface configuration.
 ///
 /// Defines the communication parameters for HL7 message exchange between systems.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -32,13 +32,13 @@ pub struct Interface {
     pub name: String,
     /// Provider ID associated with this interface
     pub provider_id: String,
-    /// Sending application identifier (MSH.3) - extracted from SAPP attribute
+    /// Sending application identifier (MSH.3)
     pub sending_app: String,
-    /// Sending facility identifier (MSH.4) - extracted from SFAC attribute
+    /// Sending facility identifier (MSH.4)
     pub sending_fac: String,
-    /// Receiving application identifier (MSH.5) - extracted from RAPP attribute
+    /// Receiving application identifier (MSH.5)
     pub receiving_app: String,
-    /// Receiving facility identifier (MSH.6) - extracted from RFAC attribute
+    /// Receiving facility identifier (MSH.6)
     pub receiving_fac: String,
     /// HL7 version literal (MSH.12) - e.g., "2.5.1"
     pub version: String,
@@ -99,7 +99,7 @@ pub struct Interface {
 pub fn wizard_apply_interface(
     message: &str,
     interface: Interface,
-    messagetype: &str, // tauri breaks when I use snake case -_-
+    messagetype: &str,
     triggerevent: &str,
     overridesegment: bool,
 ) -> Result<String, String> {
@@ -173,16 +173,19 @@ pub fn wizard_apply_interface(
     Ok(message.render_with_newlines().to_string())
 }
 
-/// Query interface configurations from the database.
+/// Query sample interface configurations.
+///
+/// Returns hardcoded sample interface configurations for testing purposes.
+/// The interfaces returned are filtered by message type.
 ///
 /// # Arguments
-/// * `db` - Database connection configuration
+/// * `_db` - Database connection configuration (not used - sample data returned)
 /// * `messagetype` - Message type code (e.g., "ADT", "ORM")
-/// * `providerid` - Optional provider ID filter
+/// * `_providerid` - Optional provider ID filter (not used)
 ///
 /// # Returns
-/// * `Ok(Vec<Interface>)` - List of matching interface configurations
-/// * `Err(String)` - Error for unsupported message types or database failures
+/// * `Ok(Vec<Interface>)` - List of sample interface configurations
+/// * `Err(String)` - Error for unsupported message types
 #[tauri::command]
 pub async fn wizard_query_interfaces(
     db: super::WizardDatabase,

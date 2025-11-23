@@ -132,14 +132,14 @@ field = 7
 group = "Attending Doctor"
 component = 2
 name = "Family Name"
-template = "Elrond"
+template = "Halfelven"
 
 [[fields]]
 field = 7
 group = "Attending Doctor"
 component = 3
 name = "Given Name"
-template = "Halfelven"
+template = "Elrond"
 
 [[fields]]
 field = 7
@@ -162,14 +162,14 @@ field = 8
 group = "Referring Doctor"
 component = 2
 name = "Family Name"
-template = "Galadriel"
+template = "Celeborn"
 
 [[fields]]
 field = 8
 group = "Referring Doctor"
 component = 3
 name = "Given Name"
-template = "Lorien"
+template = "Galadriel"
 
 [[fields]]
 field = 8
@@ -192,14 +192,14 @@ field = 9
 group = "Consulting Doctor"
 component = 2
 name = "Family Name"
-template = "Saruman"
+template = "White"
 
 [[fields]]
 field = 9
 group = "Consulting Doctor"
 component = 3
 name = "Given Name"
-template = "TheWhite"
+template = "Saruman"
 
 [[fields]]
 field = 9
@@ -222,14 +222,14 @@ field = 17
 group = "Admitting Doctor"
 component = 2
 name = "Family Name"
-template = "Radagast"
+template = "Brown"
 
 [[fields]]
 field = 17
 group = "Admitting Doctor"
 component = 3
 name = "Given Name"
-template = "TheBrown"
+template = "Radagast"
 
 [[fields]]
 field = 17

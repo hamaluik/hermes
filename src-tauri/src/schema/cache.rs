@@ -12,7 +12,7 @@
 //!
 //! # Cache Strategy
 //! The cache uses RwLock for concurrent reads with exclusive writes. Each schema type
-//! (messages, segments) has its own RwLock to minimize contention. File modification
+//! (messages, segments) has its own RwLock to minimise contention. File modification
 //! times are compared before each access to detect changes.
 
 use color_eyre::{
@@ -185,10 +185,10 @@ impl SchemaCache {
                 })
                 .and_then(|()| {
                     let segments = self.segments.read().expect("Cannot read segments lock");
-                    Ok(segments
+                    segments
                         .get(segment)
                         .cloned()
-                        .wrap_err_with(|| format!("Failed to load segment {segment} from cache"))?)
+                        .wrap_err_with(|| format!("Failed to load segment {segment} from cache"))
                 });
         }
 

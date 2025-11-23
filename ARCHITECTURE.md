@@ -119,7 +119,7 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Spec Module (src-tauri/src/spec/)                           │   │
 │  │  • std_spec.rs - Standard HL7 field descriptions             │   │
-│  │  •  - standard specifications           │   │
+│  │  •  - HL7 system-specific extensions                         │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -376,7 +376,7 @@ pub async fn stop_listening(
 ### Native Menu Events
 
 The application provides a native File menu with standard keyboard shortcuts. Menu item clicks
-trigger events that the frontend listens to, ensuring consistent behavior between menu and toolbar.
+trigger events that the frontend listens to, ensuring consistent behaviour between menu and toolbar.
 
 **Menu Structure:**
 - File → New (Cmd/Ctrl+N)

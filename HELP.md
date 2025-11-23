@@ -19,7 +19,7 @@ provides an intuitive interface for creating and manipulating HL7 messages.
 
 HL7 (Health Level 7) is an international standard for exchanging healthcare
 information between computer systems. HL7 v2.x messages are text-based and use a
-specific format with delimiters to organize data.
+specific format with delimiters to organise data.
 
 ### Message Structure
 
@@ -104,11 +104,11 @@ MSH|^~\&|...
 
 Hermes gives you two ways to work with messages:
 
-1. **Segment Tabs** (Top Panel): Form-based editing with labeled fields and
+1. **Segment Tabs** (Top Panel): Form-based editing with labelled fields and
    validation
 2. **Message Editor** (Middle Panel): Direct text editing of the raw HL7 message
 
-Both views are synchronized - changes in one are immediately reflected in the
+Both views are synchronised - changes in one are immediately reflected in the
 other.
 
 ---
@@ -150,12 +150,12 @@ This helps you understand what each field is for as you navigate the message.
 
 ### Syntax Highlighting
 
-The message editor color-codes different parts of your HL7 message to make it
+The message editor colour-codes different parts of your HL7 message to make it
 easier to read:
 
 - **Segment identifiers** (MSH, PID, etc.): Bright blue
 - **MSH segment header**: Green
-- **Field separators** (|): Gray
+- **Field separators** (|): Grey
 - **Timestamps and dates**: Purple
 - **Template/variable data**: Gold
 - **Errors**: Red
@@ -179,7 +179,7 @@ checkmark to confirm the copy.
 ### Viewing and Editing Segments
 
 Each segment in your message has its own tab at the top of the interface. The
-tabs are labeled with the segment name (e.g., "MSH", "PID", "PV1").
+tabs are labelled with the segment name (e.g., "MSH", "PID", "PV1").
 
 **For repeated segments**, tabs are numbered:
 - OBX (1)
@@ -196,7 +196,7 @@ want to add, and it will be appended to your message with a new tab created.
 
 ### Field Editing
 
-Within each tab, you'll see a form with labeled fields:
+Within each tab, you'll see a form with labelled fields:
 
 - **Field labels** show the field name and ID (e.g., "Sending Application
   (MSH.3)")
@@ -210,7 +210,7 @@ Within each tab, you'll see a form with labeled fields:
 
 By default, when you click in the message editor, the segment tabs automatically
 switch to show the segment where your cursor is located. You can disable this
-    behavior in **Settings** if you prefer to manually switch tabs.
+    behaviour in **Settings** if you prefer to manually switch tabs.
 
 ---
 
@@ -221,7 +221,7 @@ cursor position:
 
 - **Field Path**: The exact location in the HL7 structure (e.g., "PID.5.1")
 - **Field Name**: Human-readable name (e.g., "Patient Last Name")
-- **Group Hierarchy**: The organizational path (e.g., "Patient Identification →
+- **Group Hierarchy**: The organisational path (e.g., "Patient Identification →
   Patient Name → Last Name")
 - **Specification**: Field type and additional metadata
 
@@ -376,7 +376,7 @@ non-blocking interface for both operations.
 Click the **Communication** button in the toolbar to open the drawer. The button
 shows the current state:
 
-- **Gray**: Not listening, drawer closed
+- **Grey**: Not listening, drawer closed
 - **Green**: Listen server is active
 - **Purple**: Drawer is open
 
@@ -427,7 +427,7 @@ Click **Stop Listening** to shut down the server.
 
 **Viewing Received Messages:**
 
-Received messages appear in the center list with:
+Received messages appear in the centre list with:
 
 - **●** (filled circle): Unread message
 - **○** (empty circle): Read message

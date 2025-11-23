@@ -5,7 +5,7 @@
 
   Purpose:
   While the message editor shows raw HL7 text, this component provides a more user-friendly
-  form interface where each field is a labeled input. This is especially helpful for:
+  form interface where each field is a labelled input. This is especially helpful for:
   - Users unfamiliar with HL7 syntax
   - Populating common segments (PID, ORC, OBR, etc.)
   - Ensuring field values are placed in the correct positions
@@ -22,7 +22,7 @@
 
   Group Membership:
   Related fields are grouped together in fieldsets (e.g., all Patient Name components).
-  The groupMembership derived value organizes fields by their group for rendering.
+  The groupMembership derived value organises fields by their group for rendering.
 -->
 <script lang="ts">
   import {
@@ -30,12 +30,12 @@
     parseMessageSegment,
     renderMessageSegment,
     type SegmentData,
-  } from "../../backend/data";
+  } from "$lib/shared/data";
   import {
     type Field,
     type SegmentSchema,
     fieldId as _fieldId,
-  } from "../../backend/schema";
+  } from "$lib/shared/schema";
   import InputField from "./input_field.svelte";
 
   let {
@@ -74,7 +74,7 @@
   /**
    * Groups fields by their logical grouping for display
    *
-   * Fields can be organized in two ways:
+   * Fields can be organised in two ways:
    * 1. Group: Multiple related fields (e.g., Patient Name components)
    *    - Rendered as a fieldset with legend
    * 2. Standalone: Single field with no group

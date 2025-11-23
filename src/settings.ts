@@ -40,7 +40,7 @@
  * - Only one listener is needed (the page component or specific tab)
  * - The callback is called both on setter changes AND after initial load
  *
- * The "after initial load" behavior is particularly important for components that
+ * The "after initial load" behaviour is particularly important for components that
  * use local $state variables with debounced persistence (like SendTab and ListenTab).
  * These components initialize their state at mount time, which may occur before the
  * async settings load completes. The callback allows them to sync their local state
@@ -96,7 +96,7 @@ export class Settings {
   private _sendTransformTimestamp: boolean = true;
   private _sendWaitTimeoutSeconds: number = 5;
 
-  // Wizard database connection settings for HL7 system integration
+  // Wizard database connection settings for the database integration
   private _wizardDbHost: string = "";
   private _wizardDbPort: number = 1433;
   private _wizardDbDatabase: string = "";
@@ -405,7 +405,7 @@ export class Settings {
 
   /**
    * Database hostname for wizard queries.
-   * Wizards query database to populate message fields with real data.
+   * Wizards query the database database to populate message fields with real data.
    */
   get wizardDbHost(): string {
     return this._wizardDbHost;

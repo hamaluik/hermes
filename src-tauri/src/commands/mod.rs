@@ -1,28 +1,31 @@
-mod syntax_highlight;
-pub use syntax_highlight::*;
+//! Tauri command handlers.
+//!
+//! Commands are organised by feature to mirror the frontend structure and make
+//! related code easy to find. Each subdirectory groups commands that serve a
+//! common purpose:
+//!
+//! - [`communication`] - MLLP send/receive over TCP
+//! - [`editor`] - Cursor tracking, data manipulation, syntax highlighting
+//! - [`validation`] - Message validation and semantic comparison
+//! - [`support`] - Field descriptions and schema queries
+//! - [`wizards`] - Database-driven auto-fill for segments
+//!
+//! # Adding New Commands
+//!
+//! 1. Identify which feature group the command belongs to
+//! 2. Add the command to the appropriate subdirectory
+//! 3. Re-export it from the subdirectory's `mod.rs`
+//! 4. Register it in `lib.rs` under `invoke_handler`
+//!
+//! If the command doesn't fit existing groups, create a new subdirectory.
 
-mod locate_cursor;
-pub use locate_cursor::*;
-
-mod field_description;
-pub use field_description::*;
-
-mod schema;
-pub use schema::*;
-
-mod data;
-pub use data::*;
-
-mod send_receive;
-pub use send_receive::*;
-
-mod listen;
-pub use listen::*;
-
-mod menu;
-pub use menu::*;
-
-mod diff;
-pub use diff::*;
-
+mod communication;
+mod editor;
+mod support;
+mod validation;
 pub mod wizards;
+
+pub use communication::*;
+pub use editor::*;
+pub use support::*;
+pub use validation::*;

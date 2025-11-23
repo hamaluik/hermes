@@ -2,7 +2,7 @@
 //!
 //! This module defines the structure of segment schema files (e.g., pid.toml, pv1.toml).
 //! Each segment schema describes the fields that can appear in that segment, along with
-//! metadata about validation, display, and behavior.
+//! metadata about validation, display, and behaviour.
 //!
 //! # Schema File Format
 //!
@@ -67,7 +67,7 @@ pub struct Field {
     pub name: String,
     /// Component number if this represents a specific component (1-based)
     pub component: Option<u8>,
-    /// Optional grouping identifier for UI organization
+    /// Optional grouping identifier for UI organisation
     pub group: Option<String>,
     /// Optional filter expression for conditional display based on trigger event
     pub trigger_filter: Option<String>,

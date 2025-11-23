@@ -32,7 +32,7 @@
   to ensure visibility for longer help text.
 -->
 <script lang="ts">
-  import { fieldId as _fieldId, type Field } from "../../backend/schema";
+  import { fieldId as _fieldId, type Field } from "$lib/shared/schema";
 
   let {
     segment,

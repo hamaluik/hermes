@@ -78,7 +78,7 @@ group = "Patient Name"
 name = "Last Name"
 maxlength = 50
 placeholder = "Mouse"
-template = "Greybeard"
+template = "Grey"
 
 [[fields]]
 field = 5

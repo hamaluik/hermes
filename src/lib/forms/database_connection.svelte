@@ -1,9 +1,9 @@
 <!--
   Database Connection Component
 
-  Form fieldset for configuring SQL Server database connection settings used by
-  the wizard features. Wizards query the database to populate HL7
-  message fields with real patient/visit/interface data.
+  Form fieldset for configuring database connection settings used by
+  the wizard features. Note: Wizards currently return sample data and
+  do not require an actual database connection.
 
   ## Auto-Save Pattern
 
@@ -146,7 +146,7 @@
       oninput={saveToSettings}
       minlength={1}
       maxlength={128}
-      placeholder="LAB"
+      placeholder="mydb"
       required={true}
       pattern={"^[a-zA-Z_@#][a-zA-Z0-9_@#$]{0,127}$"}
     />

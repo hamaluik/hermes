@@ -260,3 +260,22 @@ input::-webkit-datetime-edit-meridiem-field {
   color: var(--col-base);
   border-radius: 2px;
 }
+
+/* validation highlighting */
+.validation-error {
+  text-decoration: underline wavy var(--col-love);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+.validation-warning {
+  text-decoration: underline wavy var(--col-gold);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+.validation-info {
+  text-decoration: underline wavy var(--col-foam);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}

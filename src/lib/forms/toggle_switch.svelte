@@ -10,9 +10,9 @@
   keyboard navigation) while providing enhanced visuals.
 
   Visual states:
-  - Unchecked: Gray background, circle on left
+  - Unchecked: Grey background, circle on left
   - Checked: Pine (green) background, circle slides right
-  - Disabled: Muted colors, cursor changes to not-allowed
+  - Disabled: Muted colours, cursor changes to not-allowed
   - Focused: Blue outline for keyboard navigation
 -->
 <script lang="ts">

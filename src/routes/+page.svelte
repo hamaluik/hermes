@@ -54,13 +54,13 @@
   and unread message count are tracked here to show notifications in the UI (when enabled).
 -->
 <script lang="ts">
-  import MessageEditor from "$lib/message_editor.svelte";
-  import CursorDescription from "$lib/cursor_description.svelte";
-  import Tabs from "$lib/tabs.svelte";
-  import Tab from "$lib/tab.svelte";
+  import MessageEditor from "$lib/editor/message_editor.svelte";
+  import CursorDescription from "$lib/editor/cursor_description.svelte";
+  import Tabs from "$lib/tabs/tabs.svelte";
+  import Tab from "$lib/tabs/tab.svelte";
   import SegmentTab from "$lib/forms/segment_tab.svelte";
   import { onMount } from "svelte";
-  import { getAllSegmentSchemas, type SegmentSchemas } from "../backend/schema";
+  import { getAllSegmentSchemas, type SegmentSchemas } from "$lib/shared/schema";
   import {
     message as messageDialog,
     open as openDialog,
@@ -74,39 +74,42 @@
     renderMessageSegment,
     getCurrentCellRange,
     getCurrentHl7Timestamp,
-  } from "../backend/data";
-  import Toolbar from "$lib/toolbar.svelte";
-  import ToolbarButton from "$lib/toolbar_button.svelte";
+  } from "$lib/shared/data";
+  import { exportToJson, exportToYaml, exportToToml } from "$lib/editor/export";
+  import Toolbar from "$lib/toolbar/toolbar.svelte";
+  import ToolbarButton from "$lib/toolbar/toolbar_button.svelte";
   import IconNew from "$lib/icons/IconNew.svelte";
   import IconOpen from "$lib/icons/IconOpen.svelte";
   import IconSave from "$lib/icons/IconSave.svelte";
   import IconSaveAs from "$lib/icons/IconSaveAs.svelte";
   import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
   import type { PageProps } from "./$types";
-  import ToolbarSpacer from "$lib/toolbar_spacer.svelte";
+  import ToolbarSpacer from "$lib/toolbar/toolbar_spacer.svelte";
   import IconSettings from "$lib/icons/IconSettings.svelte";
-  import SettingsModal from "$lib/settings_modal.svelte";
+  import SettingsModal from "$lib/settings/settings_modal.svelte";
   import IconHelp from "$lib/icons/IconHelp.svelte";
-  import ToolbarSeparator from "$lib/toolbar_separator.svelte";
+  import ToolbarSeparator from "$lib/toolbar/toolbar_separator.svelte";
   import IconSendReceive from "$lib/icons/IconSendReceive.svelte";
   import { get } from "svelte/store";
   import NotificationIcon from "$lib/notification_icon.svelte";
-  import { listenToListenResponse } from "../backend/listen";
-  import CommunicationDrawer from "$lib/communication_drawer.svelte";
+  import { listenToListenResponse } from "$lib/communication/listen";
+  import CommunicationDrawer from "$lib/communication/communication_drawer.svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import HeaderWizard from "$lib/wizards/header_wizard.svelte";
-  import PatientWizard from "$lib/wizards/patient_wizard.svelte";
-  import VisitWizard from "$lib/wizards/visit_wizard.svelte";
-  import { createHistoryManager } from "$lib/history.svelte";
+  import HeaderWizard from "$lib/wizards/header/header_wizard.svelte";
+  import PatientWizard from "$lib/wizards/patient/patient_wizard.svelte";
+  import VisitWizard from "$lib/wizards/visit/visit_wizard.svelte";
+  import { createHistoryManager } from "$lib/editor/history.svelte";
   import IconUndo from "$lib/icons/IconUndo.svelte";
   import IconRedo from "$lib/icons/IconRedo.svelte";
-  import FindReplaceBar from "$lib/find_replace_bar.svelte";
-  import JumpToFieldModal from "$lib/jump_to_field_modal.svelte";
-  import InsertTimestampModal from "$lib/insert_timestamp_modal.svelte";
-  import DiffModal from "$lib/diff_modal.svelte";
-  import type { SearchMatch } from "../backend/syntax_highlight";
+  import FindReplaceBar from "$lib/find_replace/find_replace_bar.svelte";
+  import JumpToFieldModal from "$lib/modals/jump_to_field_modal.svelte";
+  import InsertTimestampModal from "$lib/modals/insert_timestamp_modal.svelte";
+  import DiffModal from "$lib/diff/diff_modal.svelte";
+  import ValidationPanel from "$lib/validation/validation_panel.svelte";
+  import type { SearchMatch, ValidationMatch } from "$lib/editor/syntax_highlight";
+  import { validateLight, validateFull, type ValidationResult, type ValidationIssue } from "$lib/validation/validate";
 
   let { data }: PageProps = $props();
 
@@ -154,6 +157,20 @@
 
   // Diff modal state
   let showDiffModal = $state(false);
+
+  // Validation state
+  let validationResult: ValidationResult | null = $state(null);
+  let showValidationPanel = $state(false);
+  let validationHighlights: ValidationMatch[] = $derived.by(() => {
+    if (!validationResult) return [];
+    return validationResult.issues
+      .filter((issue: ValidationIssue) => issue.range !== null)
+      .map((issue: ValidationIssue) => ({
+        start: issue.range![0],
+        end: issue.range![1],
+        severity: issue.severity,
+      }));
+  });
 
   /**
    * Message Editor Resize System
@@ -376,7 +393,7 @@
      * Theme Application
      *
      * Applies the theme setting to the document's data-theme attribute.
-     * The CSS uses this attribute to apply light/dark/auto theme colors.
+     * The CSS uses this attribute to apply light/dark/auto theme colours.
      */
     const applyTheme = (theme: "light" | "dark" | "auto") => {
       document.documentElement.dataset.theme = theme;
@@ -471,9 +488,13 @@
     let unlistenMenuToolsInsertTimestampNow: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsInsertTimestamp: UnlistenFn | undefined = undefined;
     let unlistenMenuToolsCompare: UnlistenFn | undefined = undefined;
+    let unlistenMenuToolsValidate: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
     let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
+    let unlistenMenuExportJson: UnlistenFn | undefined = undefined;
+    let unlistenMenuExportYaml: UnlistenFn | undefined = undefined;
+    let unlistenMenuExportToml: UnlistenFn | undefined = undefined;
 
     listen("menu-file-new", () => handleNew()).then((fn) => {
       unlistenMenuNew = fn;
@@ -503,6 +524,15 @@
     });
     listen("menu-file-save-as", () => handleSaveAs()).then((fn) => {
       unlistenMenuSaveAs = fn;
+    });
+    listen("menu-file-export-json", () => handleExport("json")).then((fn) => {
+      unlistenMenuExportJson = fn;
+    });
+    listen("menu-file-export-yaml", () => handleExport("yaml")).then((fn) => {
+      unlistenMenuExportYaml = fn;
+    });
+    listen("menu-file-export-toml", () => handleExport("toml")).then((fn) => {
+      unlistenMenuExportToml = fn;
     });
     listen("menu-file-auto-save", () => {
       // Toggle the auto-save setting when menu item is clicked
@@ -621,6 +651,15 @@
     }).then((fn) => {
       unlistenMenuToolsCompare = fn;
     });
+    listen("menu-tools-validate", async () => {
+      // run full validation on demand
+      if (message) {
+        validationResult = await validateFull(message);
+        showValidationPanel = true;
+      }
+    }).then((fn) => {
+      unlistenMenuToolsValidate = fn;
+    });
 
     /**
      * Window Resize Handling
@@ -666,6 +705,10 @@
       unlistenMenuToolsInsertTimestampNow?.();
       unlistenMenuToolsInsertTimestamp?.();
       unlistenMenuToolsCompare?.();
+      unlistenMenuToolsValidate?.();
+      unlistenMenuExportJson?.();
+      unlistenMenuExportYaml?.();
+      unlistenMenuExportToml?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -684,7 +727,7 @@
   /**
    * Tab Label Generation
    *
-   * If a segment appears only once, its tab is labeled with just the segment name (e.g., "MSH").
+   * If a segment appears only once, its tab is labelled with just the segment name (e.g., "MSH").
    * If a segment appears multiple times, tabs are numbered to distinguish them (e.g., "OBX (1)", "OBX (2)").
    *
    * This numbering is essential because clicking a tab needs to uniquely identify which
@@ -868,6 +911,39 @@
     };
   });
 
+  /**
+   * Passive Validation Effect
+   *
+   * Runs light validation (required fields, parse errors) when the message changes.
+   * This provides immediate feedback without the overhead of full validation.
+   * Debounced to avoid running on every keystroke.
+   */
+  let validationTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    const currentMessage = message;
+
+    // clear any existing timer
+    if (validationTimer) {
+      clearTimeout(validationTimer);
+      validationTimer = null;
+    }
+
+    if (currentMessage) {
+      validationTimer = setTimeout(async () => {
+        validationResult = await validateLight(currentMessage);
+      }, 500); // 500ms debounce
+    } else {
+      validationResult = null;
+    }
+
+    return () => {
+      if (validationTimer) {
+        clearTimeout(validationTimer);
+        validationTimer = null;
+      }
+    };
+  });
+
   const handleSaveAs = async () => {
     const filePath = await saveDialog({
       filters: [
@@ -895,6 +971,51 @@
         console.error("Error saving file:", error);
         messageDialog(error, { title: "Error Saving File", kind: "error" });
       });
+  };
+
+  /**
+   * Exports the current message to a different format (JSON, YAML, or TOML).
+   *
+   * Shows a save dialog with the appropriate file extension filter, converts
+   * the message using the backend, and writes to the selected file.
+   */
+  const handleExport = async (format: "json" | "yaml" | "toml") => {
+    const formatConfig = {
+      json: { name: "JSON Files", extension: "json", title: "Export as JSON" },
+      yaml: { name: "YAML Files", extension: "yaml", title: "Export as YAML" },
+      toml: { name: "TOML Files", extension: "toml", title: "Export as TOML" },
+    };
+
+    const config = formatConfig[format];
+
+    const filePath = await saveDialog({
+      filters: [{ name: config.name, extensions: [config.extension] }],
+      title: config.title,
+    });
+
+    if (!filePath) {
+      return;
+    }
+
+    try {
+      let exported: string;
+      switch (format) {
+        case "json":
+          exported = await exportToJson(message);
+          break;
+        case "yaml":
+          exported = await exportToYaml(message);
+          break;
+        case "toml":
+          exported = await exportToToml(message);
+          break;
+      }
+
+      await writeTextFile(filePath, exported, { append: false, create: true });
+    } catch (error) {
+      console.error(`Error exporting to ${format}:`, error);
+      messageDialog(`${error}`, { title: `Export Error`, kind: "error" });
+    }
   };
 
   /**
@@ -1035,7 +1156,7 @@
         Wizard Integration
 
         Tabs for MSH, PID, and PV1 segments have wizard buttons that open modal dialogs.
-        These wizards query a connected database to auto-populate segment
+        These wizards query a connected the database database to auto-populate segment
         fields with real patient/visit/interface data, saving users from manual data entry.
 
         The onWizard callback is conditionally defined based on segment type:
@@ -1106,6 +1227,7 @@
     {message}
     {searchMatches}
     {currentMatchIndex}
+    {validationHighlights}
     height={editorHeight}
     onchange={(m, coalesce) => {
       updateMessage(m, { coalesce });
@@ -1139,6 +1261,10 @@
     {cursorPos}
     segmentSchemas={schemas}
     {currentFilePath}
+    {validationResult}
+    onvalidationclick={() => {
+      showValidationPanel = !showValidationPanel;
+    }}
     oncursorlocated={(loc) => {
       if (!data.settings.tabsFollowCursor) {
         return;
@@ -1146,6 +1272,26 @@
       if (loc?.segment && setActiveTab) {
         const setactive: (id: string) => void = setActiveTab;
         setactive(loc.segment);
+      }
+    }}
+  />
+  <ValidationPanel
+    result={validationResult}
+    bind:show={showValidationPanel}
+    onNavigate={(issue: ValidationIssue) => {
+      // navigate to the field in the editor and select the range
+      if (issue.range && editorElement) {
+        const el = editorElement;
+        const range = issue.range;
+        // use setTimeout to ensure panel state has settled
+        setTimeout(() => {
+          el.focus();
+          el.setSelectionRange(range[0], range[1]);
+          // scroll the selection into view by briefly blurring and refocusing
+          el.blur();
+          el.focus();
+          el.setSelectionRange(range[0], range[1]);
+        }, 0);
       }
     }}
   />
@@ -1196,7 +1342,7 @@
         editorElement.focus();
         editorElement.setSelectionRange(start, end);
         // Scroll the selection into view by briefly blurring and refocusing
-        // This triggers the browser's native scroll-to-caret behavior
+        // this triggers the browser's native scroll-to-caret behaviour
         editorElement.blur();
         editorElement.focus();
         editorElement.setSelectionRange(start, end);

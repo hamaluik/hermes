@@ -1,6 +1,6 @@
 # Hermes
 
-A desktop application for composing, sending, and receiving HL7 messages for development and testing.
+A desktop application for composing, sending, and receiving HL7 messages for HL7 system development and testing.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -21,7 +21,7 @@ A desktop application for composing, sending, and receiving HL7 messages for dev
 
 ## Overview
 
-Hermes is a cross-platform desktop application built with Tauri and Svelte that provides a comprehensive interface for working with HL7 v2.x messages. It's designed specifically for development and testing, offering both visual form-based editing and raw message manipulation capabilities.
+Hermes is a cross-platform desktop application built with Tauri and Svelte that provides a comprehensive interface for working with HL7 v2.x messages. It's designed specifically for HL7 system development and testing, offering both visual form-based editing and raw message manipulation capabilities.
 
 The application bridges the gap between manual HL7 message creation and automated testing, providing:
 - **Visual message editing** through segment tabs with field validation
@@ -408,8 +408,9 @@ cargo build
 
 ## License
 
-MIT License - See LICENSE file for details
+See LICENSE file for details
 
 ---
 
-**Note**: This is an internal tool for development and testing. It is not intended for production use in clinical environments.
+**Note**: This is a developer's tool for HL7 system development and testing. It
+is not intended for production use in clinical environments.

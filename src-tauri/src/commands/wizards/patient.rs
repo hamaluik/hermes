@@ -15,7 +15,7 @@ use color_eyre::eyre::Context;
 use hl7_parser::builder::{FieldBuilder, MessageBuilder};
 use serde::{Deserialize, Serialize};
 
-/// Patient demographic information retrieved from the database.
+/// Patient demographic information.
 ///
 /// All fields use String types for consistency with HL7 text encoding, even for structured
 /// data like dates (formatted as YYYYMMDD).
@@ -100,12 +100,10 @@ pub fn wizard_apply_patient(
     Ok(message.render_with_newlines().to_string())
 }
 
-/// Search for patients in the database.
+/// Search for sample patients.
 ///
-/// This command supports three search modes with intelligent prioritization:
-/// 1. **Patient ID search** (highest priority) - Direct lookup by internal patient ID
-/// 2. **MRN search** (second priority) - Lookup by medical record number
-/// 3. **Name search** (fallback) - Flexible name matching with multiple formats
+/// Returns hardcoded sample patient data for testing purposes.
+/// Supports filtering by patient ID, MRN, or name.
 ///
 /// # Search Priority
 /// If multiple search parameters are provided, the search uses this priority order:
@@ -113,20 +111,15 @@ pub fn wizard_apply_patient(
 /// * MRN is used if ID is not provided
 /// * Name search is only used if neither ID nor MRN is provided
 ///
-/// This prioritization exists because ID and MRN are unique identifiers that return
-/// at most one patient, while name searches can return multiple matches.
-///
-/// All name searches use case-insensitive partial matching (LIKE '%value%').
-///
 /// # Arguments
-/// * `db` - Database connection configuration
-/// * `name` - Patient name in any supported format (empty string to skip name search)
+/// * `_db` - Database connection configuration (not used - sample data returned)
+/// * `name` - Patient name to search for (empty string to skip name search)
 /// * `id` - Internal patient ID (empty string to skip ID search)
 /// * `mrn` - Medical record number (empty string to skip MRN search)
 ///
 /// # Returns
-/// * `Ok(Vec<Patient>)` - List of matching patients (may be empty if no matches found)
-/// * `Err(String)` - Database connection or query error
+/// * `Ok(Vec<Patient>)` - List of matching sample patients
+/// * `Err(String)` - Error description
 #[tauri::command]
 pub async fn wizard_search_patients(
     db: super::WizardDatabase,
@@ -134,11 +127,60 @@ pub async fn wizard_search_patients(
     id: &str,
     mrn: &str,
 ) -> Result<Vec<Patient>, String> {
-    let name = if name.trim().is_empty() {
-        None
-    } else {
-        Some(name.trim())
-    };
+    // sample patient data
+    let sample_patients = vec![
+        Patient {
+            id: "P001".to_string(),
+            fname: "John".to_string(),
+            mname: "Michael".to_string(),
+            lname: "Doe".to_string(),
+            gender: "M".to_string(),
+            dob: "19850315".to_string(),
+            mrn: "MRN001".to_string(),
+            enterpriseid: "ENT001".to_string(),
+        },
+        Patient {
+            id: "P002".to_string(),
+            fname: "Jane".to_string(),
+            mname: "Elizabeth".to_string(),
+            lname: "Smith".to_string(),
+            gender: "F".to_string(),
+            dob: "19901122".to_string(),
+            mrn: "MRN002".to_string(),
+            enterpriseid: "ENT002".to_string(),
+        },
+        Patient {
+            id: "P003".to_string(),
+            fname: "Robert".to_string(),
+            mname: "".to_string(),
+            lname: "Johnson".to_string(),
+            gender: "M".to_string(),
+            dob: "19780708".to_string(),
+            mrn: "MRN003".to_string(),
+            enterpriseid: "ENT003".to_string(),
+        },
+        Patient {
+            id: "P004".to_string(),
+            fname: "Emily".to_string(),
+            mname: "Rose".to_string(),
+            lname: "Williams".to_string(),
+            gender: "F".to_string(),
+            dob: "20001201".to_string(),
+            mrn: "MRN004".to_string(),
+            enterpriseid: "ENT004".to_string(),
+        },
+        Patient {
+            id: "P005".to_string(),
+            fname: "Michael".to_string(),
+            mname: "James".to_string(),
+            lname: "Brown".to_string(),
+            gender: "M".to_string(),
+            dob: "19650430".to_string(),
+            mrn: "MRN005".to_string(),
+            enterpriseid: "ENT005".to_string(),
+        },
+    ];
+
     let id = if id.trim().is_empty() {
         None
     } else {
@@ -149,147 +191,40 @@ pub async fn wizard_search_patients(
     } else {
         Some(mrn.trim())
     };
-
-    let fake_patients = vec![
-        Patient {
-            id: "1".to_string(),
-            fname: "John".to_string(),
-            mname: "A".to_string(),
-            lname: "Doe".to_string(),
-            gender: "M".to_string(),
-            dob: "1980-01-01".to_string(),
-            mrn: "MRN001".to_string(),
-            enterpriseid: "EID001".to_string(),
-        },
-        Patient {
-            id: "2".to_string(),
-            fname: "Jane".to_string(),
-            mname: "B".to_string(),
-            lname: "Smith".to_string(),
-            gender: "F".to_string(),
-            dob: "1990-02-02".to_string(),
-            mrn: "MRN002".to_string(),
-            enterpriseid: "EID002".to_string(),
-        },
-        Patient {
-            id: "3".to_string(),
-            fname: "Alice".to_string(),
-            mname: "C".to_string(),
-            lname: "Johnson".to_string(),
-            gender: "F".to_string(),
-            dob: "1975-03-03".to_string(),
-            mrn: "MRN003".to_string(),
-            enterpriseid: "EID003".to_string(),
-        },
-    ];
-
-    let filtered: Vec<Patient> = fake_patients
-        .into_iter()
-        .filter(|p| {
-            let name_match = match name {
-                Some(n) => {
-                    let (fname, mname, lname) = parse_name(n);
-                    let fname_match = fname
-                        .as_ref()
-                        .map_or(true, |f| p.fname.eq_ignore_ascii_case(f));
-                    let mname_match = mname
-                        .as_ref()
-                        .map_or(true, |m| p.mname.eq_ignore_ascii_case(m));
-                    let lname_match = lname
-                        .as_ref()
-                        .map_or(true, |l| p.lname.eq_ignore_ascii_case(l));
-                    fname_match && mname_match && lname_match
-                }
-                None => true,
-            };
-            let id_match = match id {
-                Some(i) => p.id == i,
-                None => true,
-            };
-            let mrn_match = match mrn {
-                Some(m) => p.mrn == m,
-                None => true,
-            };
-            name_match && id_match && mrn_match
-        })
-        .collect();
-
-    // TODO: actual database search...
-
-    Ok(filtered)
-}
-
-/// Parse a name string into (first_name, middle_name, last_name) components.
-/// Handles formats like:
-/// - "first last" -> (Some(first), None, Some(last))
-/// - "last, first" -> (Some(first), None, Some(last))
-/// - "first middle last" -> (Some(first), Some(middle), Some(last))
-/// - "last, first middle" -> (Some(first), Some(middle), Some(last))
-/// - "first" -> (Some(first), None, None)
-/// - "last" -> (None, None, Some(last))
-fn parse_name(name: &str) -> (Option<String>, Option<String>, Option<String>) {
-    let name = name.trim();
-
-    if name.is_empty() {
-        return (None, None, None);
-    }
-
-    // Check if name contains a comma (likely "last, first" format)
-    if let Some(comma_pos) = name.find(',') {
-        let last = name[..comma_pos].trim();
-        let rest = name[comma_pos + 1..].trim();
-
-        let parts: Vec<&str> = rest.split_whitespace().collect();
-
-        match parts.len() {
-            0 => (None, None, Some(last.to_string())),
-            1 => (Some(parts[0].to_string()), None, Some(last.to_string())),
-            2 => (
-                Some(parts[0].to_string()),
-                Some(parts[1].to_string()),
-                Some(last.to_string()),
-            ),
-            _ => {
-                // More than 2 parts after comma: treat first as first name, rest as middle
-                let middle = parts[1..].join(" ");
-                (
-                    Some(parts[0].to_string()),
-                    Some(middle),
-                    Some(last.to_string()),
-                )
-            }
-        }
+    let name = if name.trim().is_empty() {
+        None
     } else {
-        // No comma, split by whitespace
-        let parts: Vec<&str> = name.split_whitespace().collect();
+        Some(name.trim().to_lowercase())
+    };
 
-        match parts.len() {
-            0 => (None, None, None),
-            1 => {
-                // Single name - ambiguous, but we'll treat as first name
-                (Some(parts[0].to_string()), None, None)
-            }
-            2 => {
-                // "first last"
-                (Some(parts[0].to_string()), None, Some(parts[1].to_string()))
-            }
-            3 => {
-                // "first middle last"
-                (
-                    Some(parts[0].to_string()),
-                    Some(parts[1].to_string()),
-                    Some(parts[2].to_string()),
-                )
-            }
-            _ => {
-                // More than 3 parts: first is first name, last is last name, rest is middle
-                let middle = parts[1..parts.len() - 1].join(" ");
-                (
-                    Some(parts[0].to_string()),
-                    Some(middle),
-                    Some(parts[parts.len() - 1].to_string()),
-                )
-            }
-        }
+    // filter by ID if provided
+    if let Some(patient_id) = id {
+        return Ok(sample_patients
+            .into_iter()
+            .filter(|p| p.id == patient_id)
+            .collect());
     }
+
+    // filter by MRN if provided
+    if let Some(mrn_value) = mrn {
+        return Ok(sample_patients
+            .into_iter()
+            .filter(|p| p.mrn == mrn_value)
+            .collect());
+    }
+
+    // filter by name if provided
+    if let Some(name_value) = name {
+        return Ok(sample_patients
+            .into_iter()
+            .filter(|p| {
+                p.fname.to_lowercase().contains(&name_value)
+                    || p.lname.to_lowercase().contains(&name_value)
+                    || p.mname.to_lowercase().contains(&name_value)
+            })
+            .collect());
+    }
+
+    // no filter - return all
+    Ok(sample_patients)
 }
