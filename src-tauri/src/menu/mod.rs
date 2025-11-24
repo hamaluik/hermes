@@ -245,6 +245,7 @@ pub fn setup_menu_event_handler(app: &App) {
             "view-zoom-in" => Some("menu-view-zoom-in"),
             "view-zoom-out" => Some("menu-view-zoom-out"),
             "view-reset-zoom" => Some("menu-view-reset-zoom"),
+            "view-keyboard-shortcuts" => Some("menu-view-keyboard-shortcuts"),
             "tools-send" => Some("menu-tools-send"),
             "tools-listen" => Some("menu-tools-listen"),
             "tools-validate" => Some("menu-tools-validate"),
@@ -497,6 +498,13 @@ fn build_view_menu(app: &App) -> color_eyre::Result<Submenu<Wry>> {
             &MenuItemBuilder::new("&Reset Zoom")
                 .id("view-reset-zoom")
                 .accelerator("CmdOrCtrl+0")
+                .build(app)?,
+        )
+        .separator()
+        .item(
+            &MenuItemBuilder::new("&Keyboard Shortcuts")
+                .id("view-keyboard-shortcuts")
+                .accelerator("CmdOrCtrl+/")
                 .build(app)?,
         )
         .build()?;

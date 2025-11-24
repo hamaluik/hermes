@@ -104,6 +104,7 @@
   import FindReplaceBar from "$lib/find_replace/find_replace_bar.svelte";
   import JumpToFieldModal from "$lib/modals/jump_to_field_modal.svelte";
   import InsertTimestampModal from "$lib/modals/insert_timestamp_modal.svelte";
+  import KeyboardShortcutsModal from "$lib/modals/keyboard_shortcuts_modal.svelte";
   import DiffModal from "$lib/diff/diff_modal.svelte";
   import ValidationPanel from "$lib/validation/validation_panel.svelte";
   import type { SearchMatch, ValidationMatch } from "$lib/editor/syntax_highlight";
@@ -150,6 +151,9 @@
 
   // Diff modal state
   let showDiffModal = $state(false);
+
+  // Keyboard shortcuts modal state
+  let showKeyboardShortcutsModal = $state(false);
 
   // Validation state
   let validationResult: ValidationResult | null = $state(null);
@@ -485,6 +489,7 @@
     let unlistenMenuZoomIn: UnlistenFn | undefined = undefined;
     let unlistenMenuZoomOut: UnlistenFn | undefined = undefined;
     let unlistenMenuResetZoom: UnlistenFn | undefined = undefined;
+    let unlistenMenuKeyboardShortcuts: UnlistenFn | undefined = undefined;
     let unlistenMenuExportJson: UnlistenFn | undefined = undefined;
     let unlistenMenuExportYaml: UnlistenFn | undefined = undefined;
     let unlistenMenuExportToml: UnlistenFn | undefined = undefined;
@@ -588,6 +593,11 @@
     });
     listen("menu-view-reset-zoom", () => handleResetZoom()).then((fn) => {
       unlistenMenuResetZoom = fn;
+    });
+    listen("menu-view-keyboard-shortcuts", () => {
+      showKeyboardShortcutsModal = true;
+    }).then((fn) => {
+      unlistenMenuKeyboardShortcuts = fn;
     });
     listen<string>("menu-open-recent", (event) => {
       handleOpenRecentFile(event.payload);
@@ -722,6 +732,7 @@
       unlistenMenuZoomIn?.();
       unlistenMenuZoomOut?.();
       unlistenMenuResetZoom?.();
+      unlistenMenuKeyboardShortcuts?.();
       unlistenMenuOpenRecent?.();
       unlistenMenuClearRecent?.();
       unlistenMenuHelp?.();
@@ -1461,6 +1472,7 @@
   }}
 />
 <DiffModal bind:show={showDiffModal} editorMessage={message} />
+<KeyboardShortcutsModal bind:show={showKeyboardShortcutsModal} />
 
 <style>
   .app-content {
