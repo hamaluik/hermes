@@ -109,6 +109,7 @@
   import ValidationPanel from "$lib/validation/validation_panel.svelte";
   import type { SearchMatch, ValidationMatch } from "$lib/editor/syntax_highlight";
   import { validateLight, validateFull, type ValidationResult, type ValidationIssue } from "$lib/validation/validate";
+  import { reloadExtensions } from "$lib/extensions/extensions";
 
   let { data }: PageProps = $props();
 
@@ -451,6 +452,19 @@
     data.settings.onZoomChanged = applyZoom;
     // Initialize with current zoom setting
     applyZoom(data.settings.zoomLevel);
+
+    // Extension system integration
+    // When extension configs change (or are loaded from disk), reload the extension host.
+    // TODO: Phase 4 will add toolbar button rendering and status display in settings UI.
+    data.settings.onExtensionsChanged = (extensions) => {
+      reloadExtensions(extensions).catch((error) => {
+        console.error("Failed to reload extensions:", error);
+      });
+    };
+    // Load extensions on startup with current settings
+    reloadExtensions(data.settings.extensions).catch((error) => {
+      console.error("Failed to load extensions on startup:", error);
+    });
 
     /**
      * Menu Event Listeners

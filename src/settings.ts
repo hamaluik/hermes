@@ -66,6 +66,29 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import { error as logError } from "@tauri-apps/plugin-log";
 import type { ConnectionPreset } from "$lib/communication/connection_preset";
 
+/**
+ * Configuration for a third-party extension.
+ *
+ * Extensions are standalone executables that communicate with Hermes over stdio
+ * using JSON-RPC 2.0. This configuration specifies how to launch the extension.
+ *
+ * @see EXTENSIONPLAN.md for the complete extension system design
+ * @see extensions/api-docs/ for the extension API specification
+ */
+export interface ExtensionConfig {
+  /** Absolute path to the extension executable. */
+  path: string;
+
+  /** Command-line arguments to pass to the extension. */
+  args?: string[];
+
+  /** Additional environment variables to set when launching the extension. */
+  env?: Record<string, string>;
+
+  /** Whether the extension is enabled. Disabled extensions are not started. */
+  enabled?: boolean;
+}
+
 export class Settings {
   store: Store | null = null;
 
@@ -135,6 +158,19 @@ export class Settings {
   onConnectionPresetsChanged: ((presets: ConnectionPreset[]) => void) | null =
     null;
 
+  // Extension configurations for third-party plugins
+  // TODO: Phase 4 will add a settings UI for managing extensions
+  private _extensions: ExtensionConfig[] = [];
+
+  /**
+   * Callback to notify when extensions change (for reloading extension host).
+   *
+   * When extensions are added, removed, or modified, this callback is invoked
+   * so the frontend can trigger a reload of the extension host with the new
+   * configuration.
+   */
+  onExtensionsChanged: ((extensions: ExtensionConfig[]) => void) | null = null;
+
   /**
    * Initializes settings by loading from persistent store.
    *
@@ -166,6 +202,7 @@ export class Settings {
           store.get<number>("listenPort"),
           store.get<number>("zoomLevel"),
           store.get<ConnectionPreset[]>("connectionPresets"),
+          store.get<ExtensionConfig[]>("extensions"),
         ]);
       })
       .then(
@@ -186,6 +223,7 @@ export class Settings {
           listenPort,
           zoomLevel,
           connectionPresets,
+          extensions,
         ]) => {
           this._tabsFollowCursor = tabsFollowCursor ?? true;
           this._editorHeight = editorHeight ?? 200;
@@ -203,6 +241,7 @@ export class Settings {
           this._listenPort = listenPort ?? 2575;
           this._zoomLevel = zoomLevel ?? 1.0;
           this._connectionPresets = connectionPresets ?? [];
+          this._extensions = extensions ?? [];
 
           // Notify listeners that settings are loaded (for initial menu population)
           if (this.onRecentFilesChanged) {
@@ -229,6 +268,9 @@ export class Settings {
           }
           if (this.onConnectionPresetsChanged) {
             this.onConnectionPresetsChanged(this._connectionPresets);
+          }
+          if (this.onExtensionsChanged) {
+            this.onExtensionsChanged(this._extensions);
           }
         },
       )
@@ -522,6 +564,30 @@ export class Settings {
     }
     if (this.onConnectionPresetsChanged) {
       this.onConnectionPresetsChanged(value);
+    }
+  }
+
+  /**
+   * Configured third-party extensions.
+   *
+   * Each extension is a standalone executable that communicates with Hermes
+   * over stdio using JSON-RPC 2.0. Changes to this list trigger a reload of
+   * the extension host.
+   */
+  get extensions(): ExtensionConfig[] {
+    return this._extensions;
+  }
+  set extensions(value: ExtensionConfig[]) {
+    console.debug("Setting extensions to:", value);
+    this._extensions = value;
+    if (this.store) {
+      this.store.set("extensions", value).catch((error) => {
+        console.error("Error saving extensions setting:", error);
+        logError("Failed to save extensions setting");
+      });
+    }
+    if (this.onExtensionsChanged) {
+      this.onExtensionsChanged(value);
     }
   }
 }

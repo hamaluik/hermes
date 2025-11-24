@@ -289,7 +289,14 @@ fn set_field_value(
         .ok_or_else(|| format!("Segment {} not found", segment_name))?;
 
     // modify the field using the builder API
-    modify_segment_field(segment, field_num, field_repetition, component, subcomponent, value);
+    modify_segment_field(
+        segment,
+        field_num,
+        field_repetition,
+        component,
+        subcomponent,
+        value,
+    );
 
     Ok(builder.to_string())
 }
