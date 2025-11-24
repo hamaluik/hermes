@@ -13,6 +13,7 @@
 //!   - `editor/` - Cursor tracking, data manipulation, syntax highlighting
 //!   - `validation/` - Message validation and comparison
 //!   - `support/` - Field descriptions and schema queries
+//! - [`extensions`] - Extension system for third-party plugins
 //! - [`menu`] - Native menu building and state management
 //! - [`schema`] - HL7 schema caching from TOML files
 //! - [`spec`] - HL7 standard field descriptions
@@ -22,6 +23,7 @@
 //! Application state is managed via [`AppData`], which holds:
 //! - Cached HL7 schema
 //! - MLLP listener task handle
+//! - Extension host for managing third-party extensions
 //! - Menu item references for dynamic enable/disable
 
 use color_eyre::eyre::Context;
@@ -31,6 +33,7 @@ use tauri::{Manager, Wry};
 use tokio::sync::Mutex;
 
 mod commands;
+mod extensions;
 mod menu;
 mod schema;
 mod spec;
@@ -46,6 +49,9 @@ pub struct AppData {
 
     /// Handle to the MLLP listener background task.
     listen_join: Mutex<Option<tokio::task::JoinHandle<()>>>,
+
+    /// Extension host for managing third-party extensions.
+    pub extension_host: Mutex<extensions::ExtensionHost>,
 
     /// Reference to the Save menu item for dynamic enable/disable.
     pub save_menu_item: MenuItem<Wry>,
@@ -159,10 +165,27 @@ pub fn run() {
 
             menu::setup_menu_event_handler(app);
 
+            // get app data directory for extensions
+            let data_dir = app
+                .path()
+                .app_data_dir()
+                .wrap_err_with(|| "Failed to get app data directory")?;
+
+            // get hermes version from cargo package
+            let hermes_version = env!("CARGO_PKG_VERSION").to_string();
+
+            // create extension host
+            let extension_host = extensions::ExtensionHost::new(
+                app.handle().clone(),
+                data_dir,
+                hermes_version,
+            );
+
             let app_data = AppData {
                 schema: SchemaCache::new("messages.toml")
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
                 listen_join: Mutex::new(None),
+                extension_host: Mutex::new(extension_host),
                 save_menu_item: menu_items.save_menu_item,
                 auto_save_menu_item: menu_items.auto_save_menu_item,
                 undo_menu_item: menu_items.undo_menu_item,

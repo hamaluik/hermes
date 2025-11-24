@@ -81,7 +81,7 @@ When Hermes starts your extension, it sends an `initialize` request. Your extens
     "name": "My Extension",
     "version": "1.0.0",
     "capabilities": {
-      "commands": true,
+      "commands": ["myExtension/doSomething"],
       "schemaProvider": false
     },
     "toolbarButtons": [

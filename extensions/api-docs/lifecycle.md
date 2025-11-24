@@ -109,7 +109,7 @@ Your extension must respond with its metadata and capabilities:
     "description": "Does useful things with HL7 messages",
     "authors": ["Jane Developer <jane@example.com>"],
     "capabilities": {
-      "commands": true,
+      "commands": ["myExtension/action"],
       "schemaProvider": true
     },
     "toolbarButtons": [

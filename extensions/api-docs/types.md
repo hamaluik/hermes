@@ -120,13 +120,17 @@ interface InitializeResult {
 
 ```typescript
 interface Capabilities {
-  /** Extension can handle commands */
-  commands?: boolean;
+  /** Command IDs this extension can handle */
+  commands?: string[];
 
   /** Extension provides schema overrides */
   schemaProvider?: boolean;
 }
 ```
+
+**Note:** The `commands` array lists command IDs that the extension can handle via
+`command/execute`. This allows extensions to register commands independently of toolbar
+buttons. Commands from `toolbarButtons[].command` are automatically included.
 
 ---
 
