@@ -381,18 +381,19 @@ pub struct PatchMessageParams {
 /// A single patch operation for `editor/patchMessage`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Patch {
-    /// HL7 path to the target field (e.g., "PID.5.1", "OBX[2].5").
+    /// HL7 path to the target (e.g., "PID.5.1", "OBX[2].5", "NK1").
     pub path: String,
 
     /// New value to set (if not removing).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
 
-    /// Whether to remove the field instead of setting it.
+    /// Remove an entire segment (path must be segment name only, e.g., "NK1" or "OBX[2]").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remove: Option<bool>,
 
-    /// Whether to create the field if it doesn't exist.
+    /// Create a new segment (path must be segment name only, e.g., "NK1").
+    /// Fields are auto-created when setting values; this is only for segments.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub create: Option<bool>,
 }

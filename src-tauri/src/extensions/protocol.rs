@@ -122,7 +122,11 @@ pub struct Request {
 
 impl Request {
     /// Create a new request with the given method and parameters.
-    pub fn new(id: RequestId, method: impl Into<String>, params: Option<serde_json::Value>) -> Self {
+    pub fn new(
+        id: RequestId,
+        method: impl Into<String>,
+        params: Option<serde_json::Value>,
+    ) -> Self {
         Self {
             jsonrpc: "2.0".to_string(),
             id,
@@ -226,6 +230,21 @@ impl RpcError {
             error_codes::COMMAND_TIMEOUT,
             format!("command timed out: {command}"),
         )
+    }
+
+    /// Create an invalid message error (-32004).
+    pub fn invalid_message(message: impl Into<String>) -> Self {
+        Self::new(error_codes::INVALID_MESSAGE, message)
+    }
+
+    /// Create an invalid URL error (-32007).
+    pub fn invalid_url(message: impl Into<String>) -> Self {
+        Self::new(error_codes::INVALID_URL, message)
+    }
+
+    /// Create a window error (-32008).
+    pub fn window_error(message: impl Into<String>) -> Self {
+        Self::new(error_codes::WINDOW_ERROR, message)
     }
 }
 
@@ -360,7 +379,9 @@ const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024;
 /// \r\n
 /// <JSON-RPC message>
 /// ```
-pub async fn read_message<R: AsyncBufRead + Unpin>(reader: &mut R) -> Result<Message, ProtocolError> {
+pub async fn read_message<R: AsyncBufRead + Unpin>(
+    reader: &mut R,
+) -> Result<Message, ProtocolError> {
     // read headers until we find Content-Length
     let mut content_length: Option<usize> = None;
     let mut line = String::new();
@@ -477,7 +498,10 @@ mod tests {
 
     #[test]
     fn test_notification_serialization() {
-        let notification = Notification::new("window/closed", Some(serde_json::json!({"windowId": "123"})));
+        let notification = Notification::new(
+            "window/closed",
+            Some(serde_json::json!({"windowId": "123"})),
+        );
         let json = serde_json::to_string(&notification).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
         assert!(json.contains("\"method\":\"window/closed\""));
@@ -500,7 +524,8 @@ mod tests {
 
     #[test]
     fn test_message_deserialize_error() {
-        let json = r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"method not found"}}"#;
+        let json =
+            r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"method not found"}}"#;
         let msg: Message = serde_json::from_str(json).unwrap();
         assert!(matches!(msg, Message::Error(_)));
     }

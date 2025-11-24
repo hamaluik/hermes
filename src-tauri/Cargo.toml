@@ -47,4 +47,6 @@ bytes = "1.10.1"
 tauri-plugin-clipboard-manager = "2"
 regex = "1"
 indexmap = { version = "2", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+url = "2"
 

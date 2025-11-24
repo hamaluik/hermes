@@ -20,10 +20,12 @@
 
 mod communication;
 mod editor;
+pub mod extensions;
 mod support;
 mod validation;
 
 pub use communication::*;
 pub use editor::*;
+pub use extensions::*;
 pub use support::*;
 pub use validation::*;

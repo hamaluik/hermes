@@ -13,16 +13,10 @@
 //! - [`process`] - Single extension process management
 //! - [`host`] - Multi-extension orchestration
 
-mod host;
+pub mod host;
 mod process;
-mod protocol;
-mod types;
+pub mod protocol;
+pub mod types;
 
 // primary public API
 pub use host::ExtensionHost;
-
-// types needed by Tauri commands (Phase 2)
-#[allow(unused_imports)]
-pub use host::{ExtensionStatus, ToolbarButtonInfo};
-#[allow(unused_imports)]
-pub use types::ExtensionConfig;

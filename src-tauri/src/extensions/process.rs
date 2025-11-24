@@ -26,6 +26,10 @@ const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(10);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// Type alias for pending request tracking.
+type PendingRequests =
+    Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Response, ErrorResponse>>>>>;
+
 /// Errors that can occur during extension process operations.
 #[derive(Debug)]
 pub enum ExtensionError {
@@ -116,7 +120,7 @@ pub struct ExtensionProcess {
     outgoing_tx: Option<mpsc::Sender<Message>>,
 
     /// Pending requests waiting for responses.
-    pending_requests: Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Response, ErrorResponse>>>>>,
+    pending_requests: PendingRequests,
 
     /// Next request ID counter.
     next_request_id: Arc<Mutex<i64>>,
@@ -334,10 +338,8 @@ impl ExtensionProcess {
         method: &str,
         params: serde_json::Value,
     ) -> Result<(), ExtensionError> {
-        let notification = Notification::new(
-            method,
-            if params.is_null() { None } else { Some(params) },
-        );
+        let notification =
+            Notification::new(method, if params.is_null() { None } else { Some(params) });
 
         if let Some(tx) = &self.outgoing_tx {
             tx.send(Message::Notification(notification))
@@ -363,9 +365,12 @@ impl ExtensionProcess {
 
         let params = serde_json::json!({ "command": command });
 
-        timeout(COMMAND_TIMEOUT, self.send_request("command/execute", params))
-            .await
-            .map_err(|_| ExtensionError::Timeout(format!("command/{command}")))?
+        timeout(
+            COMMAND_TIMEOUT,
+            self.send_request("command/execute", params),
+        )
+        .await
+        .map_err(|_| ExtensionError::Timeout(format!("command/{command}")))?
     }
 
     /// Initiate graceful shutdown of the extension.
@@ -380,7 +385,9 @@ impl ExtensionProcess {
 
         log::info!("shutting down extension {}", self.id);
 
-        let params = ShutdownParams { reason: Some(reason) };
+        let params = ShutdownParams {
+            reason: Some(reason),
+        };
         let result = timeout(
             SHUTDOWN_TIMEOUT,
             self.send_request("shutdown", serde_json::to_value(&params).unwrap()),
@@ -425,9 +432,12 @@ impl ExtensionProcess {
 
     /// Take the incoming message receiver for the host to process.
     ///
-    /// TODO: the host should spawn a task per extension to process incoming messages
-    /// from this channel, routing requests to `handle_extension_request` and sending
-    /// responses back via the outgoing channel.
+    /// NOTE: This method supports the infrastructure for extension-initiated requests
+    /// (e.g., editor/getMessage). Currently, the host handles messages inline during
+    /// execute_command calls. For full bidirectional communication where extensions
+    /// can initiate requests asynchronously, the host would spawn a task per extension
+    /// to continuously process this channel. This is not currently needed since
+    /// extensions only send requests in response to command execution.
     #[allow(dead_code)]
     pub fn take_incoming_rx(&mut self) -> Option<mpsc::Receiver<InternalMessage>> {
         self.incoming_rx.take()
@@ -475,7 +485,7 @@ impl ExtensionProcess {
 fn spawn_reader_task<R: AsyncBufRead + Unpin + Send + 'static>(
     mut reader: R,
     incoming_tx: mpsc::Sender<InternalMessage>,
-    pending_requests: Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Response, ErrorResponse>>>>>,
+    pending_requests: PendingRequests,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
@@ -567,7 +577,6 @@ fn generate_extension_id(path: &str) -> String {
     let hash = hasher.finish();
     format!("ext-{hash:016x}")
 }
-
 
 #[cfg(test)]
 mod tests {

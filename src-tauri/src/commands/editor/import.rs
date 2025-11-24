@@ -56,69 +56,31 @@
 //! PID|||12345||DOE^JOHN
 //! ```
 
+use hl7_parser::{
+    builder::{ComponentBuilder, FieldBuilder, MessageBuilder, RepeatBuilder, SegmentBuilder},
+    message::Separators,
+};
 use indexmap::IndexMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
-/// Default HL7 delimiters.
-const DEFAULT_FIELD_SEP: char = '|';
-const DEFAULT_COMPONENT_SEP: char = '^';
-const DEFAULT_REPETITION_SEP: char = '~';
-const DEFAULT_SUBCOMPONENT_SEP: char = '&';
-
-/// HL7 delimiter configuration extracted from MSH segment.
-#[derive(Debug, Clone)]
-struct Delimiters {
-    field: char,
-    component: char,
-    repetition: char,
-    subcomponent: char,
-}
-
-impl Default for Delimiters {
-    fn default() -> Self {
-        Self {
-            field: DEFAULT_FIELD_SEP,
-            component: DEFAULT_COMPONENT_SEP,
-            repetition: DEFAULT_REPETITION_SEP,
-            subcomponent: DEFAULT_SUBCOMPONENT_SEP,
-        }
-    }
-}
-
-impl Delimiters {
-    /// Parses delimiters from MSH.2 encoding characters string.
-    fn from_encoding_chars(encoding_chars: &str) -> Self {
-        let chars: Vec<char> = encoding_chars.chars().collect();
-        Self {
-            field: DEFAULT_FIELD_SEP,
-            component: chars.first().copied().unwrap_or(DEFAULT_COMPONENT_SEP),
-            repetition: chars.get(1).copied().unwrap_or(DEFAULT_REPETITION_SEP),
-            // chars[2] is escape char, chars[3] is subcomponent
-            subcomponent: chars.get(3).copied().unwrap_or(DEFAULT_SUBCOMPONENT_SEP),
-        }
-    }
-}
-
-/// Converts a tree structure back to an HL7 message.
+/// Converts a tree structure back to an HL7 message using MessageBuilder.
 fn tree_to_message(tree: &IndexMap<String, Value>) -> Result<String, String> {
-    // extract delimiters from MSH if present
-    let delimiters = extract_delimiters(tree);
-
-    let mut segments: Vec<String> = Vec::new();
+    let separators = extract_separators(tree);
+    let mut builder = MessageBuilder::new(separators);
 
     for (segment_name, value) in tree {
         match value {
             Value::Array(arr) => {
                 // repeated segments
                 for segment_value in arr {
-                    let segment_line =
-                        build_segment_line(segment_name, segment_value, &delimiters)?;
-                    segments.push(segment_line);
+                    let segment = build_segment(segment_name, segment_value)?;
+                    builder.push_segment(segment);
                 }
             }
             Value::Object(_) => {
-                let segment_line = build_segment_line(segment_name, value, &delimiters)?;
-                segments.push(segment_line);
+                let segment = build_segment(segment_name, value)?;
+                builder.push_segment(segment);
             }
             _ => {
                 return Err(format!(
@@ -128,13 +90,13 @@ fn tree_to_message(tree: &IndexMap<String, Value>) -> Result<String, String> {
         }
     }
 
-    Ok(segments.join("\r"))
+    Ok(builder.to_string())
 }
 
-/// Extracts delimiter configuration from MSH segment if present.
-fn extract_delimiters(tree: &IndexMap<String, Value>) -> Delimiters {
+/// Extracts separator configuration from MSH segment if present.
+fn extract_separators(tree: &IndexMap<String, Value>) -> Separators {
     let Some(msh) = tree.get("MSH") else {
-        return Delimiters::default();
+        return Separators::default();
     };
 
     // handle both single MSH and array of MSH (though array is unusual)
@@ -142,25 +104,33 @@ fn extract_delimiters(tree: &IndexMap<String, Value>) -> Delimiters {
         Value::Object(obj) => obj,
         Value::Array(arr) => match arr.first() {
             Some(Value::Object(obj)) => obj,
-            _ => return Delimiters::default(),
+            _ => return Separators::default(),
         },
-        _ => return Delimiters::default(),
+        _ => return Separators::default(),
     };
 
-    // MSH.1 is the field separator (|), MSH.2 contains encoding characters (^~\&)
-    // The export stores MSH.1 at "1" and MSH.2 at "2"
+    // MSH.2 contains encoding characters (^~\&)
     match msh_obj.get("2") {
-        Some(Value::String(encoding_chars)) => Delimiters::from_encoding_chars(encoding_chars),
-        _ => Delimiters::default(),
+        Some(Value::String(encoding_chars)) => separators_from_encoding_chars(encoding_chars),
+        _ => Separators::default(),
     }
 }
 
-/// Builds a single segment line from segment name and fields object.
-fn build_segment_line(
-    segment_name: &str,
-    fields_value: &Value,
-    delimiters: &Delimiters,
-) -> Result<String, String> {
+/// Parses separators from MSH.2 encoding characters string.
+fn separators_from_encoding_chars(encoding_chars: &str) -> Separators {
+    let chars: Vec<char> = encoding_chars.chars().collect();
+    Separators {
+        field: '|',
+        component: chars.first().copied().unwrap_or('^'),
+        repetition: chars.get(1).copied().unwrap_or('~'),
+        escape: chars.get(2).copied().unwrap_or('\\'),
+        subcomponent: chars.get(3).copied().unwrap_or('&'),
+        lenient_newlines: false,
+    }
+}
+
+/// Builds a SegmentBuilder from segment name and fields object.
+fn build_segment(segment_name: &str, fields_value: &Value) -> Result<SegmentBuilder, String> {
     let fields_obj = match fields_value {
         Value::Object(obj) => obj,
         _ => {
@@ -170,149 +140,98 @@ fn build_segment_line(
         }
     };
 
-    // find the maximum field index
     let max_field_idx = fields_obj
         .keys()
         .filter_map(|k| k.parse::<usize>().ok())
         .max()
         .unwrap_or(0);
 
-    if segment_name == "MSH" {
-        // MSH is special: MSH.1 is the field separator (|), MSH.2 is encoding chars
-        build_msh_segment(fields_obj, max_field_idx, delimiters)
-    } else {
-        build_regular_segment(segment_name, fields_obj, max_field_idx, delimiters)
-    }
-}
+    let mut segment = SegmentBuilder::new(segment_name);
 
-/// Builds an MSH segment line.
-///
-/// MSH is unique because MSH.1 (the field separator) is implicit in the output.
-/// The export stores MSH.1 as "|" at index "1" and MSH.2 (encoding chars) at "2".
-/// We skip field "1" since the field separator is implicitly added by joining.
-fn build_msh_segment(
-    fields_obj: &serde_json::Map<String, Value>,
-    max_field_idx: usize,
-    delimiters: &Delimiters,
-) -> Result<String, String> {
-    let mut parts: Vec<String> = vec!["MSH".to_string()];
+    // MSH is special: field "1" in export is the field separator, skip it
+    // since SegmentBuilder handles MSH.1/MSH.2 automatically
+    let start_idx = if segment_name == "MSH" { 2 } else { 1 };
 
-    // skip field "1" (field separator "|"), start from field "2" (encoding chars)
-    for idx in 2..=max_field_idx {
-        let field_value = fields_obj.get(&idx.to_string());
-        let field_str = match field_value {
-            Some(v) => value_to_field(v, delimiters)?,
-            None => String::new(),
-        };
-        parts.push(field_str);
+    for idx in start_idx..=max_field_idx {
+        if let Some(field_value) = fields_obj.get(&idx.to_string()) {
+            let field = value_to_field(field_value)?;
+            segment.set_field(idx, field);
+        }
     }
 
-    Ok(parts.join(&delimiters.field.to_string()))
+    Ok(segment)
 }
 
-/// Builds a regular (non-MSH) segment line.
-fn build_regular_segment(
-    segment_name: &str,
-    fields_obj: &serde_json::Map<String, Value>,
-    max_field_idx: usize,
-    delimiters: &Delimiters,
-) -> Result<String, String> {
-    let mut parts: Vec<String> = vec![segment_name.to_string()];
-
-    for idx in 1..=max_field_idx {
-        let field_value = fields_obj.get(&idx.to_string());
-        let field_str = match field_value {
-            Some(v) => value_to_field(v, delimiters)?,
-            None => String::new(),
-        };
-        parts.push(field_str);
-    }
-
-    Ok(parts.join(&delimiters.field.to_string()))
-}
-
-/// Converts a JSON value to a field string, handling repetitions.
-fn value_to_field(value: &Value, delimiters: &Delimiters) -> Result<String, String> {
+/// Converts a JSON value to a FieldBuilder, handling repetitions.
+fn value_to_field(value: &Value) -> Result<FieldBuilder, String> {
     match value {
-        Value::Null => Ok(String::new()),
-        Value::String(s) => Ok(s.clone()),
-        Value::Number(n) => Ok(n.to_string()),
-        Value::Bool(b) => Ok(b.to_string()),
+        Value::Null => Ok(FieldBuilder::default()),
+        Value::String(s) => Ok(FieldBuilder::with_value(s.clone())),
+        Value::Number(n) => Ok(FieldBuilder::with_value(n.to_string())),
+        Value::Bool(b) => Ok(FieldBuilder::with_value(b.to_string())),
         Value::Array(arr) => {
             // field repetitions
-            let parts: Result<Vec<String>, String> =
-                arr.iter().map(|v| value_to_repeat(v, delimiters)).collect();
-            Ok(parts?.join(&delimiters.repetition.to_string()))
+            let repeats: Result<Vec<RepeatBuilder>, String> =
+                arr.iter().map(value_to_repeat).collect();
+            Ok(FieldBuilder::with_repeats(repeats?))
         }
         Value::Object(_) => {
             // single repeat with components
-            value_to_repeat(value, delimiters)
+            let repeat = value_to_repeat(value)?;
+            Ok(FieldBuilder::with_repeats(vec![repeat]))
         }
     }
 }
 
-/// Converts a JSON value to a single field repetition (components).
-fn value_to_repeat(value: &Value, delimiters: &Delimiters) -> Result<String, String> {
+/// Converts a JSON value to a RepeatBuilder (components).
+fn value_to_repeat(value: &Value) -> Result<RepeatBuilder, String> {
     match value {
-        Value::Null => Ok(String::new()),
-        Value::String(s) => Ok(s.clone()),
-        Value::Number(n) => Ok(n.to_string()),
-        Value::Bool(b) => Ok(b.to_string()),
+        Value::Null => Ok(RepeatBuilder::default()),
+        Value::String(s) => Ok(RepeatBuilder::with_value(s.clone())),
+        Value::Number(n) => Ok(RepeatBuilder::with_value(n.to_string())),
+        Value::Bool(b) => Ok(RepeatBuilder::with_value(b.to_string())),
         Value::Object(obj) => {
-            // multiple components
-            let max_comp_idx = obj
-                .keys()
-                .filter_map(|k| k.parse::<usize>().ok())
-                .max()
-                .unwrap_or(0);
-
-            let mut parts: Vec<String> = Vec::new();
-            for idx in 1..=max_comp_idx {
-                let comp_value = obj.get(&idx.to_string());
-                let comp_str = match comp_value {
-                    Some(v) => value_to_component(v, delimiters)?,
-                    None => String::new(),
-                };
-                parts.push(comp_str);
+            let mut components: HashMap<usize, ComponentBuilder> = HashMap::new();
+            for (key, comp_value) in obj {
+                let idx: usize = key
+                    .parse()
+                    .map_err(|_| format!("Invalid component index: {key}"))?;
+                let component = value_to_component(comp_value)?;
+                components.insert(idx, component);
             }
-            Ok(parts.join(&delimiters.component.to_string()))
+            Ok(RepeatBuilder::with_components(components))
         }
         Value::Array(_) => Err("Unexpected array in repeat position".to_string()),
     }
 }
 
-/// Converts a JSON value to a component string, handling subcomponents.
-fn value_to_component(value: &Value, delimiters: &Delimiters) -> Result<String, String> {
+/// Converts a JSON value to a ComponentBuilder, handling subcomponents.
+fn value_to_component(value: &Value) -> Result<ComponentBuilder, String> {
     match value {
-        Value::Null => Ok(String::new()),
-        Value::String(s) => Ok(s.clone()),
-        Value::Number(n) => Ok(n.to_string()),
-        Value::Bool(b) => Ok(b.to_string()),
+        Value::Null => Ok(ComponentBuilder::default()),
+        Value::String(s) => Ok(ComponentBuilder::with_value(s.clone())),
+        Value::Number(n) => Ok(ComponentBuilder::with_value(n.to_string())),
+        Value::Bool(b) => Ok(ComponentBuilder::with_value(b.to_string())),
         Value::Object(obj) => {
-            // multiple subcomponents
-            let max_sub_idx = obj
-                .keys()
-                .filter_map(|k| k.parse::<usize>().ok())
-                .max()
-                .unwrap_or(0);
-
-            let mut parts: Vec<String> = Vec::new();
-            for idx in 1..=max_sub_idx {
-                let sub_value = obj.get(&idx.to_string());
+            let mut subcomponents: HashMap<usize, String> = HashMap::new();
+            for (key, sub_value) in obj {
+                let idx: usize = key
+                    .parse()
+                    .map_err(|_| format!("Invalid subcomponent index: {key}"))?;
                 let sub_str = match sub_value {
-                    Some(Value::String(s)) => s.clone(),
-                    Some(Value::Number(n)) => n.to_string(),
-                    Some(Value::Bool(b)) => b.to_string(),
-                    Some(Value::Null) | None => String::new(),
-                    Some(other) => {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    Value::Null => String::new(),
+                    other => {
                         return Err(format!(
                             "Unexpected value type in subcomponent position: {other:?}"
                         ));
                     }
                 };
-                parts.push(sub_str);
+                subcomponents.insert(idx, sub_str);
             }
-            Ok(parts.join(&delimiters.subcomponent.to_string()))
+            Ok(ComponentBuilder::with_subcomponents(subcomponents))
         }
         Value::Array(_) => Err("Unexpected array in component position".to_string()),
     }

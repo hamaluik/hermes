@@ -6,11 +6,15 @@
 //! - Aggregating toolbar buttons from all extensions
 //! - Handling requests from extensions (editor/*, ui/*)
 
+use crate::commands::extensions::editor::handle_set_message;
+use crate::commands::extensions::ui::{
+    close_extension_windows, handle_close_window, handle_open_window, SharedWindowManager,
+};
 use crate::extensions::process::{ExtensionError, ExtensionProcess};
 use crate::extensions::protocol::{Message, Notification, Request, Response, RpcError};
 use crate::extensions::types::{
-    CommandExecuteResult, ExtensionConfig, ExtensionState, SchemaOverride, ShutdownReason,
-    ToolbarButton,
+    CloseWindowParams, CommandExecuteResult, ExtensionConfig, ExtensionState, OpenWindowParams,
+    SchemaOverride, SetMessageParams, ShutdownReason, ToolbarButton,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -110,10 +114,9 @@ impl ExtensionHost {
     async fn start_extension(&mut self, config: ExtensionConfig) -> Result<(), ExtensionError> {
         let ext_data_dir = self.data_dir.join("extensions");
         std::fs::create_dir_all(&ext_data_dir).map_err(|e| {
-            ExtensionError::SpawnFailed(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("failed to create extension data directory: {e}"),
-            ))
+            ExtensionError::SpawnFailed(std::io::Error::other(format!(
+                "failed to create extension data directory: {e}"
+            )))
         })?;
 
         let mut process =
@@ -132,10 +135,18 @@ impl ExtensionHost {
     }
 
     /// Gracefully shutdown all extensions.
-    pub async fn shutdown_all(&mut self) {
+    ///
+    /// Closes any windows opened by extensions and then shuts down the extension
+    /// processes gracefully.
+    pub async fn shutdown_all(&mut self, window_manager: &SharedWindowManager) {
         log::info!("shutting down all extensions");
 
         let ext_ids: Vec<String> = self.extensions.keys().cloned().collect();
+
+        for ext_id in &ext_ids {
+            // close any windows opened by this extension
+            close_extension_windows(&self.app_handle, ext_id, window_manager).await;
+        }
 
         for ext_id in ext_ids {
             if let Some(mut ext) = self.extensions.remove(&ext_id) {
@@ -150,11 +161,21 @@ impl ExtensionHost {
     }
 
     /// Reload all extensions (stop, then start with new configs).
-    pub async fn reload(&mut self, configs: Vec<ExtensionConfig>) -> Result<(), ExtensionError> {
+    ///
+    /// Closes windows, shuts down existing extensions, and starts with new configs.
+    pub async fn reload(
+        &mut self,
+        configs: Vec<ExtensionConfig>,
+        window_manager: &SharedWindowManager,
+    ) -> Result<(), ExtensionError> {
         log::info!("reloading extensions");
 
-        // shutdown existing extensions
+        // shutdown existing extensions (this also closes their windows)
         let ext_ids: Vec<String> = self.extensions.keys().cloned().collect();
+        for ext_id in &ext_ids {
+            close_extension_windows(&self.app_handle, ext_id, window_manager).await;
+        }
+
         for ext_id in ext_ids {
             if let Some(mut ext) = self.extensions.remove(&ext_id) {
                 if let Err(e) = ext.shutdown(ShutdownReason::Reload).await {
@@ -197,52 +218,102 @@ impl ExtensionHost {
     /// Handle a request from an extension.
     ///
     /// This routes editor/* and ui/* requests from extensions to the appropriate handlers.
+    ///
+    /// For editor operations, the handler emits events to the frontend for processing.
+    /// For UI operations, the handler uses the window manager to create/close windows.
     pub async fn handle_extension_request(
         &mut self,
         ext_id: &str,
         request: Request,
+        window_manager: &SharedWindowManager,
     ) -> Result<Response, RpcError> {
         log::debug!("handling request from {ext_id}: {}", request.method);
 
         match request.method.as_str() {
             "editor/getMessage" => {
-                // TODO: implement frontend event bridge with response channel
-                // needs to emit event, await frontend response, then return result
+                // TODO: Phase 4 - implement full frontend integration.
+                // Currently emits event but response handling is incomplete.
+                // The frontend needs to:
+                // 1. Listen for "extension-get-message-request" event
+                // 2. Call handle_get_message() with current editor content
+                // 3. Route response back to extension via provide_extension_message command
+                // See EXTENSIONPLAN.md Phase 4 section 4.3 "Editor Bridge" for details.
+                self.app_handle
+                    .emit("extension-get-message-request", (&ext_id, &request.id))
+                    .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
+
                 Err(RpcError::internal(
-                    "editor/getMessage not yet implemented",
+                    "editor/getMessage requires frontend interaction - not yet fully implemented",
                 ))
             }
             "editor/setMessage" => {
-                // TODO: implement proper response handling from frontend
-                if let Some(params) = &request.params {
+                let params_value = request
+                    .params
+                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+                let params: SetMessageParams = serde_json::from_value(params_value)
+                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+                let (hl7_message, result) = handle_set_message(params)?;
+
+                if result.success {
+                    // emit event to frontend with the converted HL7 message
                     self.app_handle
-                        .emit("extension-set-message", params)
+                        .emit("extension-set-message", &hl7_message)
                         .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
                 }
+
                 Ok(Response::new(
                     request.id,
-                    serde_json::json!({"success": true}),
+                    serde_json::to_value(result).unwrap(),
                 ))
             }
             "editor/patchMessage" => {
-                // TODO: implement proper response handling from frontend
-                if let Some(params) = &request.params {
-                    self.app_handle
-                        .emit("extension-patch-message", params)
-                        .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
-                }
-                Ok(Response::new(
-                    request.id,
-                    serde_json::json!({"success": true, "patchesApplied": 0}),
+                // TODO: Phase 4 - implement full frontend integration.
+                // Currently emits event but response handling is incomplete.
+                // The frontend needs to:
+                // 1. Listen for "extension-patch-message-request" event
+                // 2. Get current message, call handle_patch_message() with it
+                // 3. Update editor with patched message
+                // 4. Route response back to extension
+                // See EXTENSIONPLAN.md Phase 4 section 4.3 "Editor Bridge" for details.
+                self.app_handle
+                    .emit(
+                        "extension-patch-message-request",
+                        (&ext_id, &request.id, &request.params),
+                    )
+                    .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
+
+                Err(RpcError::internal(
+                    "editor/patchMessage requires frontend interaction - not yet fully implemented",
                 ))
             }
             "ui/openWindow" => {
-                // TODO: implement window management in Phase 2
-                Err(RpcError::method_not_found(&request.method))
+                let params_value = request
+                    .params
+                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+                let params: OpenWindowParams = serde_json::from_value(params_value)
+                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+                let result =
+                    handle_open_window(&self.app_handle, ext_id, params, window_manager).await?;
+                Ok(Response::new(
+                    request.id,
+                    serde_json::to_value(result).unwrap(),
+                ))
             }
             "ui/closeWindow" => {
-                // TODO: implement window management in Phase 2
-                Err(RpcError::method_not_found(&request.method))
+                let params_value = request
+                    .params
+                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+                let params: CloseWindowParams = serde_json::from_value(params_value)
+                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+                let result =
+                    handle_close_window(&self.app_handle, ext_id, params, window_manager).await?;
+                Ok(Response::new(
+                    request.id,
+                    serde_json::to_value(result).unwrap(),
+                ))
             }
             _ => Err(RpcError::method_not_found(&request.method)),
         }
@@ -315,12 +386,17 @@ impl ExtensionHost {
     }
 
     /// Send a response to an extension's pending request.
+    ///
+    /// TODO: Phase 4 - implement proper response routing.
+    /// Currently responses are handled inline in handle_extension_request.
+    /// For getMessage/patchMessage which require async frontend interaction,
+    /// we need to track pending requests and route responses when the frontend
+    /// calls back. This method will be used by provide_extension_message command.
     pub async fn send_response(
         &mut self,
         ext_id: &str,
         response: Message,
     ) -> Result<(), ExtensionError> {
-        // TODO: this would need the outgoing channel; for now we handle responses inline
         log::debug!("send_response to {ext_id}: {:?}", response);
         Ok(())
     }
@@ -366,8 +442,16 @@ impl ExtensionHost {
     }
 
     /// Rebuild the merged schema from all extensions.
+    ///
+    /// TODO: Phase 5 - implement proper schema merging with field-level merge semantics.
+    /// Currently uses naive "last extension wins" approach. Proper implementation should:
+    /// 1. Create `src-tauri/src/schema/merge.rs` module
+    /// 2. Merge built-in schema with all extension overrides
+    /// 3. Handle field-level conflicts (later overrides win)
+    /// 4. Support null values to unset properties
+    ///
+    /// See EXTENSIONPLAN.md Phase 5 and `extensions/api-docs/schema.md` for merging behaviour.
     async fn rebuild_merged_schema(&mut self) {
-        // collect all schema overrides
         let mut all_overrides: Vec<SchemaOverride> = Vec::new();
 
         for ext in self.extensions.values() {
@@ -381,8 +465,7 @@ impl ExtensionHost {
         if all_overrides.is_empty() {
             self.merged_schema = None;
         } else {
-            // TODO: implement proper schema merging (field-level merge with conflict resolution)
-            // for now, just use the last override
+            // naive last-one-wins approach; see TODO above for proper implementation
             self.merged_schema = all_overrides.pop();
         }
     }

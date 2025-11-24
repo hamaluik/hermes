@@ -21,8 +21,8 @@
 
 mod cursor;
 mod data;
-mod export;
-mod import;
+pub mod export;
+pub mod import;
 mod segment;
 mod syntax_highlight;
 

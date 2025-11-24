@@ -27,6 +27,7 @@
 //! - Menu item references for dynamic enable/disable
 
 use color_eyre::eyre::Context;
+use commands::extensions::ui::SharedWindowManager;
 use schema::cache::SchemaCache;
 use tauri::menu::{CheckMenuItem, MenuItem, Submenu};
 use tauri::{Manager, Wry};
@@ -76,6 +77,9 @@ pub struct AppData {
 
     /// Reference to the "Insert Timestamp..." menu item for dynamic enable/disable.
     pub insert_timestamp_menu_item: MenuItem<Wry>,
+
+    /// Window manager for tracking extension-opened windows.
+    pub window_manager: SharedWindowManager,
 }
 
 /// Main entry point for the Hermes application.
@@ -158,6 +162,10 @@ pub fn run() {
             commands::delete_segment,
             commands::move_segment,
             commands::duplicate_segment,
+            commands::get_extensions,
+            commands::get_extension_toolbar_buttons,
+            commands::reload_extensions,
+            commands::execute_extension_command,
         ])
         .setup(|app| {
             let menu_items =
@@ -174,12 +182,12 @@ pub fn run() {
             // get hermes version from cargo package
             let hermes_version = env!("CARGO_PKG_VERSION").to_string();
 
+            // create window manager for extension windows
+            let window_manager = commands::extensions::ui::create_window_manager();
+
             // create extension host
-            let extension_host = extensions::ExtensionHost::new(
-                app.handle().clone(),
-                data_dir,
-                hermes_version,
-            );
+            let extension_host =
+                extensions::ExtensionHost::new(app.handle().clone(), data_dir, hermes_version);
 
             let app_data = AppData {
                 schema: SchemaCache::new("messages.toml")
@@ -194,6 +202,7 @@ pub fn run() {
                 recent_files: Mutex::new(Vec::new()),
                 insert_timestamp_now_menu_item: menu_items.insert_timestamp_now_menu_item,
                 insert_timestamp_menu_item: menu_items.insert_timestamp_menu_item,
+                window_manager,
             };
             app.manage(app_data);
 
