@@ -428,46 +428,68 @@ interface SegmentOverride {
 
 ### FieldOverride
 
+Field overrides use **three-state semantics** for each property:
+
+| JSON Value    | Meaning                                      |
+|---------------|----------------------------------------------|
+| Absent        | Inherit from base schema (no change)         |
+| `null`        | Explicitly unset (remove inherited value)    |
+| Value         | Override with this value                     |
+
+This allows extensions to selectively override properties while inheriting others,
+or explicitly remove inherited constraints when needed.
+
 ```typescript
 interface FieldOverride {
-  /** 1-based field number */
+  /** 1-based field number (required) */
   field: number;
 
   /** 1-based component number */
   component?: number;
 
   /** Human-readable field name */
-  name?: string;
+  name?: string | null;
 
   /** UI grouping */
-  group?: string;
+  group?: string | null;
 
   /** Help text / notes */
-  note?: string;
+  note?: string | null;
 
   /** Minimum length */
-  minlength?: number;
+  minlength?: number | null;
 
   /** Maximum length */
-  maxlength?: number;
+  maxlength?: number | null;
 
   /** Regex pattern for validation */
-  pattern?: string;
+  pattern?: string | null;
 
   /** Whether field is required */
-  required?: boolean;
+  required?: boolean | null;
 
   /** Data type for special handling */
-  datatype?: "date" | "datetime";
+  datatype?: "date" | "datetime" | null;
 
   /** Placeholder text for UI */
-  placeholder?: string;
+  placeholder?: string | null;
 
   /** Allowed values (code → description) */
-  values?: { [code: string]: string };
+  values?: { [code: string]: string } | null;
 
   /** Default value for templates */
-  template?: string;
+  template?: string | null;
+}
+```
+
+**Example: Three-state behaviour**
+
+```json
+{
+  "field": 3,
+  "name": "Custom MRN",     // override name
+  "note": null,             // remove inherited note
+                            // group is absent → inherited from base
 }
 ```
 

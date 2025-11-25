@@ -115,9 +115,9 @@ pub struct ExtensionHost {
 
     /// Merged schema overrides from all extensions.
     ///
-    /// TODO: Phase 5 - implement proper schema merging with field-level semantics.
-    /// Currently stores the last extension's schema; proper implementation should
-    /// merge all extension schemas with built-in schema. See EXTENSIONPLAN.md Phase 5.
+    /// This field stores the result of merging all extension schema overrides together.
+    /// The merged schema is computed by `rebuild_merged_schema()` and applied to the
+    /// SchemaCache via `set_extension_overrides()`.
     merged_schema: Option<SchemaOverride>,
 
     /// Pending requests awaiting responses from the frontend.
@@ -142,9 +142,13 @@ impl ExtensionHost {
     }
 
     /// Load and start all enabled extensions from configuration.
+    ///
+    /// After starting extensions, this method rebuilds the merged schema and updates
+    /// the provided SchemaCache with the extension overrides.
     pub async fn start_extensions(
         &mut self,
         configs: Vec<ExtensionConfig>,
+        schema_cache: &crate::schema::cache::SchemaCache,
     ) -> Result<(), ExtensionError> {
         for config in configs {
             if !config.enabled {
@@ -161,6 +165,9 @@ impl ExtensionHost {
         // rebuild aggregated data
         self.rebuild_toolbar_buttons().await;
         self.rebuild_merged_schema().await;
+
+        // update schema cache with merged overrides
+        schema_cache.set_extension_overrides(self.merged_schema.clone());
 
         // notify frontend that extensions changed
         self.emit_extensions_changed();
@@ -233,10 +240,12 @@ impl ExtensionHost {
     /// Reload all extensions (stop, then start with new configs).
     ///
     /// Closes windows, shuts down existing extensions, and starts with new configs.
+    /// Updates the SchemaCache with the newly merged schema overrides.
     pub async fn reload(
         &mut self,
         configs: Vec<ExtensionConfig>,
         window_manager: &SharedWindowManager,
+        schema_cache: &crate::schema::cache::SchemaCache,
     ) -> Result<(), ExtensionError> {
         log::info!("reloading extensions");
 
@@ -255,7 +264,7 @@ impl ExtensionHost {
         }
 
         // start with new configs
-        self.start_extensions(configs).await
+        self.start_extensions(configs, schema_cache).await
     }
 
     /// Start executing a command asynchronously.
@@ -267,7 +276,10 @@ impl ExtensionHost {
         &mut self,
         command: &str,
         window_manager: &SharedWindowManager,
-    ) -> Result<tokio::sync::oneshot::Receiver<Result<CommandExecuteResult, ExtensionError>>, ExtensionError> {
+    ) -> Result<
+        tokio::sync::oneshot::Receiver<Result<CommandExecuteResult, ExtensionError>>,
+        ExtensionError,
+    > {
         // find extension that registered this command
         let ext_id = self.find_extension_for_command(command).await;
 
@@ -294,8 +306,8 @@ impl ExtensionHost {
         // spawn a background task to process messages
         tokio::spawn(async move {
             use crate::extensions::process::InternalMessage;
-            use tokio::time::{Duration, timeout, sleep};
             use tauri::Manager;
+            use tokio::time::{sleep, timeout, Duration};
 
             let deadline = Duration::from_secs(30);
             let result = timeout(deadline, async {
@@ -369,7 +381,9 @@ impl ExtensionHost {
                                 ));
                             }
                             InternalMessage::Send(_) | InternalMessage::Response(_, _) => {
-                                log::warn!("unexpected internal message type in start_command_async");
+                                log::warn!(
+                                    "unexpected internal message type in start_command_async"
+                                );
                             }
                         }
 
@@ -407,12 +421,11 @@ impl ExtensionHost {
                     }
 
                     // parse the result
-                    serde_json::from_value(response.result)
-                        .map_err(|e| {
-                            ExtensionError::Protocol(
-                                crate::extensions::protocol::ProtocolError::Json(e),
-                            )
-                        })
+                    serde_json::from_value(response.result).map_err(|e| {
+                        ExtensionError::Protocol(crate::extensions::protocol::ProtocolError::Json(
+                            e,
+                        ))
+                    })
                 }
                 Ok(Err(e)) => {
                     let app_data = app_handle.state::<crate::AppData>();
@@ -461,7 +474,7 @@ impl ExtensionHost {
         window_manager: &SharedWindowManager,
     ) -> Result<CommandExecuteResult, ExtensionError> {
         use crate::extensions::process::InternalMessage;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::{timeout, Duration};
 
         // find extension that registered this command
         let ext_id = self.find_extension_for_command(command).await;
@@ -498,12 +511,9 @@ impl ExtensionHost {
                 }
 
                 // process any incoming messages from the extension
-                let ext = self
-                    .extensions
-                    .get_mut(&ext_id)
-                    .ok_or_else(|| {
-                        ExtensionError::InvalidState(format!("extension {ext_id} not found"))
-                    })?;
+                let ext = self.extensions.get_mut(&ext_id).ok_or_else(|| {
+                    ExtensionError::InvalidState(format!("extension {ext_id} not found"))
+                })?;
 
                 if let Some(msg) = ext.process_incoming().await {
                     let mut is_async_response = false;
@@ -575,21 +585,28 @@ impl ExtensionHost {
                 ext.complete_command(command, Ok(response.clone())).await;
 
                 // parse the result
-                let result: CommandExecuteResult =
-                    serde_json::from_value(response.result).map_err(|e| {
-                        ExtensionError::Protocol(crate::extensions::protocol::ProtocolError::Json(e))
+                let result: CommandExecuteResult = serde_json::from_value(response.result)
+                    .map_err(|e| {
+                        ExtensionError::Protocol(crate::extensions::protocol::ProtocolError::Json(
+                            e,
+                        ))
                     })?;
 
                 Ok(result)
             }
             Ok(Err(e)) => {
                 let err_msg = e.to_string();
-                ext.complete_command(command, Err(ExtensionError::InvalidState(err_msg))).await;
+                ext.complete_command(command, Err(ExtensionError::InvalidState(err_msg)))
+                    .await;
                 Err(e)
             }
             Err(_) => {
                 let err = ExtensionError::Timeout(format!("command/{command}"));
-                ext.complete_command(command, Err(ExtensionError::Timeout(format!("command/{command}")))).await;
+                ext.complete_command(
+                    command,
+                    Err(ExtensionError::Timeout(format!("command/{command}"))),
+                )
+                .await;
                 Err(err)
             }
         }
@@ -851,9 +868,10 @@ impl ExtensionHost {
         );
 
         // get the extension process
-        let ext = self.extensions.get_mut(ext_id).ok_or_else(|| {
-            ExtensionError::InvalidState(format!("extension {ext_id} not found"))
-        })?;
+        let ext = self
+            .extensions
+            .get_mut(ext_id)
+            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
 
         // send the response
         let response = Response::new(pending.request_id, result);
@@ -882,9 +900,10 @@ impl ExtensionHost {
         );
 
         // get the extension process
-        let ext = self.extensions.get_mut(ext_id).ok_or_else(|| {
-            ExtensionError::InvalidState(format!("extension {ext_id} not found"))
-        })?;
+        let ext = self
+            .extensions
+            .get_mut(ext_id)
+            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
 
         // send the error response
         ext.send_error_response(Some(pending.request_id), error)
@@ -933,14 +952,10 @@ impl ExtensionHost {
 
     /// Rebuild the merged schema from all extensions.
     ///
-    /// TODO: Phase 5 - implement proper schema merging with field-level merge semantics.
-    /// Currently uses naive "last extension wins" approach. Proper implementation should:
-    /// 1. Create `src-tauri/src/schema/merge.rs` module
-    /// 2. Merge built-in schema with all extension overrides
-    /// 3. Handle field-level conflicts (later overrides win)
-    /// 4. Support null values to unset properties
-    ///
-    /// See EXTENSIONPLAN.md Phase 5 and `extensions/api-docs/schema.md` for merging behaviour.
+    /// Collects schema overrides from all running extensions and merges them using
+    /// field-level merge semantics (later extensions win for conflicting fields).
+    /// The merged result is stored in `self.merged_schema` for later application
+    /// to the SchemaCache.
     async fn rebuild_merged_schema(&mut self) {
         let mut all_overrides: Vec<SchemaOverride> = Vec::new();
 
@@ -955,8 +970,7 @@ impl ExtensionHost {
         if all_overrides.is_empty() {
             self.merged_schema = None;
         } else {
-            // naive last-one-wins approach; see TODO above for proper implementation
-            self.merged_schema = all_overrides.pop();
+            self.merged_schema = Some(crate::schema::merge::merge_schema_overrides(&all_overrides));
         }
     }
 

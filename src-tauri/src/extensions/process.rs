@@ -458,9 +458,9 @@ impl ExtensionProcess {
         let error_response = ErrorResponse::new(id, error);
 
         if let Some(tx) = &self.outgoing_tx {
-            tx.send(Message::Error(error_response))
-                .await
-                .map_err(|_| ExtensionError::Channel("failed to send error response".to_string()))?;
+            tx.send(Message::Error(error_response)).await.map_err(|_| {
+                ExtensionError::Channel("failed to send error response".to_string())
+            })?;
             Ok(())
         } else {
             Err(ExtensionError::InvalidState(
@@ -636,8 +636,11 @@ impl ExtensionProcess {
             }
             Err(_) => {
                 log::warn!("extension {} shutdown timed out, killing", self.id);
-                self.add_log(LogLevel::Warn, "shutdown timed out, force killing".to_string())
-                    .await;
+                self.add_log(
+                    LogLevel::Warn,
+                    "shutdown timed out, force killing".to_string(),
+                )
+                .await;
                 self.kill().await;
                 Ok(()) // timeout is acceptable for shutdown
             }

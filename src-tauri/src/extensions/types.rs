@@ -4,10 +4,138 @@
 //! JSON-RPC message parameters/results.
 
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
 use jiff::Timestamp;
+
+// ============================================================================
+// Nullable type for schema overrides
+// ============================================================================
+
+/// A type that distinguishes between a value, explicit null, and absence.
+///
+/// This is used in `FieldOverride` to support three distinct states:
+/// - `Option::None` - property was absent from JSON (inherit from base schema)
+/// - `Option::Some(Nullable::Null)` - property was explicitly null (unset inherited value)
+/// - `Option::Some(Nullable::Value(T))` - property has a value (override with this value)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Nullable<T> {
+    /// Property is set to a value.
+    Value(T),
+    /// Property is explicitly null (unset inherited value).
+    Null,
+}
+
+impl<T: Serialize> Serialize for Nullable<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Nullable::Value(value) => value.serialize(serializer),
+            Nullable::Null => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Nullable<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Option::<T>::deserialize(deserializer).map(|opt| match opt {
+            Some(value) => Nullable::Value(value),
+            None => Nullable::Null,
+        })
+    }
+}
+
+/// Helper module for `Option<Nullable<T>>` serialization and deserialization.
+///
+/// This module provides custom serde functions that properly distinguish between:
+/// - Absent field -> `None` (skipped in serialization)
+/// - Explicit JSON `null` -> `Some(Nullable::Null)` (serialized as `null`)
+/// - JSON value -> `Some(Nullable::Value(t))` (serialized as value)
+mod option_nullable {
+    use super::Nullable;
+    use serde::de::{self, Deserialize, Deserializer};
+    use serde::{Serialize, Serializer};
+
+    /// Custom deserializer that handles the distinction between absent and null.
+    ///
+    /// This works by deserializing as `Option<T>` (not `Option<Option<T>>`), but
+    /// using a visitor that can detect the difference between a missing field and
+    /// an explicit null. When combined with `#[serde(default)]`, missing fields
+    /// result in `None`, while explicit null or values go through the deserializer.
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<Nullable<T>>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Deserialize<'de>,
+    {
+        struct NullableVisitor<T>(std::marker::PhantomData<T>);
+
+        impl<'de, T> de::Visitor<'de> for NullableVisitor<T>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = Option<Nullable<T>>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a value or null")
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                // explicit null
+                Ok(Some(Nullable::Null))
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                // explicit null (some formats use visit_none for null)
+                Ok(Some(Nullable::Null))
+            }
+
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                // explicit value
+                T::deserialize(deserializer).map(|v| Some(Nullable::Value(v)))
+            }
+        }
+
+        deserializer.deserialize_option(NullableVisitor(std::marker::PhantomData))
+    }
+
+    /// Custom serializer that matches the deserializer behavior.
+    ///
+    /// Note: The `None` branch is effectively dead code when used with
+    /// `skip_serializing_if = "is_none"`, since those fields are skipped
+    /// entirely. It's included for completeness if this serializer is used
+    /// without the skip attribute.
+    pub fn serialize<S, T>(value: &Option<Nullable<T>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Serialize,
+    {
+        match value {
+            None => serializer.serialize_none(),
+            Some(nullable) => nullable.serialize(serializer),
+        }
+    }
+
+    /// Helper to determine if we should skip serializing this value.
+    /// Only skip if it's `None` (absent field).
+    pub fn is_none<T>(value: &Option<Nullable<T>>) -> bool {
+        value.is_none()
+    }
+}
 
 /// Extension configuration stored in settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,52 +301,140 @@ pub struct FieldOverride {
     pub field: u32,
 
     /// 1-based component number (if overriding a component).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub component: Option<u32>,
 
     /// Override the field name.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set name to `s`
+    /// - `Some(Nullable::Null)` = unset inherited name
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub name: Option<Nullable<String>>,
 
     /// Override the field group.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub group: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set group to `s`
+    /// - `Some(Nullable::Null)` = unset inherited group
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub group: Option<Nullable<String>>,
 
     /// Override the field note/description.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub note: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set note to `s`
+    /// - `Some(Nullable::Null)` = unset inherited note
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub note: Option<Nullable<String>>,
 
     /// Override whether the field is required.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub required: Option<bool>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(b))` = set required to `b`
+    /// - `Some(Nullable::Null)` = unset inherited required
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub required: Option<Nullable<bool>>,
 
     /// Override minimum length.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub minlength: Option<u32>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(n))` = set minlength to `n`
+    /// - `Some(Nullable::Null)` = unset inherited minlength
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub minlength: Option<Nullable<u32>>,
 
     /// Override maximum length.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub maxlength: Option<u32>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(n))` = set maxlength to `n`
+    /// - `Some(Nullable::Null)` = unset inherited maxlength
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub maxlength: Option<Nullable<u32>>,
 
     /// Override validation pattern (regex).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pattern: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set pattern to `s`
+    /// - `Some(Nullable::Null)` = unset inherited pattern
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub pattern: Option<Nullable<String>>,
 
     /// Override datatype ("date" | "datetime").
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub datatype: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set datatype to `s`
+    /// - `Some(Nullable::Null)` = unset inherited datatype
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub datatype: Option<Nullable<String>>,
 
     /// Override placeholder text.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub placeholder: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set placeholder to `s`
+    /// - `Some(Nullable::Null)` = unset inherited placeholder
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub placeholder: Option<Nullable<String>>,
 
     /// Override allowed values (code -> display name).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub values: Option<IndexMap<String, String>>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(map))` = set values to `map`
+    /// - `Some(Nullable::Null)` = unset inherited values
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub values: Option<Nullable<IndexMap<String, String>>>,
 
     /// Override template value.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub template: Option<String>,
+    /// - `None` = inherit from base schema
+    /// - `Some(Nullable::Value(s))` = set template to `s`
+    /// - `Some(Nullable::Null)` = unset inherited template
+    #[serde(
+        default,
+        serialize_with = "option_nullable::serialize",
+        deserialize_with = "option_nullable::deserialize",
+        skip_serializing_if = "option_nullable::is_none"
+    )]
+    pub template: Option<Nullable<String>>,
 }
 
 // ============================================================================
@@ -632,5 +848,182 @@ mod tests {
         assert!(json.contains("\"value\":\"DOE\""));
         assert!(json.contains("\"create\":true"));
         assert!(!json.contains("\"remove\"")); // should be skipped when None
+    }
+
+    // ========================================================================
+    // Nullable<T> tests
+    // ========================================================================
+
+    #[test]
+    fn test_nullable_value_serialization() {
+        let nullable = Nullable::Value("test".to_string());
+        let json = serde_json::to_string(&nullable).unwrap();
+        assert_eq!(json, "\"test\"");
+    }
+
+    #[test]
+    fn test_nullable_null_serialization() {
+        let nullable: Nullable<String> = Nullable::Null;
+        let json = serde_json::to_string(&nullable).unwrap();
+        assert_eq!(json, "null");
+    }
+
+    #[test]
+    fn test_nullable_value_deserialization() {
+        let json = "\"test\"";
+        let nullable: Nullable<String> = serde_json::from_str(json).unwrap();
+        assert_eq!(nullable, Nullable::Value("test".to_string()));
+    }
+
+    #[test]
+    fn test_nullable_null_deserialization() {
+        let json = "null";
+        let nullable: Nullable<String> = serde_json::from_str(json).unwrap();
+        assert_eq!(nullable, Nullable::Null);
+    }
+
+    #[test]
+    fn test_option_nullable_none_skipped_in_serialization() {
+        #[derive(Serialize)]
+        struct TestStruct {
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            field: Option<Nullable<String>>,
+        }
+
+        let test = TestStruct { field: None };
+        let json = serde_json::to_string(&test).unwrap();
+        assert_eq!(json, "{}");
+    }
+
+    #[test]
+    fn test_option_nullable_value_serialization() {
+        #[derive(Serialize)]
+        struct TestStruct {
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            field: Option<Nullable<String>>,
+        }
+
+        let test = TestStruct {
+            field: Some(Nullable::Value("test".to_string())),
+        };
+        let json = serde_json::to_string(&test).unwrap();
+        assert_eq!(json, "{\"field\":\"test\"}");
+    }
+
+    #[test]
+    fn test_option_nullable_null_serialization() {
+        #[derive(Serialize)]
+        struct TestStruct {
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            field: Option<Nullable<String>>,
+        }
+
+        let test = TestStruct {
+            field: Some(Nullable::Null),
+        };
+        let json = serde_json::to_string(&test).unwrap();
+        assert_eq!(json, "{\"field\":null}");
+    }
+
+    #[test]
+    fn test_field_override_with_null_values() {
+        let json = r#"{
+            "field": 5,
+            "name": null,
+            "group": "test_group",
+            "required": null,
+            "maxlength": 100
+        }"#;
+
+        let override_: FieldOverride = serde_json::from_str(json).unwrap();
+        assert_eq!(override_.field, 5);
+        assert_eq!(override_.component, None);
+        assert_eq!(override_.name, Some(Nullable::Null));
+        assert_eq!(
+            override_.group,
+            Some(Nullable::Value("test_group".to_string()))
+        );
+        assert_eq!(override_.note, None);
+        assert_eq!(override_.required, Some(Nullable::Null));
+        assert_eq!(override_.minlength, None);
+        assert_eq!(override_.maxlength, Some(Nullable::Value(100)));
+        assert_eq!(override_.pattern, None);
+        assert_eq!(override_.datatype, None);
+        assert_eq!(override_.placeholder, None);
+        assert_eq!(override_.values, None);
+        assert_eq!(override_.template, None);
+    }
+
+    #[test]
+    fn test_field_override_round_trip() {
+        let mut values_map = IndexMap::new();
+        values_map.insert("M".to_string(), "Male".to_string());
+        values_map.insert("F".to_string(), "Female".to_string());
+
+        let override_ = FieldOverride {
+            field: 5,
+            component: None,
+            name: Some(Nullable::Value("Patient Name".to_string())),
+            group: Some(Nullable::Null),
+            note: None,
+            required: Some(Nullable::Value(true)),
+            minlength: Some(Nullable::Null),
+            maxlength: Some(Nullable::Value(50)),
+            pattern: None,
+            datatype: Some(Nullable::Value("string".to_string())),
+            placeholder: Some(Nullable::Value("Enter name".to_string())),
+            values: Some(Nullable::Value(values_map.clone())),
+            template: Some(Nullable::Null),
+        };
+
+        let json = serde_json::to_string(&override_).unwrap();
+        let deserialized: FieldOverride = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.field, 5);
+        assert_eq!(
+            deserialized.name,
+            Some(Nullable::Value("Patient Name".to_string()))
+        );
+        assert_eq!(deserialized.group, Some(Nullable::Null));
+        assert_eq!(deserialized.note, None);
+        assert_eq!(deserialized.required, Some(Nullable::Value(true)));
+        assert_eq!(deserialized.minlength, Some(Nullable::Null));
+        assert_eq!(deserialized.maxlength, Some(Nullable::Value(50)));
+        assert_eq!(
+            deserialized.datatype,
+            Some(Nullable::Value("string".to_string()))
+        );
+        assert_eq!(
+            deserialized.placeholder,
+            Some(Nullable::Value("Enter name".to_string()))
+        );
+        assert_eq!(deserialized.values, Some(Nullable::Value(values_map)));
+        assert_eq!(deserialized.template, Some(Nullable::Null));
+    }
+
+    #[test]
+    fn test_nullable_with_different_types() {
+        // test with bool
+        let nullable_bool = Nullable::Value(true);
+        let json = serde_json::to_string(&nullable_bool).unwrap();
+        assert_eq!(json, "true");
+        let deserialized: Nullable<bool> = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, Nullable::Value(true));
+
+        // test with u32
+        let nullable_u32 = Nullable::Value(42u32);
+        let json = serde_json::to_string(&nullable_u32).unwrap();
+        assert_eq!(json, "42");
+        let deserialized: Nullable<u32> = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, Nullable::Value(42));
+
+        // test with IndexMap
+        let mut map = IndexMap::new();
+        map.insert("key".to_string(), "value".to_string());
+        let nullable_map = Nullable::Value(map.clone());
+        let json = serde_json::to_string(&nullable_map).unwrap();
+        assert!(json.contains("\"key\":\"value\""));
+        let deserialized: Nullable<IndexMap<String, String>> = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, Nullable::Value(map));
     }
 }

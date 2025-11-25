@@ -27,6 +27,7 @@ use std::{
 };
 
 use super::{message::MessagesSchema, segment::Field};
+use crate::extensions::types::SchemaOverride;
 
 /// Thread-safe cache for HL7 schema data with hot-reload capability.
 ///
@@ -45,6 +46,9 @@ pub struct SchemaCache {
     segments: RwLock<HashMap<String, Vec<Field>>>,
     /// Last modification times of segment schema files (keyed by segment name)
     segment_mod_time: RwLock<HashMap<String, SystemTime>>,
+
+    /// Extension schema overrides to apply on top of base schemas.
+    extension_overrides: RwLock<Option<SchemaOverride>>,
 }
 
 impl SchemaCache {
@@ -80,6 +84,7 @@ impl SchemaCache {
             segment_mod_time: RwLock::new(HashMap::new()),
             messages: RwLock::new(messages),
             message_mod_time: RwLock::new(message_mod_time),
+            extension_overrides: RwLock::new(None),
         })
     }
 
@@ -145,7 +150,7 @@ impl SchemaCache {
         segment_path
     }
 
-    /// Get a segment schema, loading or reloading from disk as needed.
+    /// Get a base segment schema without extension overrides, loading or reloading from disk as needed.
     ///
     /// This method implements the core caching logic:
     /// 1. Check if segment is in cache
@@ -169,7 +174,7 @@ impl SchemaCache {
     /// # Returns
     /// * `Ok(Vec<Field>)` - Field definitions for the segment
     /// * `Err` - Segment not found in messages schema or failed to load
-    pub fn get_segment(&self, segment: &str) -> Result<Vec<Field>> {
+    fn get_base_segment(&self, segment: &str) -> Result<Vec<Field>> {
         let path_for_segment = self
             .path_for_segment(segment)
             .wrap_err_with(|| format!("Failed to get path for segment {segment}"))?;
@@ -220,6 +225,57 @@ impl SchemaCache {
             .wrap_err_with(|| format!("Failed to load segment {segment} from cache"))
     }
 
+    /// Get a segment schema with extension overrides applied.
+    ///
+    /// This method first retrieves the base segment schema, then applies any
+    /// extension overrides that have been set. If no overrides are present or
+    /// the segment has no overrides, the base schema is returned unchanged.
+    ///
+    /// # Arguments
+    /// * `segment` - Segment name to retrieve
+    ///
+    /// # Returns
+    /// * `Ok(Vec<Field>)` - Field definitions for the segment with overrides applied
+    /// * `Err` - Segment not found in messages schema or failed to load
+    pub fn get_segment(&self, segment: &str) -> Result<Vec<Field>> {
+        let base_fields = self.get_base_segment(segment)?;
+
+        let overrides = self
+            .extension_overrides
+            .read()
+            .expect("can read extension overrides");
+
+        if let Some(ref schema_override) = *overrides {
+            if let Some(ref segments) = schema_override.segments {
+                if let Some(segment_override) = segments.get(segment) {
+                    if let Some(ref field_overrides) = segment_override.fields {
+                        return Ok(crate::schema::merge::merge_segment_fields(
+                            &base_fields,
+                            field_overrides,
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(base_fields)
+    }
+
+    /// Set the extension schema overrides.
+    ///
+    /// Called by ExtensionHost after merging all extension schemas.
+    /// The overrides will be applied to all subsequent calls to `get_segment()`.
+    ///
+    /// # Arguments
+    /// * `overrides` - The merged schema override to apply, or None to clear overrides
+    pub fn set_extension_overrides(&self, overrides: Option<SchemaOverride>) {
+        let mut ext_overrides = self
+            .extension_overrides
+            .write()
+            .expect("can write extension overrides");
+        *ext_overrides = overrides;
+    }
+
     /// Get the messages schema, reloading from disk if modified.
     ///
     /// Similar to `get_segment`, this method checks the file modification time
@@ -251,5 +307,87 @@ impl SchemaCache {
         }
 
         Ok(messages.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::extensions::types::{FieldOverride, Nullable, SchemaOverride, SegmentOverride};
+    use indexmap::IndexMap;
+
+    #[test]
+    fn test_schema_cache_with_overrides() {
+        // create a cache instance
+        let cache = SchemaCache::new("messages.toml").expect("can create cache");
+
+        // get base PID segment fields
+        let base_fields = cache.get_segment("PID").expect("can get PID segment");
+        let field_3_base = base_fields
+            .iter()
+            .find(|f| f.field == 3 && f.component.is_none())
+            .expect("can find field 3");
+        let original_name = field_3_base.name.clone();
+        let original_note = field_3_base.note.clone();
+
+        // create an override that changes field 3 name and adds a note
+        let mut segments = IndexMap::new();
+        segments.insert(
+            "PID".to_string(),
+            SegmentOverride {
+                fields: Some(vec![FieldOverride {
+                    field: 3,
+                    component: None,
+                    name: Some(Nullable::Value("Overridden MRN".to_string())),
+                    group: None,
+                    note: Some(Nullable::Value("This is an override note".to_string())),
+                    required: None,
+                    minlength: None,
+                    maxlength: None,
+                    pattern: None,
+                    datatype: None,
+                    placeholder: None,
+                    values: None,
+                    template: None,
+                }]),
+            },
+        );
+
+        let override_schema = SchemaOverride {
+            segments: Some(segments),
+        };
+
+        // set the override
+        cache.set_extension_overrides(Some(override_schema));
+
+        // get fields again and check that override was applied
+        let fields_with_override = cache
+            .get_segment("PID")
+            .expect("can get PID segment with override");
+        let field_3_override = fields_with_override
+            .iter()
+            .find(|f| f.field == 3 && f.component.is_none())
+            .expect("can find overridden field 3");
+
+        assert_eq!(field_3_override.name, "Overridden MRN");
+        assert_eq!(
+            field_3_override.note,
+            Some("This is an override note".to_string())
+        );
+
+        // clear overrides
+        cache.set_extension_overrides(None);
+
+        // get fields again and check that base is restored
+        let fields_restored = cache
+            .get_segment("PID")
+            .expect("can get PID segment after clear");
+        let field_3_restored = fields_restored
+            .iter()
+            .find(|f| f.field == 3 && f.component.is_none())
+            .expect("can find restored field 3");
+
+        assert_eq!(field_3_restored.name, original_name);
+        assert_eq!(field_3_restored.note, original_note);
     }
 }

@@ -459,6 +459,36 @@ Schema overrides are **merged** with the Hermes built-in schema:
 | Field only in built-in          | Preserved unchanged               |
 | Property exists in both         | Extension value wins              |
 | Property only in extension      | Added to field                    |
+| Property set to `null`          | Inherited value is removed        |
+| Property absent in override     | Inherited value is preserved      |
+
+### Field Matching
+
+Hermes uses a two-pass matching algorithm when merging field overrides:
+
+1. **Exact match** (first pass): Both field number AND component must match exactly
+2. **Flexible match** (second pass): If the base schema has a field-level entry (no
+   component) and the override specifies a component, the override can match and
+   modify the field-level entry
+
+This allows component-specific overrides to match against field-level schema entries
+when no component-level entry exists.
+
+**Example: Flexible matching**
+
+If the built-in schema has:
+```json
+{ "field": 3, "name": "Patient ID" }  // field-level (no component)
+```
+
+An override can target it with a component:
+```json
+{ "field": 3, "component": 1, "note": "8-digit MRN" }
+```
+
+The note will be added to the field-level entry. If the base schema had a separate
+component-level entry for PID.3.1, the override would match that instead (exact
+match takes priority).
 
 ### Merge Example
 

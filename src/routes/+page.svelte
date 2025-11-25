@@ -500,12 +500,13 @@
       }
     };
 
-    // Helper to refresh extension buttons and statuses
+    // Helper to refresh extension buttons, statuses, and schemas
     async function refreshExtensionData() {
       try {
-        [extensionButtons, extensionStatuses] = await Promise.all([
+        [extensionButtons, extensionStatuses, schemas] = await Promise.all([
           getExtensionToolbarButtons(),
           getExtensions(),
+          getAllSegmentSchemas(),
         ]);
       } catch (error) {
         console.error("Failed to refresh extension data:", error);

@@ -61,6 +61,7 @@ pub async fn get_extension_logs(
 /// Reload all extensions.
 ///
 /// Shuts down existing extensions and restarts them with the provided configuration.
+/// After reloading, merges extension schema overrides and updates the SchemaCache.
 /// This is typically called after the user modifies extension settings, or on app
 /// startup when settings are loaded from disk.
 ///
@@ -75,7 +76,7 @@ pub async fn reload_extensions(
     state: State<'_, AppData>,
 ) -> Result<(), String> {
     let mut host = state.extension_host.lock().await;
-    host.reload(configs, &state.window_manager)
+    host.reload(configs, &state.window_manager, &state.schema)
         .await
         .map_err(|e| e.to_string())
 }
