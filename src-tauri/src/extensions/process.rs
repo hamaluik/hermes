@@ -8,10 +8,11 @@ use crate::extensions::protocol::{
     RequestId, Response, RpcError,
 };
 use crate::extensions::types::{
-    ExtensionConfig, ExtensionMetadata, ExtensionState, InitializeParams, InitializeResult,
-    ShutdownParams, ShutdownReason,
+    ExtensionConfig, ExtensionLog, ExtensionMetadata, ExtensionState, InitializeParams,
+    InitializeResult, LogLevel, ShutdownParams, ShutdownReason,
 };
-use std::collections::HashMap;
+use jiff::Timestamp;
+use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -24,7 +25,11 @@ use tokio::time::{timeout, Duration};
 /// Timeouts for extension operations.
 const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(10);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
+#[allow(dead_code)]
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Maximum number of log entries to keep per extension.
+const MAX_LOG_ENTRIES: usize = 100;
 
 /// Type alias for pending request tracking.
 type PendingRequests =
@@ -88,7 +93,7 @@ impl From<RpcError> for ExtensionError {
 
 /// Internal message type for communication between tasks.
 #[allow(dead_code)]
-pub(crate) enum InternalMessage {
+pub enum InternalMessage {
     /// Outgoing message to send to extension.
     Send(Message),
     /// Incoming response to route to waiting request.
@@ -136,6 +141,9 @@ pub struct ExtensionProcess {
 
     /// Channel for receiving requests/notifications from the extension.
     incoming_rx: Option<mpsc::Receiver<InternalMessage>>,
+
+    /// Ring buffer of recent log entries.
+    logs: Arc<Mutex<VecDeque<ExtensionLog>>>,
 }
 
 impl ExtensionProcess {
@@ -158,10 +166,37 @@ impl ExtensionProcess {
 
         log::info!("spawning extension {id} from {}", config.path);
 
+        // parse the command string if args are empty
+        // this allows the UI to accept full command strings like "uv run script.py"
+        let (executable, args) = if config.args.is_empty() {
+            match shell_words::split(&config.path) {
+                Ok(parts) if !parts.is_empty() => {
+                    let executable = parts[0].clone();
+                    let args = parts[1..].to_vec();
+                    (executable, args)
+                }
+                Ok(_) => {
+                    return Err(ExtensionError::SpawnFailed(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "empty command string",
+                    )));
+                }
+                Err(e) => {
+                    return Err(ExtensionError::SpawnFailed(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("failed to parse command: {e}"),
+                    )));
+                }
+            }
+        } else {
+            // args explicitly provided, use path as-is
+            (config.path.clone(), config.args.clone())
+        };
+
         // spawn the process
-        let mut command = Command::new(&config.path);
+        let mut command = Command::new(&executable);
         command
-            .args(&config.args)
+            .args(&args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit()) // let extension stderr pass through for debugging
@@ -197,9 +232,10 @@ impl ExtensionProcess {
         let state = Arc::new(Mutex::new(ExtensionState::Starting));
         let metadata = Arc::new(Mutex::new(None));
         let next_request_id = Arc::new(Mutex::new(1i64));
+        let logs = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_LOG_ENTRIES)));
 
-        Ok(Self {
-            id,
+        let process = Self {
+            id: id.clone(),
             config,
             state,
             metadata,
@@ -210,7 +246,15 @@ impl ExtensionProcess {
             writer_task: Some(writer_task),
             child: Some(child),
             incoming_rx: Some(incoming_rx),
-        })
+            logs,
+        };
+
+        // add initial log entry
+        process
+            .add_log(LogLevel::Info, format!("extension process spawned: {id}"))
+            .await;
+
+        Ok(process)
     }
 
     /// Get the current state of the extension.
@@ -221,6 +265,29 @@ impl ExtensionProcess {
     /// Get the extension metadata (available after initialization).
     pub async fn metadata(&self) -> Option<ExtensionMetadata> {
         self.metadata.lock().await.clone()
+    }
+
+    /// Add a log entry.
+    async fn add_log(&self, level: LogLevel, message: String) {
+        let mut logs = self.logs.lock().await;
+        let entry = ExtensionLog {
+            timestamp: Timestamp::now(),
+            level,
+            message,
+        };
+
+        // add to end of deque
+        logs.push_back(entry);
+
+        // if we exceed capacity, remove oldest entry
+        if logs.len() > MAX_LOG_ENTRIES {
+            logs.pop_front();
+        }
+    }
+
+    /// Get all log entries for this extension.
+    pub async fn get_logs(&self) -> Vec<ExtensionLog> {
+        self.logs.lock().await.iter().cloned().collect()
     }
 
     /// Send the initialize request and await response.
@@ -240,6 +307,9 @@ impl ExtensionProcess {
             }
             *state = ExtensionState::Initializing;
         }
+
+        self.add_log(LogLevel::Info, "sending initialize request".to_string())
+            .await;
 
         let params = InitializeParams {
             hermes_version: hermes_version.to_string(),
@@ -266,17 +336,25 @@ impl ExtensionProcess {
                     init_result.version
                 );
 
+                let msg = format!(
+                    "initialized successfully: {} v{}",
+                    init_result.name, init_result.version
+                );
+                self.add_log(LogLevel::Info, msg).await;
+
                 *self.metadata.lock().await = Some(init_result.into());
                 *self.state.lock().await = ExtensionState::Running;
                 Ok(())
             }
             Ok(Err(e)) => {
                 let msg = format!("initialize failed: {e}");
+                self.add_log(LogLevel::Error, msg.clone()).await;
                 *self.state.lock().await = ExtensionState::Failed(msg.clone());
                 Err(e)
             }
             Err(_) => {
                 let msg = "initialize timed out".to_string();
+                self.add_log(LogLevel::Error, msg.clone()).await;
                 *self.state.lock().await = ExtensionState::Failed(msg.clone());
                 self.kill().await;
                 Err(ExtensionError::Timeout("initialize".to_string()))
@@ -353,7 +431,46 @@ impl ExtensionProcess {
         }
     }
 
+    /// Send a response to the extension for a pending request.
+    ///
+    /// Used when responding to requests from the extension that required
+    /// async processing (e.g., editor/getMessage where we needed to get
+    /// data from the frontend).
+    pub async fn send_response(&mut self, response: Response) -> Result<(), ExtensionError> {
+        if let Some(tx) = &self.outgoing_tx {
+            tx.send(Message::Response(response))
+                .await
+                .map_err(|_| ExtensionError::Channel("failed to send response".to_string()))?;
+            Ok(())
+        } else {
+            Err(ExtensionError::InvalidState(
+                "extension not connected".to_string(),
+            ))
+        }
+    }
+
+    /// Send an error response to the extension for a pending request.
+    pub async fn send_error_response(
+        &mut self,
+        id: Option<RequestId>,
+        error: RpcError,
+    ) -> Result<(), ExtensionError> {
+        let error_response = ErrorResponse::new(id, error);
+
+        if let Some(tx) = &self.outgoing_tx {
+            tx.send(Message::Error(error_response))
+                .await
+                .map_err(|_| ExtensionError::Channel("failed to send error response".to_string()))?;
+            Ok(())
+        } else {
+            Err(ExtensionError::InvalidState(
+                "extension not connected".to_string(),
+            ))
+        }
+    }
+
     /// Execute a command on the extension.
+    #[allow(dead_code)]
     pub async fn execute_command(&mut self, command: &str) -> Result<Response, ExtensionError> {
         let state = self.state.lock().await.clone();
         if !state.is_running() {
@@ -363,14 +480,119 @@ impl ExtensionProcess {
             )));
         }
 
+        self.add_log(LogLevel::Info, format!("executing command: {command}"))
+            .await;
+
         let params = serde_json::json!({ "command": command });
 
-        timeout(
+        let result = timeout(
             COMMAND_TIMEOUT,
             self.send_request("command/execute", params),
         )
-        .await
-        .map_err(|_| ExtensionError::Timeout(format!("command/{command}")))?
+        .await;
+
+        match result {
+            Ok(response) => {
+                self.add_log(LogLevel::Info, format!("command completed: {command}"))
+                    .await;
+                Ok(response?)
+            }
+            Err(_) => {
+                let msg = format!("command timed out: {command}");
+                self.add_log(LogLevel::Error, msg.clone()).await;
+                Err(ExtensionError::Timeout(format!("command/{command}")))
+            }
+        }
+    }
+
+    /// Start executing a command without waiting for the response.
+    ///
+    /// Returns a oneshot receiver that will receive the response when it arrives.
+    /// This allows the caller to process incoming messages while waiting for the response.
+    pub async fn start_command(
+        &mut self,
+        command: &str,
+    ) -> Result<tokio::sync::oneshot::Receiver<Result<Response, ExtensionError>>, ExtensionError>
+    {
+        let state = self.state.lock().await.clone();
+        if !state.is_running() {
+            return Err(ExtensionError::InvalidState(format!(
+                "cannot execute command in state {:?}",
+                state
+            )));
+        }
+
+        self.add_log(LogLevel::Info, format!("executing command: {command}"))
+            .await;
+
+        let params = serde_json::json!({ "command": command });
+
+        // generate request ID
+        let id = {
+            let mut next_id = self.next_request_id.lock().await;
+            let id = *next_id;
+            *next_id += 1;
+            RequestId::Number(id)
+        };
+
+        // create channels for the response
+        let (internal_tx, internal_rx) = oneshot::channel();
+        let (external_tx, external_rx) = tokio::sync::oneshot::channel();
+
+        // register pending request
+        {
+            let mut pending = self.pending_requests.lock().await;
+            pending.insert(id.clone(), internal_tx);
+        }
+
+        // spawn a task to forward the response
+        tokio::spawn(async move {
+            let result = match internal_rx.await {
+                Ok(Ok(response)) => Ok(response),
+                Ok(Err(error_response)) => Err(ExtensionError::Rpc(error_response.error)),
+                Err(_) => Err(ExtensionError::Channel(
+                    "response channel closed".to_string(),
+                )),
+            };
+            let _ = external_tx.send(result);
+        });
+
+        let request = Request::new(
+            id.clone(),
+            "command/execute",
+            if params.is_null() { None } else { Some(params) },
+        );
+
+        // send the request
+        if let Some(tx) = &self.outgoing_tx {
+            tx.send(Message::Request(request))
+                .await
+                .map_err(|_| ExtensionError::Channel("failed to send request".to_string()))?;
+        } else {
+            return Err(ExtensionError::InvalidState(
+                "extension not connected".to_string(),
+            ));
+        }
+
+        Ok(external_rx)
+    }
+
+    /// Complete a command that was started with start_command.
+    pub async fn complete_command(
+        &mut self,
+        command: &str,
+        result: Result<Response, ExtensionError>,
+    ) {
+        match &result {
+            Ok(_) => {
+                self.add_log(LogLevel::Info, format!("command completed: {command}"))
+                    .await;
+            }
+            Err(e) => {
+                self.add_log(LogLevel::Error, format!("command failed: {command}: {e}"))
+                    .await;
+            }
+        }
     }
 
     /// Initiate graceful shutdown of the extension.
@@ -384,6 +606,8 @@ impl ExtensionProcess {
         }
 
         log::info!("shutting down extension {}", self.id);
+        self.add_log(LogLevel::Info, "shutting down".to_string())
+            .await;
 
         let params = ShutdownParams {
             reason: Some(reason),
@@ -397,17 +621,23 @@ impl ExtensionProcess {
         match result {
             Ok(Ok(_)) => {
                 log::info!("extension {} shutdown gracefully", self.id);
+                self.add_log(LogLevel::Info, "shutdown completed".to_string())
+                    .await;
                 *self.state.lock().await = ExtensionState::Stopped;
                 self.cleanup().await;
                 Ok(())
             }
             Ok(Err(e)) => {
                 log::warn!("extension {} shutdown error: {e}", self.id);
+                self.add_log(LogLevel::Warn, format!("shutdown error: {e}"))
+                    .await;
                 self.kill().await;
                 Err(e)
             }
             Err(_) => {
                 log::warn!("extension {} shutdown timed out, killing", self.id);
+                self.add_log(LogLevel::Warn, "shutdown timed out, force killing".to_string())
+                    .await;
                 self.kill().await;
                 Ok(()) // timeout is acceptable for shutdown
             }
@@ -464,7 +694,6 @@ impl ExtensionProcess {
     /// Process an incoming message from the extension.
     ///
     /// Returns requests/notifications that need to be handled by the host.
-    #[allow(dead_code)]
     pub async fn process_incoming(&mut self) -> Option<InternalMessage> {
         if let Some(rx) = &mut self.incoming_rx {
             rx.recv().await

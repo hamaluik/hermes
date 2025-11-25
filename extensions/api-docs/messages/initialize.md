@@ -82,8 +82,8 @@ Capabilities declare what features the extension supports:
 
 ```typescript
 interface Capabilities {
-  /** Extension can handle commands */
-  commands?: boolean;
+  /** List of command IDs this extension can handle */
+  commands?: string[];
 
   /** Extension provides schema overrides (included in this response) */
   schemaProvider?: boolean;
@@ -174,7 +174,7 @@ interface FieldOverride {
     "name": "My Extension",
     "version": "1.0.0",
     "capabilities": {
-      "commands": true
+      "commands": ["myExtension/someCommand"]
     }
   }
 }
@@ -196,7 +196,7 @@ interface FieldOverride {
     ],
     "homepage": "https://internal.hospital.org/hermes-extensions/patient-lookup",
     "capabilities": {
-      "commands": true,
+      "commands": ["patientLookup/search", "patientLookup/create"],
       "schemaProvider": true
     },
     "toolbarButtons": [
@@ -354,17 +354,17 @@ Use namespaced IDs to avoid conflicts with other extensions:
 
 ### Minimal Capabilities
 
-Only declare capabilities you actually support:
+Only declare the commands you actually support:
 
 ```json
 {
   "capabilities": {
-    "commands": true
+    "commands": ["myExtension/command1", "myExtension/command2"]
   }
 }
 ```
 
-Do not set `schemaProvider: true` unless you are actually providing schema overrides.
+Leave `commands` as an empty array or omit it if you don't handle any commands. Do not set `schemaProvider: true` unless you are actually providing schema overrides.
 
 ## Related Documentation
 

@@ -1,14 +1,21 @@
 <!--
   Settings Modal
 
-  Modal dialog for configuring application preferences. Provides controls for:
+  Modal dialog for configuring application preferences. Organized into sections:
+
+  ## General Section
   - Theme: 3-way toggle for Light/Auto/Dark mode with live preview
   - Auto-Save: Automatically save files after changes (also accessible via File menu)
   - Tabs Follow Cursor: Auto-switch segment tabs when cursor moves in raw editor
 
+  ## Extensions Section
+  - Manage third-party extensions (add, enable/disable, remove)
+  - View extension runtime status
+  - Reload extensions to apply configuration changes
+
   ## Save/Cancel Workflow
 
-  This modal uses a "staging" pattern for settings changes:
+  This modal uses a "staging" pattern for general settings changes:
   1. Settings are read from the Settings object into local state variables
   2. User modifies the local state via form controls
   3. On Save: Local state is written back to the Settings object
@@ -21,6 +28,10 @@
 
   The Settings object itself handles persistence to Tauri's store, so we don't need
   explicit save-to-disk calls here - just updating the Settings properties is sufficient.
+
+  **Note:** Extension settings persist immediately when modified (no Save button needed)
+  because extension configuration changes require a "Reload Extensions" action to take
+  effect, providing a natural commit boundary.
 
   ## Theme Live Preview
 
@@ -41,6 +52,13 @@
   the onAutoSaveChanged callback, which updates the File menu's checkable Auto-Save
   item. This ensures the menu always reflects the current setting state regardless
   of where it was changed (menu or modal).
+
+  ## Layout Structure
+
+  The modal content is divided into sections with:
+  - Section headers (`<h3>`) with bottom borders for visual separation
+  - Scrollable content area (`overflow-y: auto`) to accommodate growing extension lists
+  - Consistent spacing (`gap: 2rem`) between sections
 -->
 <script lang="ts">
   import type { Settings } from "../../settings";
@@ -50,6 +68,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import ExtensionsSettings from "./extensions_settings.svelte";
 
   let {
     settings,
@@ -100,17 +119,24 @@
   };
 </script>
 
-<Modal bind:show>
+<Modal bind:show width="min(40rem, 90vw)" height="min(36rem, 85vh)">
   <ModalHeader onclose={handleClose}>Settings</ModalHeader>
   <main>
-    <form method="dialog">
-      <label for="themeSetting">Theme</label>
-      <ThemeToggle id="themeSetting" bind:value={themeSetting} />
-      <label for="autoSaveEnabled">Auto-Save</label>
-      <ToggleSwitch id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
-      <label for="tabsFollowCursor">Tabs Follow Cursor</label>
-      <ToggleSwitch id="tabsFollowCursor" bind:checked={tabsFollowCursor} />
-    </form>
+    <section class="general-settings">
+      <h3>General</h3>
+      <form method="dialog">
+        <label for="themeSetting">Theme</label>
+        <ThemeToggle id="themeSetting" bind:value={themeSetting} />
+        <label for="autoSaveEnabled">Auto-Save</label>
+        <ToggleSwitch id="autoSaveEnabled" bind:checked={autoSaveEnabled} />
+        <label for="tabsFollowCursor">Tabs Follow Cursor</label>
+        <ToggleSwitch id="tabsFollowCursor" bind:checked={tabsFollowCursor} />
+      </form>
+    </section>
+
+    <section class="extensions-section">
+      <ExtensionsSettings {settings} />
+    </section>
   </main>
   <ModalFooter>
     {#snippet right()}
@@ -132,8 +158,24 @@
     justify-content: stretch;
     padding: 0.5rem 2ch;
     color: var(--col-text);
+    overflow-y: auto;
+    gap: 2rem;
 
-    form {
+    section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--col-text);
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--col-highlightMed);
+      }
+    }
+
+    .general-settings form {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 0.8lh 1ch;

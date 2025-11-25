@@ -164,8 +164,12 @@ pub fn run() {
             commands::duplicate_segment,
             commands::get_extensions,
             commands::get_extension_toolbar_buttons,
+            commands::get_extension_logs,
             commands::reload_extensions,
             commands::execute_extension_command,
+            commands::provide_extension_message,
+            commands::provide_extension_patch_result,
+            commands::apply_extension_patches,
         ])
         .setup(|app| {
             let menu_items =

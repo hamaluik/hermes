@@ -512,7 +512,7 @@ def handle_initialize(request_id, params):
             "description": "Look up patients and populate HL7 messages",
             "authors": ["Example Author <author@example.com>"],
             "capabilities": {
-                "commands": True,
+                "commands": ["wizard/patientLookup"],
                 "schemaProvider": True
             },
             "toolbarButtons": [

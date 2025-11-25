@@ -6,6 +6,7 @@
 //! - Query extension status and toolbar buttons
 //! - Execute extension commands (triggered by toolbar button clicks)
 //! - Reload extensions after configuration changes
+//! - Provide responses from the frontend for async editor operations
 //!
 //! Extension-to-Hermes requests (editor/*, ui/*) are handled internally by
 //! the extension host and don't require separate Tauri commands.
@@ -14,7 +15,10 @@ pub mod editor;
 pub mod ui;
 
 use crate::extensions::host::{ExtensionStatus, ToolbarButtonInfo};
-use crate::extensions::types::{CommandExecuteResult, ExtensionConfig};
+use crate::extensions::types::{
+    CommandExecuteResult, ExtensionConfig, ExtensionLog, GetMessageResult, Patch, PatchError,
+    PatchMessageResult,
+};
 use crate::AppData;
 use tauri::State;
 
@@ -38,6 +42,20 @@ pub async fn get_extension_toolbar_buttons(
 ) -> Result<Vec<ToolbarButtonInfo>, String> {
     let host = state.extension_host.lock().await;
     Ok(host.get_toolbar_buttons().to_vec())
+}
+
+/// Get log entries for a specific extension.
+///
+/// Returns the recent log entries (up to 100) for the specified extension.
+#[tauri::command]
+pub async fn get_extension_logs(
+    extension_id: String,
+    state: State<'_, AppData>,
+) -> Result<Vec<ExtensionLog>, String> {
+    let host = state.extension_host.lock().await;
+    host.get_extension_logs(&extension_id)
+        .await
+        .ok_or_else(|| format!("extension not found: {extension_id}"))
 }
 
 /// Reload all extensions.
@@ -71,10 +89,118 @@ pub async fn execute_extension_command(
     command: String,
     state: State<'_, AppData>,
 ) -> Result<CommandExecuteResult, String> {
+    // start the command without holding the lock for the entire duration
+    // this prevents deadlock when the frontend calls provide_extension_patch_result
     let mut host = state.extension_host.lock().await;
-    host.execute_command(&command)
+    let receiver = host
+        .start_command_async(&command, &state.window_manager)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // release the lock before waiting for the response
+    drop(host);
+
+    // wait for the response (lock is released, so frontend can call complete_pending_request)
+    let result = receiver.await.map_err(|e| e.to_string())?;
+
+    result.map_err(|e| e.to_string())
+}
+
+/// Provide the message content in response to an extension's `editor/getMessage` request.
+///
+/// Called by the frontend after receiving an `extension-get-message-request` event.
+/// The frontend converts the message to the requested format and sends it back,
+/// which is then routed to the waiting extension.
+#[tauri::command]
+pub async fn provide_extension_message(
+    extension_id: String,
+    request_id: String,
+    message: String,
+    has_file: bool,
+    file_path: Option<String>,
+    state: State<'_, AppData>,
+) -> Result<(), String> {
+    let result = GetMessageResult {
+        message,
+        has_file,
+        file_path,
+    };
+
+    let result_value =
+        serde_json::to_value(result).map_err(|e| format!("failed to serialize result: {e}"))?;
+
+    let mut host = state.extension_host.lock().await;
+    host.complete_pending_request(&extension_id, &request_id, result_value)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Provide the result of applying patches in response to an extension's
+/// `editor/patchMessage` request.
+///
+/// Called by the frontend after receiving an `extension-patch-message-request` event,
+/// applying the patches locally, and updating the editor.
+#[tauri::command]
+pub async fn provide_extension_patch_result(
+    extension_id: String,
+    request_id: String,
+    success: bool,
+    patches_applied: usize,
+    errors: Option<Vec<PatchError>>,
+    state: State<'_, AppData>,
+) -> Result<(), String> {
+    let result = PatchMessageResult {
+        success,
+        patches_applied,
+        errors,
+    };
+
+    let result_value =
+        serde_json::to_value(result).map_err(|e| format!("failed to serialize result: {e}"))?;
+
+    let mut host = state.extension_host.lock().await;
+    host.complete_pending_request(&extension_id, &request_id, result_value)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Apply patches to an HL7 message.
+///
+/// This Tauri command is called by the frontend when it needs to apply patches
+/// from an extension's `editor/patchMessage` request. It uses the same patch
+/// logic as the internal editor handlers.
+#[tauri::command]
+pub fn apply_extension_patches(
+    message: String,
+    patches: Vec<Patch>,
+) -> Result<ApplyPatchesResult, String> {
+    use crate::extensions::types::PatchMessageParams;
+
+    let params = PatchMessageParams { patches };
+    let (new_message, result) =
+        editor::handle_patch_message(params, &message).map_err(|e| e.to_string())?;
+
+    Ok(ApplyPatchesResult {
+        message: new_message,
+        success: result.success,
+        patches_applied: result.patches_applied,
+        errors: result.errors,
+    })
+}
+
+/// Result type for apply_extension_patches command.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ApplyPatchesResult {
+    /// The patched message content (HL7 format).
+    pub message: String,
+    /// Whether all patches were applied successfully.
+    pub success: bool,
+    /// Number of patches applied.
+    #[serde(rename = "patchesApplied")]
+    pub patches_applied: usize,
+    /// Errors for patches that failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub errors: Option<Vec<PatchError>>,
 }
 
 #[cfg(test)]

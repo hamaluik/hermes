@@ -359,7 +359,7 @@ function handleInitialize(requestId, params) {
       name: 'Minimal Extension',
       version: '1.0.0',
       description: 'A minimal example extension',
-      capabilities: { commands: true },
+      capabilities: { commands: ['minimal/setPatient'] },
       toolbarButtons: [{
         id: 'minimal-set-patient',
         label: 'Set Sample Patient',
@@ -524,7 +524,7 @@ def write_message(msg):
 return {
     "name": "Minimal Extension",
     "version": "1.0.0",
-    "capabilities": { "commands": True },
+    "capabilities": { "commands": ["minimal/setPatient"] },
     "toolbarButtons": [...]
 }
 ```

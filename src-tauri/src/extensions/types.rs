@@ -7,6 +7,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use jiff::Timestamp;
+
 /// Extension configuration stored in settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
@@ -58,6 +60,28 @@ impl ExtensionState {
     pub fn is_terminated(&self) -> bool {
         matches!(self, ExtensionState::Stopped | ExtensionState::Failed(_))
     }
+}
+
+/// Log entry for an extension.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtensionLog {
+    /// Timestamp of the log entry.
+    pub timestamp: Timestamp,
+
+    /// Log level.
+    pub level: LogLevel,
+
+    /// Log message.
+    pub message: String,
+}
+
+/// Log level for extension events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Info,
+    Warn,
+    Error,
 }
 
 /// Metadata returned by an extension during initialization.

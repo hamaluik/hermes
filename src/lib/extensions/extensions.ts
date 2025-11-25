@@ -12,8 +12,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ExtensionConfig } from "../../settings";
 
-// Re-export ExtensionConfig from settings for convenience
+// Re-export types for convenience
 export type { ExtensionConfig } from "../../settings";
+export type {
+  MessageFormat,
+  GetMessageRequestPayload,
+  GetMessageResult,
+  PatchMessageRequestPayload,
+  Patch,
+  PatchError,
+  PatchMessageResult,
+  SetMessagePayload,
+} from "./types";
 
 // ============================================================================
 // Types
@@ -40,6 +50,9 @@ export type ExtensionState =
 export interface ExtensionStatus {
   /** Unique identifier (derived from executable path). */
   id: string;
+
+  /** Original path from configuration (used for matching). */
+  path: string;
 
   /** Human-readable name from extension metadata. */
   name: string;
@@ -93,6 +106,25 @@ export interface CommandExecuteResult {
   message?: string;
 }
 
+/**
+ * Log level for extension events.
+ */
+export type LogLevel = "info" | "warn" | "error";
+
+/**
+ * Log entry from an extension.
+ */
+export interface ExtensionLog {
+  /** Timestamp of the log entry (ISO 8601 format). */
+  timestamp: string;
+
+  /** Log level. */
+  level: LogLevel;
+
+  /** Log message. */
+  message: string;
+}
+
 // ============================================================================
 // Tauri Command Bridges
 // ============================================================================
@@ -112,22 +144,11 @@ export async function reloadExtensions(
   return invoke("reload_extensions", { configs });
 }
 
-// TODO: Phase 4 - The following functions will be used for frontend integration:
-//
-// - getExtensions(): Get status of all extensions for settings UI
-// - getExtensionToolbarButtons(): Get toolbar buttons for dynamic rendering
-// - executeExtensionCommand(command: string): Execute command when toolbar button clicked
-//
-// These are already implemented in the Rust backend (commands/extensions/mod.rs)
-// but the frontend integration is deferred to Phase 4.
-
 /**
  * Get status information for all extensions.
  *
  * Returns a list of extension statuses including ID, name, version, state,
  * and any error messages for failed extensions.
- *
- * TODO: Phase 4 - Wire up to settings UI
  */
 export async function getExtensions(): Promise<ExtensionStatus[]> {
   return invoke("get_extensions");
@@ -138,8 +159,6 @@ export async function getExtensions(): Promise<ExtensionStatus[]> {
  *
  * Returns buttons with their associated extension IDs, allowing the frontend
  * to display them and route clicks appropriately.
- *
- * TODO: Phase 4 - Wire up to toolbar component
  */
 export async function getExtensionToolbarButtons(): Promise<
   ToolbarButtonInfo[]
@@ -152,11 +171,106 @@ export async function getExtensionToolbarButtons(): Promise<
  *
  * This is called when a user clicks an extension toolbar button. The command
  * string identifies which extension and action to invoke.
- *
- * TODO: Phase 4 - Wire up to toolbar button click handlers
  */
 export async function executeExtensionCommand(
   command: string,
 ): Promise<CommandExecuteResult> {
   return invoke("execute_extension_command", { command });
+}
+
+/**
+ * Get log entries for a specific extension.
+ *
+ * Returns the recent log entries (up to 100) for the specified extension.
+ *
+ * @param extensionId - ID of the extension to get logs for
+ */
+export async function getExtensionLogs(
+  extensionId: string,
+): Promise<ExtensionLog[]> {
+  return invoke("get_extension_logs", { extensionId });
+}
+
+// ============================================================================
+// Editor Bridge Response Functions
+// ============================================================================
+
+/**
+ * Provide the message content in response to an extension's `editor/getMessage` request.
+ *
+ * Called by the frontend after receiving an `extension-get-message-request` event.
+ * The frontend converts the message to the requested format and sends it back
+ * to the backend, which routes it to the waiting extension.
+ *
+ * @param extensionId - ID of the extension that made the request
+ * @param requestId - JSON-RPC request ID from the original request (string or number per JSON-RPC 2.0 spec; backend RequestId enum supports both)
+ * @param message - The message content in the requested format
+ * @param hasFile - Whether a file is currently open
+ * @param filePath - The file path, if one is open
+ */
+export async function provideExtensionMessage(
+  extensionId: string,
+  requestId: string | number,
+  message: string,
+  hasFile: boolean,
+  filePath?: string,
+): Promise<void> {
+  return invoke("provide_extension_message", {
+    extensionId,
+    requestId: String(requestId),
+    message,
+    hasFile,
+    filePath,
+  });
+}
+
+/**
+ * Provide the result of applying patches in response to an extension's
+ * `editor/patchMessage` request.
+ *
+ * Called by the frontend after receiving an `extension-patch-message-request` event,
+ * applying the patches locally, and updating the editor. The result is sent back
+ * to the backend, which routes it to the waiting extension.
+ *
+ * @param extensionId - ID of the extension that made the request
+ * @param requestId - JSON-RPC request ID from the original request (string or number per JSON-RPC 2.0 spec; backend RequestId enum supports both)
+ * @param success - Whether all patches were applied successfully
+ * @param patchesApplied - Number of patches that were applied
+ * @param errors - Optional array of patch errors
+ */
+export async function provideExtensionPatchResult(
+  extensionId: string,
+  requestId: string | number,
+  success: boolean,
+  patchesApplied: number,
+  errors?: Array<{ index: number; path: string; message: string }>,
+): Promise<void> {
+  return invoke("provide_extension_patch_result", {
+    extensionId,
+    requestId: String(requestId),
+    success,
+    patchesApplied,
+    errors,
+  });
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Check if an extension state represents a running extension.
+ */
+export function isExtensionRunning(state: ExtensionState): boolean {
+  return state === "running";
+}
+
+/**
+ * Get error message from an extension state, if it's in a failed state.
+ */
+export function getExtensionError(state: ExtensionState): string | undefined {
+  if (typeof state === "object" && "failed" in state) {
+    return state.failed;
+  }
+  return undefined;
 }

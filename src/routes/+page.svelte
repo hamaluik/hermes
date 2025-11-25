@@ -109,7 +109,24 @@
   import ValidationPanel from "$lib/validation/validation_panel.svelte";
   import type { SearchMatch, ValidationMatch } from "$lib/editor/syntax_highlight";
   import { validateLight, validateFull, type ValidationResult, type ValidationIssue } from "$lib/validation/validate";
-  import { reloadExtensions } from "$lib/extensions/extensions";
+  import {
+    reloadExtensions,
+    getExtensionToolbarButtons,
+    getExtensions,
+    executeExtensionCommand,
+    provideExtensionMessage,
+    provideExtensionPatchResult,
+    isExtensionRunning,
+    type ToolbarButtonInfo,
+    type ExtensionStatus,
+  } from "$lib/extensions/extensions";
+  import type {
+    GetMessageRequestPayload,
+    PatchMessageRequestPayload,
+    MessageFormat,
+  } from "$lib/extensions/types";
+  import { handleGetMessage, handlePatchMessage } from "$lib/extensions/editor_bridge";
+  import DOMPurify from "dompurify";
 
   let { data }: PageProps = $props();
 
@@ -156,6 +173,10 @@
   // Keyboard shortcuts modal state
   let showKeyboardShortcutsModal = $state(false);
 
+  // Extension state
+  let extensionButtons: ToolbarButtonInfo[] = $state([]);
+  let extensionStatuses: ExtensionStatus[] = $state([]);
+
   // Validation state
   let validationResult: ValidationResult | null = $state(null);
   let showValidationPanel = $state(false);
@@ -194,6 +215,21 @@
   const MIN_EDITOR_HEIGHT = 100;
   const MAX_EDITOR_HEIGHT = $derived(windowHeight * 0.6);
 
+  /**
+   * Sanitize SVG markup from extensions to prevent XSS attacks
+   *
+   * Extensions can provide arbitrary SVG icons. This function strips
+   * potentially dangerous content like scripts and event handlers while
+   * preserving safe SVG markup.
+   */
+  function sanitizeSvg(svg: string): string {
+    return DOMPurify.sanitize(svg, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      ADD_TAGS: ['use'], // allow <use> for icon references
+      FORBID_TAGS: ['script', 'style'], // prevent script injection
+      FORBID_ATTR: ['onerror', 'onload', 'onclick'], // prevent event handlers
+    });
+  }
 
   /**
    * Centralized message update function
@@ -455,15 +491,122 @@
 
     // Extension system integration
     // When extension configs change (or are loaded from disk), reload the extension host.
-    // TODO: Phase 4 will add toolbar button rendering and status display in settings UI.
-    data.settings.onExtensionsChanged = (extensions) => {
-      reloadExtensions(extensions).catch((error) => {
+    data.settings.onExtensionsChanged = async (extensions) => {
+      try {
+        await reloadExtensions(extensions);
+        await refreshExtensionData();
+      } catch (error) {
         console.error("Failed to reload extensions:", error);
-      });
+      }
     };
+
+    // Helper to refresh extension buttons and statuses
+    async function refreshExtensionData() {
+      try {
+        [extensionButtons, extensionStatuses] = await Promise.all([
+          getExtensionToolbarButtons(),
+          getExtensions(),
+        ]);
+      } catch (error) {
+        console.error("Failed to refresh extension data:", error);
+      }
+    }
+
     // Load extensions on startup with current settings
-    reloadExtensions(data.settings.extensions).catch((error) => {
-      console.error("Failed to load extensions on startup:", error);
+    reloadExtensions(data.settings.extensions)
+      .then(() => refreshExtensionData())
+      .catch((error) => {
+        console.error("Failed to load extensions on startup:", error);
+      });
+
+    // Extension event listeners
+    let unlistenExtensionsChanged: UnlistenFn | undefined = undefined;
+    let unlistenGetMessageRequest: UnlistenFn | undefined = undefined;
+    let unlistenSetMessage: UnlistenFn | undefined = undefined;
+    let unlistenPatchMessageRequest: UnlistenFn | undefined = undefined;
+
+    // Listen for extensions-changed events (emitted when extensions start/stop)
+    listen("extensions-changed", async () => {
+      try {
+        await refreshExtensionData();
+      } catch (error) {
+        console.error("Failed to refresh extension data on extensions-changed:", error);
+      }
+    }).then((unlisten) => {
+      unlistenExtensionsChanged = unlisten;
+    });
+
+    // Listen for extension getMessage requests
+    listen<GetMessageRequestPayload>("extension-get-message-request", async (event) => {
+      const { extensionId, requestId, format } = event.payload;
+
+      try {
+        const result = await handleGetMessage(message, format as MessageFormat);
+
+        if (result.error) {
+          console.error("Error handling getMessage:", result.error);
+          // still provide response with error message
+        }
+
+        await provideExtensionMessage(
+          extensionId,
+          requestId,
+          result.message,
+          currentFilePath !== undefined,
+          currentFilePath
+        );
+      } catch (error) {
+        console.error("Failed to handle getMessage request:", error);
+      }
+    }).then((unlisten) => {
+      unlistenGetMessageRequest = unlisten;
+    });
+
+    // Listen for extension setMessage events
+    listen<string>("extension-set-message", (event) => {
+      const newMessage = event.payload;
+      updateMessage(newMessage);
+    }).then((unlisten) => {
+      unlistenSetMessage = unlisten;
+    });
+
+    // Listen for extension patchMessage requests
+    listen<PatchMessageRequestPayload>("extension-patch-message-request", async (event) => {
+      const { extensionId, requestId, patches } = event.payload;
+
+      try {
+        const result = await handlePatchMessage(message, patches);
+
+        // update the editor with patched message
+        if (result.success || result.patchesApplied > 0) {
+          updateMessage(result.message);
+        }
+
+        // send result back to extension
+        await provideExtensionPatchResult(
+          extensionId,
+          requestId,
+          result.success,
+          result.patchesApplied,
+          result.errors
+        );
+      } catch (error) {
+        console.error("Failed to handle patchMessage request:", error);
+        // send error response back to extension so it doesn't timeout
+        try {
+          await provideExtensionPatchResult(
+            extensionId,
+            requestId,
+            false,
+            0,
+            [{ index: 0, path: "", message: String(error) }]
+          );
+        } catch (innerError) {
+          console.error("Failed to send error response:", innerError);
+        }
+      }
+    }).then((unlisten) => {
+      unlistenPatchMessageRequest = unlisten;
     });
 
     /**
@@ -763,6 +906,10 @@
       unlistenMenuImportJson?.();
       unlistenMenuImportYaml?.();
       unlistenMenuImportToml?.();
+      unlistenExtensionsChanged?.();
+      unlistenGetMessageRequest?.();
+      unlistenSetMessage?.();
+      unlistenPatchMessageRequest?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -997,6 +1144,24 @@
       }
     };
   });
+
+  /**
+   * Handle extension toolbar button click.
+   *
+   * Executes the command registered by the extension and displays any
+   * error messages to the user.
+   */
+  async function handleExtensionButtonClick(command: string) {
+    try {
+      const result = await executeExtensionCommand(command);
+      if (!result.success && result.message) {
+        await messageDialog(result.message, { title: "Extension Error", kind: "error" });
+      }
+    } catch (error) {
+      console.error("Extension command failed:", error);
+      await messageDialog(String(error), { title: "Extension Error", kind: "error" });
+    }
+  }
 
   const handleSaveAs = async () => {
     const filePath = await saveDialog({
@@ -1269,6 +1434,23 @@
       </span>
     </NotificationIcon>
   </ToolbarButton>
+  <!-- Extension toolbar buttons -->
+  {#if extensionButtons.length > 0}
+    <ToolbarSeparator />
+    {#each extensionButtons as { extensionId, button }}
+      {@const status = extensionStatuses.find(s => s.id === extensionId)}
+      {@const isRunning = status?.state === "running"}
+      <ToolbarButton
+        title={button.label}
+        onclick={isRunning ? () => handleExtensionButtonClick(button.command) : undefined}
+      >
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span class="extension-icon" class:disabled={!isRunning}>
+          {@html sanitizeSvg(button.icon)}
+        </span>
+      </ToolbarButton>
+    {/each}
+  {/if}
   <ToolbarSpacer />
   <ToolbarButton title="Help" onclick={() => invoke("open_help_window")}>
     <IconHelp />
@@ -1607,6 +1789,22 @@
 
   span.listening {
     color: var(--col-pine);
+  }
+
+  span.extension-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.disabled {
+      opacity: 0.4;
+    }
+
+    /* ensure extension SVG icons inherit the current colour */
+    :global(svg) {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
   }
 
   span.notListening {
