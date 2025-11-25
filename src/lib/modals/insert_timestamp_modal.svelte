@@ -39,6 +39,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
   import { formatDatetimeToHl7 } from "$lib/shared/data";
 
   let {
@@ -202,14 +203,14 @@
   </main>
   <ModalFooter>
     {#snippet right()}
-      <button class="cancel" onclick={handleClose}>Cancel</button>
-      <button
-        class="apply"
+      <Button variant="ghost" onclick={handleClose}>Cancel</Button>
+      <Button
+        variant="secondary"
         onclick={handleInsert}
         disabled={!dateValue || !timeValue}
       >
         Insert
-      </button>
+      </Button>
     {/snippet}
   </ModalFooter>
 </Modal>

@@ -8,6 +8,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
   import IconAdd from "$lib/icons/IconAdd.svelte";
   import IconTrash from "$lib/icons/IconTrash.svelte";
   import type { ConnectionPreset } from "./connection_preset";
@@ -115,13 +116,14 @@
                 <span class="preset-name">{preset.name}</span>
                 <span class="preset-address">{preset.hostname}:{preset.port}</span>
               </button>
-              <button
-                class="delete-button"
+              <Button
+                variant="danger"
+                iconOnly
                 onclick={() => deletePreset(preset.id)}
                 title="Delete preset"
               >
                 <IconTrash />
-              </button>
+              </Button>
             </div>
           {/each}
         {/if}
@@ -170,18 +172,18 @@
       </div>
 
       <div class="form-actions">
-        <button class="add-button" onclick={savePreset} disabled={!isFormValid}>
+        <Button variant="primary" onclick={savePreset} disabled={!isFormValid}>
           <IconAdd />
           {editingId ? "Update" : "Add"}
-        </button>
+        </Button>
       </div>
     </div>
   </div>
 
   <ModalFooter>
     {#snippet right()}
-      <button class="cancel" onclick={handleClose}>Cancel</button>
-      <button class="save" onclick={handleSave}>Save</button>
+      <Button variant="ghost" onclick={handleClose}>Cancel</Button>
+      <Button variant="primary" onclick={handleSave}>Save</Button>
     {/snippet}
   </ModalFooter>
 </Modal>
@@ -300,20 +302,6 @@
     max-width: 100%;
   }
 
-  .delete-button {
-    padding: 0.375rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--col-subtle);
-    border-radius: 4px;
-    flex-shrink: 0;
-
-    &:hover {
-      color: var(--col-love);
-      background: var(--col-highlightLow);
-    }
-  }
 
   .form-row {
     display: flex;
@@ -358,37 +346,5 @@
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.5rem;
-  }
-
-  .add-button {
-    padding: 0.375rem 0.75rem;
-    background: var(--col-pine);
-    color: var(--col-base);
-    border: none;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-
-    &:hover:not(:disabled) {
-      background: var(--col-gold);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  :global(html[data-theme="dark"]) .add-button {
-    color: var(--col-text);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html[data-theme="auto"]) .add-button {
-      color: var(--col-text);
-    }
   }
 </style>

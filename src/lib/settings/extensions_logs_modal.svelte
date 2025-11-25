@@ -12,6 +12,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
   import {
     getExtensions,
     getExtensionLogs,
@@ -136,13 +137,13 @@
         {/each}
       </select>
 
-      <button type="button" class="copy-button" onclick={copyLogsToClipboard}>
+      <Button variant="ghost" onclick={copyLogsToClipboard}>
         Copy to Clipboard
-      </button>
+      </Button>
 
-      <button type="button" class="refresh-button" onclick={loadLogs}>
+      <Button variant="ghost" onclick={loadLogs}>
         Refresh
-      </button>
+      </Button>
     </div>
 
     <div class="logs-container">
@@ -167,7 +168,7 @@
 
   <ModalFooter>
     {#snippet right()}
-      <button type="button" class="close-button cancel" onclick={onclose}>Close</button>
+      <Button variant="ghost" onclick={onclose}>Close</Button>
     {/snippet}
   </ModalFooter>
 {/snippet}
@@ -202,21 +203,6 @@
     font-size: 0.9rem;
   }
 
-  .copy-button,
-  .refresh-button {
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--col-highlightMed);
-    border-radius: 4px;
-    background: var(--col-surface);
-    color: var(--col-text);
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .copy-button:hover,
-  .refresh-button:hover {
-    background: var(--col-highlightLow);
-  }
 
   .logs-container {
     flex: 1;
@@ -284,18 +270,5 @@
 
   .level-error .log-level {
     color: var(--col-love);
-  }
-
-  .close-button {
-    padding: 0.5rem 1.5rem;
-    border: 1px solid var(--col-highlightMed);
-    border-radius: 4px;
-    background: var(--col-surface);
-    color: var(--col-text);
-    cursor: pointer;
-  }
-
-  .close-button:hover {
-    background: var(--col-highlightLow);
   }
 </style>

@@ -8,6 +8,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
 
   let { show = $bindable(false) }: { show: boolean } = $props();
 
@@ -93,7 +94,7 @@
   </main>
   <ModalFooter>
     {#snippet right()}
-      <button class="apply" onclick={handleClose}>Close</button>
+      <Button variant="secondary" onclick={handleClose}>Close</Button>
     {/snippet}
   </ModalFooter>
 </Modal>

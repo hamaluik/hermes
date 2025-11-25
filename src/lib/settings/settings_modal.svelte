@@ -68,6 +68,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
   import ExtensionsSettings from "./extensions_settings.svelte";
 
   let {
@@ -140,11 +141,11 @@
   </main>
   <ModalFooter>
     {#snippet right()}
-      <button class="cancel" onclick={handleClose}>Cancel</button>
-      <button class="save" onclick={handleSave}>
+      <Button variant="ghost" onclick={handleClose}>Cancel</Button>
+      <Button variant="primary" onclick={handleSave}>
         <IconSave />
         <span>Save</span>
-      </button>
+      </Button>
     {/snippet}
   </ModalFooter>
 </Modal>
@@ -180,30 +181,6 @@
       grid-template-columns: 1fr auto;
       gap: 0.8lh 1ch;
       align-items: center;
-    }
-  }
-
-  button.save {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 1ch;
-    background: var(--col-pine);
-    color: var(--col-base);
-
-    &:hover {
-      background: var(--col-gold);
-      color: var(--col-base);
-    }
-  }
-
-  :global(html[data-theme="dark"]) button.save {
-    color: var(--col-text);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html[data-theme="auto"]) button.save {
-      color: var(--col-text);
     }
   }
 </style>

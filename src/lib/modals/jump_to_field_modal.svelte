@@ -27,6 +27,7 @@
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
   import ModalFooter from "$lib/components/modal_footer.svelte";
+  import Button from "$lib/components/button.svelte";
   import { getFieldRange } from "$lib/editor/cursor";
 
   let {
@@ -108,10 +109,10 @@
   </main>
   <ModalFooter>
     {#snippet right()}
-      <button class="cancel" onclick={handleClose}>Cancel</button>
-      <button class="apply" onclick={handleJump} disabled={!fieldPath.trim()}>
+      <Button variant="ghost" onclick={handleClose}>Cancel</Button>
+      <Button variant="secondary" onclick={handleJump} disabled={!fieldPath.trim()}>
         Jump
-      </button>
+      </Button>
     {/snippet}
   </ModalFooter>
 </Modal>

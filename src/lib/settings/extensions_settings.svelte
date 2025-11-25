@@ -67,6 +67,7 @@
     type ExtensionStatus,
   } from "$lib/extensions/extensions";
   import IconDelete from "$lib/icons/IconDelete.svelte";
+  import Button from "$lib/components/button.svelte";
   import ExtensionLogsModal from "./extensions_logs_modal.svelte";
 
   let {
@@ -213,9 +214,9 @@
       placeholder="python3 /path/to/extension.py or /path/to/extension"
       onkeydown={(e) => e.key === "Enter" && addExtension()}
     />
-    <button type="button" class="add-button" onclick={addExtension} disabled={!newExtensionCommand.trim()}>
+    <Button variant="primary" onclick={addExtension} disabled={!newExtensionCommand.trim()}>
       Add Extension
-    </button>
+    </Button>
   </div>
 
   {#if extensionsList.length === 0}
@@ -257,14 +258,14 @@
                 />
                 <span class="toggle-slider"></span>
               </label>
-              <button
-                type="button"
-                class="delete-button"
+              <Button
+                variant="danger"
+                iconOnly
                 onclick={() => removeExtension(index)}
                 title="Remove extension"
               >
                 <IconDelete />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -280,21 +281,12 @@
   {/if}
 
   <div class="actions">
-    <button
-      type="button"
-      class="view-logs-button"
-      onclick={() => (showLogsModal = true)}
-    >
+    <Button variant="secondary" onclick={() => (showLogsModal = true)}>
       View Logs
-    </button>
-    <button
-      type="button"
-      class="reload-button"
-      onclick={handleReload}
-      disabled={isReloading}
-    >
+    </Button>
+    <Button variant="secondary" onclick={handleReload} disabled={isReloading}>
       {isReloading ? "Reloading..." : "Reload Extensions"}
-    </button>
+    </Button>
   </div>
 </div>
 
@@ -472,27 +464,6 @@
     }
   }
 
-  .delete-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    background: transparent;
-    border: 1px solid var(--col-highlightMed);
-    border-radius: 4px;
-    cursor: pointer;
-    color: var(--col-subtle);
-
-    &:hover {
-      background: var(--col-love);
-      border-color: var(--col-love);
-      color: var(--col-base);
-    }
-
-    :global(svg) {
-      pointer-events: none;
-    }
-  }
 
   .extension-error {
     padding: 0.5rem;
@@ -513,51 +484,6 @@
     padding-top: 0.5rem;
   }
 
-  button {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  .add-button {
-    background: var(--col-pine);
-    color: var(--col-base);
-    border: 1px solid var(--col-pine);
-
-    &:hover:not(:disabled) {
-      background: var(--col-gold);
-      border-color: var(--col-gold);
-    }
-  }
-
-  .view-logs-button {
-    background: var(--col-foam);
-    color: var(--col-base);
-    border: 1px solid var(--col-foam);
-
-    &:hover {
-      background: var(--col-gold);
-      border-color: var(--col-gold);
-    }
-  }
-
-  .reload-button {
-    background: var(--col-iris);
-    color: var(--col-base);
-    border: 1px solid var(--col-iris);
-
-    &:hover:not(:disabled) {
-      background: var(--col-gold);
-      border-color: var(--col-gold);
-    }
-  }
 
   .toggle-wrapper {
     position: relative;
@@ -613,17 +539,4 @@
     }
   }
 
-  :global(html[data-theme="dark"]) .add-button,
-  :global(html[data-theme="dark"]) .view-logs-button,
-  :global(html[data-theme="dark"]) .reload-button {
-    color: var(--col-text);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html[data-theme="auto"]) .add-button,
-    :global(html[data-theme="auto"]) .view-logs-button,
-    :global(html[data-theme="auto"]) .reload-button {
-      color: var(--col-text);
-    }
-  }
 </style>

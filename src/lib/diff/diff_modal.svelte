@@ -15,6 +15,7 @@
 <script lang="ts">
   import Modal from "$lib/components/modal.svelte";
   import ModalHeader from "$lib/components/modal_header.svelte";
+  import Button from "$lib/components/button.svelte";
   import { compareMessages, type MessageDiff, type FieldDiff, type DiffType } from "./diff";
   import { type DiffMatch } from "$lib/editor/syntax_highlight";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -236,14 +237,14 @@
         <div class="pane-header">
           <span class="pane-title">Left (Original)</span>
           <div class="pane-actions">
-            <button type="button" class="action-btn" onclick={() => loadFromEditor("left")} disabled={!editorMessage} title="Load from Editor">
+            <Button variant="ghost" onclick={() => loadFromEditor("left")} disabled={!editorMessage} title="Load from Editor">
               <IconEditMessage />
               <span>Editor</span>
-            </button>
-            <button type="button" class="action-btn" onclick={() => loadFromFile("left")} title="Open File...">
+            </Button>
+            <Button variant="ghost" onclick={() => loadFromFile("left")} title="Open File...">
               <IconOpen />
               <span>Open</span>
-            </button>
+            </Button>
           </div>
         </div>
         <div class="message-container">
@@ -261,14 +262,14 @@
         <div class="pane-header">
           <span class="pane-title">Right (Modified)</span>
           <div class="pane-actions">
-            <button type="button" class="action-btn" onclick={() => loadFromEditor("right")} disabled={!editorMessage} title="Load from Editor">
+            <Button variant="ghost" onclick={() => loadFromEditor("right")} disabled={!editorMessage} title="Load from Editor">
               <IconEditMessage />
               <span>Editor</span>
-            </button>
-            <button type="button" class="action-btn" onclick={() => loadFromFile("right")} title="Open File...">
+            </Button>
+            <Button variant="ghost" onclick={() => loadFromFile("right")} title="Open File...">
               <IconOpen />
               <span>Open</span>
-            </button>
+            </Button>
           </div>
         </div>
         <div class="message-container">
@@ -283,14 +284,13 @@
     </div>
 
     <div class="compare-section">
-      <button
-        type="button"
-        class="compare-button"
+      <Button
+        variant="primary"
         onclick={handleCompare}
         disabled={isComparing || !leftMessage.trim() || !rightMessage.trim()}
       >
         {isComparing ? "Comparing..." : "Compare"}
-      </button>
+      </Button>
     </div>
 
     {#if diffError}
@@ -417,40 +417,6 @@
     gap: 0.5rem;
   }
 
-  .action-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.8rem;
-    padding: 0.35rem 0.6rem;
-    background: var(--col-surface);
-    border: 1px solid var(--col-highlightMed);
-    border-radius: 4px;
-    color: var(--col-subtle);
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover:not(:disabled) {
-      background: var(--col-highlightLow);
-      color: var(--col-text);
-      border-color: var(--col-highlightHigh);
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    :global(svg) {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-    }
-
-    span {
-      white-space: nowrap;
-    }
-  }
 
   .message-container {
     flex: 1;
@@ -469,35 +435,6 @@
     display: flex;
     justify-content: center;
     padding: 0.5rem 0;
-  }
-
-  .compare-button {
-    padding: 0.5rem 2rem;
-    background: var(--col-pine);
-    color: var(--col-base);
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background: var(--col-foam);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  :global(html[data-theme="dark"]) .compare-button {
-    color: var(--col-text);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html[data-theme="auto"]) .compare-button {
-      color: var(--col-text);
-    }
   }
 
   .error {

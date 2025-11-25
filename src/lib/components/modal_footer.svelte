@@ -51,37 +51,5 @@
       justify-content: flex-end;
     }
 
-    :global(button) {
-      padding: 0.5em 1.5em;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9em;
-      border: 1px solid var(--col-highlightHigh);
-      transition: all 0.2s;
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    :global(button.cancel) {
-      background: transparent;
-      color: var(--col-text);
-
-      &:hover:not(:disabled) {
-        background: var(--col-highlightLow);
-      }
-    }
-
-    :global(button.apply),
-    :global(button.save) {
-      background: var(--col-iris);
-      color: var(--col-base);
-
-      &:hover:not(:disabled) {
-        background: var(--col-love);
-      }
-    }
   }
 </style>
