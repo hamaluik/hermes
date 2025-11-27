@@ -8,6 +8,7 @@ Demonstrates:
 - Message patching
 - Schema overrides
 - Resource cleanup
+- Window management via ui/closeWindow
 """
 
 import sys
@@ -56,6 +57,22 @@ PATIENTS = {
         },
         "phone": "5559876543",
         "accountNumber": "ACC005678"
+    },
+    "11112222": {
+        "mrn": "11112222",
+        "lastName": "DOE",
+        "firstName": "JANE",
+        "middleName": "B",
+        "dob": "19850310",
+        "sex": "F",
+        "address": {
+            "street": "789 PINE RD",
+            "city": "ANYTOWN",
+            "state": "ON",
+            "zip": "A2A 2A2"
+        },
+        "phone": "5555551234",
+        "accountNumber": "ACC009999"
     }
 }
 
@@ -65,8 +82,9 @@ PATIENTS = {
 
 http_server = None
 http_port = None
-search_result = None
-search_event = threading.Event()
+wizard_window_id = None
+wizard_result = None
+wizard_event = threading.Event()
 
 # ============================================================================
 # Message I/O
@@ -224,7 +242,11 @@ def get_wizard_html():
             background: #007bff;
             color: white;
         }
-        .btn-primary:hover { background: #0056b3; }
+        .btn-primary:hover:not(:disabled) { background: #0056b3; }
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         .btn-secondary {
             background: #e0e0e0;
             color: #333;
@@ -248,18 +270,60 @@ def get_wizard_html():
             color: #888;
             margin-top: 4px;
         }
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Results list */
+        .results-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .result-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .result-item:last-child { border-bottom: none; }
+        .result-item:hover { background: #f0f7ff; }
+        .result-item.selected {
+            background: #e3f2fd;
+            border-left: 3px solid #007bff;
+        }
+        .result-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .result-mrn {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #888;
+        }
+        .results-header {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Patient Lookup</h1>
 
-        <div id="form">
+        <!-- Search View -->
+        <div id="searchView" class="view active">
             <div class="form-group">
-                <label for="mrn">Medical Record Number (MRN)</label>
-                <input type="text" id="mrn" placeholder="Enter 8-digit MRN"
-                       maxlength="8" pattern="[0-9]{8}">
-                <div class="help-text">Try: 12345678 or 87654321</div>
+                <label for="query">Search by MRN or Last Name</label>
+                <input type="text" id="query" placeholder="Enter MRN or last name">
+                <div class="help-text">Try: DOE, SMITH, 123, or 87654321</div>
             </div>
 
             <div class="buttons">
@@ -267,86 +331,182 @@ def get_wizard_html():
                 <button class="btn-secondary" onclick="cancel()">Cancel</button>
             </div>
 
-            <div id="error" class="error"></div>
+            <div id="searchError" class="error"></div>
         </div>
 
-        <div id="loading" class="loading">
-            Searching...
+        <!-- Results View -->
+        <div id="resultsView" class="view">
+            <div class="results-header" id="resultsHeader">Select a patient:</div>
+            <div class="results-list" id="resultsList"></div>
+
+            <div class="buttons">
+                <button class="btn-primary" id="applyBtn" onclick="applyPatient()" disabled>Apply</button>
+                <button class="btn-secondary" onclick="backToSearch()">Back</button>
+                <button class="btn-secondary" onclick="cancel()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Loading View -->
+        <div id="loadingView" class="view">
+            <div class="loading" style="display: block;">
+                Searching...
+            </div>
         </div>
     </div>
 
     <script>
-        const mrnInput = document.getElementById('mrn');
-        const formEl = document.getElementById('form');
-        const loadingEl = document.getElementById('loading');
-        const errorEl = document.getElementById('error');
+        const queryInput = document.getElementById('query');
+        const searchView = document.getElementById('searchView');
+        const resultsView = document.getElementById('resultsView');
+        const loadingView = document.getElementById('loadingView');
+        const searchError = document.getElementById('searchError');
+        const resultsList = document.getElementById('resultsList');
+        const resultsHeader = document.getElementById('resultsHeader');
+        const applyBtn = document.getElementById('applyBtn');
+
+        let selectedMrn = null;
+        let searchResults = [];
 
         // focus input on load
-        mrnInput.focus();
+        queryInput.focus();
 
         // allow Enter to submit
-        mrnInput.addEventListener('keypress', (e) => {
+        queryInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') search();
         });
 
-        async function search() {
-            const mrn = mrnInput.value.trim();
+        function showView(view) {
+            searchView.classList.remove('active');
+            resultsView.classList.remove('active');
+            loadingView.classList.remove('active');
+            view.classList.add('active');
+        }
 
-            // validate
-            if (!mrn) {
-                showError('Please enter an MRN');
-                return;
-            }
-            if (!/^[0-9]{8}$/.test(mrn)) {
-                showError('MRN must be exactly 8 digits');
+        async function search() {
+            const query = queryInput.value.trim();
+
+            if (!query) {
+                showError('Please enter a search term');
                 return;
             }
 
             hideError();
-            showLoading(true);
+            showView(loadingView);
 
             try {
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mrn })
+                    body: JSON.stringify({ query })
                 });
 
                 const data = await response.json();
 
-                if (data.success) {
-                    window.close();
+                if (data.patients && data.patients.length > 0) {
+                    searchResults = data.patients;
+                    selectedMrn = null;
+                    applyBtn.disabled = true;
+                    renderResults();
+                    showView(resultsView);
                 } else {
-                    showError(data.message || 'Patient not found');
-                    showLoading(false);
+                    showError('No patients found');
+                    showView(searchView);
                 }
             } catch (err) {
                 showError('Failed to connect to extension');
-                showLoading(false);
+                showView(searchView);
             }
         }
 
-        function cancel() {
-            fetch('/api/cancel', { method: 'POST' })
-                .finally(() => window.close());
+        function renderResults() {
+            resultsHeader.textContent = `Found ${searchResults.length} patient${searchResults.length === 1 ? '' : 's'}:`;
+            resultsList.innerHTML = searchResults.map(p => `
+                <div class="result-item" data-mrn="${p.mrn}" onclick="selectPatient('${p.mrn}')">
+                    <div class="result-name">${p.lastName}, ${p.firstName}</div>
+                    <div class="result-mrn">MRN: ${p.mrn}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectPatient(mrn) {
+            selectedMrn = mrn;
+            applyBtn.disabled = false;
+
+            // update selection UI
+            document.querySelectorAll('.result-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.mrn === mrn);
+            });
+        }
+
+        async function applyPatient() {
+            if (!selectedMrn) return;
+
+            showView(loadingView);
+
+            try {
+                const response = await fetch('/api/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mrn: selectedMrn })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    showError(data.message || 'Failed to apply patient');
+                    showView(resultsView);
+                }
+                // on success, the extension will close the window
+            } catch (err) {
+                showError('Failed to connect to extension');
+                showView(resultsView);
+            }
+        }
+
+        function backToSearch() {
+            selectedMrn = null;
+            searchResults = [];
+            showView(searchView);
+            queryInput.focus();
+        }
+
+        async function cancel() {
+            try {
+                await fetch('/api/cancel', { method: 'POST' });
+            } catch (err) {
+                // ignore errors on cancel
+            }
+            // extension will close the window
         }
 
         function showError(msg) {
-            errorEl.textContent = msg;
-            errorEl.style.display = 'block';
+            searchError.textContent = msg;
+            searchError.style.display = 'block';
         }
 
         function hideError() {
-            errorEl.style.display = 'none';
-        }
-
-        function showLoading(show) {
-            formEl.style.display = show ? 'none' : 'block';
-            loadingEl.style.display = show ? 'block' : 'none';
+            searchError.style.display = 'none';
         }
     </script>
 </body>
 </html>"""
+
+
+def search_patients(query):
+    """Search patients by MRN or last name."""
+    query = query.upper()
+    results = []
+
+    for mrn, patient in PATIENTS.items():
+        # match by MRN prefix or last name contains
+        if mrn.startswith(query) or query in patient["lastName"]:
+            results.append({
+                "mrn": patient["mrn"],
+                "lastName": patient["lastName"],
+                "firstName": patient["firstName"]
+            })
+
+    return results
 
 
 class WizardHandler(BaseHTTPRequestHandler):
@@ -362,30 +522,33 @@ class WizardHandler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        global search_result
+        global wizard_result
 
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
 
         if self.path == "/api/search":
-            data = json.loads(body)
+            data = json.loads(body) if body else {}
+            query = data.get("query", "")
+
+            patients = search_patients(query)
+            self.send_json({"patients": patients})
+
+        elif self.path == "/api/apply":
+            data = json.loads(body) if body else {}
             mrn = data.get("mrn", "")
 
-            # look up patient
             patient = PATIENTS.get(mrn)
-
             if patient:
-                search_result = {"success": True, "patient": patient}
+                wizard_result = {"action": "apply", "patient": patient}
+                wizard_event.set()
                 self.send_json({"success": True})
             else:
-                search_result = {"success": False, "message": "Patient not found"}
                 self.send_json({"success": False, "message": "Patient not found"})
 
-            search_event.set()
-
         elif self.path == "/api/cancel":
-            search_result = {"success": False, "cancelled": True}
-            search_event.set()
+            wizard_result = {"action": "cancel"}
+            wizard_event.set()
             self.send_json({"success": True})
 
         else:
@@ -433,6 +596,18 @@ def stop_http_server():
         log("Stopping HTTP server")
         http_server.shutdown()
         http_server = None
+
+
+def close_wizard_window():
+    """Close the wizard window via Hermes API."""
+    global wizard_window_id
+    if wizard_window_id:
+        log(f"Closing window: {wizard_window_id}")
+        try:
+            send_request("ui/closeWindow", {"windowId": wizard_window_id})
+        except Exception as e:
+            log(f"Failed to close window: {e}")
+        wizard_window_id = None
 
 
 # ============================================================================
@@ -519,11 +694,12 @@ def handle_command(params):
 
 def execute_patient_lookup():
     """Execute the patient lookup wizard asynchronously."""
-    global search_result
+    global wizard_result, wizard_window_id
 
     # reset state
-    search_result = None
-    search_event.clear()
+    wizard_result = None
+    wizard_window_id = None
+    wizard_event.clear()
 
     # start HTTP server
     port = start_http_server()
@@ -534,7 +710,7 @@ def execute_patient_lookup():
             "url": f"http://127.0.0.1:{port}/wizard",
             "title": "Patient Lookup",
             "width": 450,
-            "height": 300,
+            "height": 400,
             "modal": True
         })
 
@@ -542,61 +718,65 @@ def execute_patient_lookup():
             log(f"Failed to open wizard: {response['error']['message']}")
             return
 
+        # save window ID for later closing
+        wizard_window_id = response.get("result", {}).get("windowId")
+        log(f"Opened window: {wizard_window_id}")
+
         # wait for user interaction
-        search_event.wait(timeout=60)
+        wizard_event.wait(timeout=300)
 
         # process result
-        if search_result is None:
+        if wizard_result is None:
             log("Wizard timed out")
             return
 
-        if search_result.get("cancelled"):
+        if wizard_result.get("action") == "cancel":
             log("Wizard cancelled")
             return
 
-        if not search_result.get("success"):
-            log(search_result.get("message", "Lookup failed"))
-            return
+        if wizard_result.get("action") == "apply":
+            patient = wizard_result["patient"]
 
-        # populate patient data
-        patient = search_result["patient"]
-        patches = [
-            {"path": "PID.3.1", "value": patient["mrn"]},
-            {"path": "PID.3.4", "value": "MRN"},
-            {"path": "PID.5.1", "value": patient["lastName"]},
-            {"path": "PID.5.2", "value": patient["firstName"]},
-            {"path": "PID.5.3", "value": patient.get("middleName", "")},
-            {"path": "PID.7", "value": patient["dob"]},
-            {"path": "PID.8", "value": patient["sex"]},
-            {"path": "PID.11.1", "value": patient["address"]["street"]},
-            {"path": "PID.11.3", "value": patient["address"]["city"]},
-            {"path": "PID.11.4", "value": patient["address"]["state"]},
-            {"path": "PID.11.5", "value": patient["address"]["zip"]},
-            {"path": "PID.13.1", "value": patient["phone"]},
-            {"path": "PID.18.1", "value": patient["accountNumber"]},
-        ]
+            # populate patient data
+            patches = [
+                {"path": "PID.3.1", "value": patient["mrn"]},
+                {"path": "PID.3.4", "value": "MRN"},
+                {"path": "PID.5.1", "value": patient["lastName"]},
+                {"path": "PID.5.2", "value": patient["firstName"]},
+                {"path": "PID.5.3", "value": patient.get("middleName", "")},
+                {"path": "PID.7", "value": patient["dob"]},
+                {"path": "PID.8", "value": patient["sex"]},
+                {"path": "PID.11.1", "value": patient["address"]["street"]},
+                {"path": "PID.11.3", "value": patient["address"]["city"]},
+                {"path": "PID.11.4", "value": patient["address"]["state"]},
+                {"path": "PID.11.5", "value": patient["address"]["zip"]},
+                {"path": "PID.13.1", "value": patient["phone"]},
+                {"path": "PID.18.1", "value": patient["accountNumber"]},
+            ]
 
-        patch_response = send_request("editor/patchMessage", {"patches": patches})
+            patch_response = send_request("editor/patchMessage", {"patches": patches})
 
-        if "error" in patch_response:
-            log(f"Failed to update message: {patch_response['error']['message']}")
-            return
-
-        if not patch_response.get("result", {}).get("success"):
-            errors = patch_response.get("result", {}).get("errors", [])
-            if errors:
-                log(f"Patch failed: {errors[0]['message']}")
+            if "error" in patch_response:
+                log(f"Failed to update message: {patch_response['error']['message']}")
                 return
 
-        log(f"Loaded patient: {patient['firstName']} {patient['lastName']}")
+            if not patch_response.get("result", {}).get("success"):
+                errors = patch_response.get("result", {}).get("errors", [])
+                if errors:
+                    log(f"Patch failed: {errors[0]['message']}")
+                    return
+
+            log(f"Loaded patient: {patient['firstName']} {patient['lastName']}")
 
     finally:
+        close_wizard_window()
         stop_http_server()
 
 
 def handle_shutdown(request_id, params):
     """Handle shutdown request."""
     log("Shutting down")
+    close_wizard_window()
     stop_http_server()
     return {
         "jsonrpc": "2.0",
@@ -668,6 +848,7 @@ def main():
             traceback.print_exc(file=sys.stderr)
             break
 
+    close_wizard_window()
     stop_http_server()
     log("Exiting")
 

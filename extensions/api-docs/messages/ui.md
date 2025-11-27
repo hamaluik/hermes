@@ -154,12 +154,13 @@ class WizardHandler(SimpleHTTPRequestHandler):
                     <input type="text" id="mrn" placeholder="Enter MRN">
                     <button onclick="search()">Search</button>
                     <script>
-                        function search() {
+                        async function search() {
                             // POST results back to extension
-                            fetch('/api/search', {
+                            await fetch('/api/search', {
                                 method: 'POST',
                                 body: JSON.stringify({mrn: document.getElementById('mrn').value})
                             });
+                            // extension will close window via ui/closeWindow
                         }
                     </script>
                 </body>
@@ -242,11 +243,11 @@ class WizardHandler(BaseHTTPRequestHandler):
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({mrn: mrn})
                         });
-                        window.close();
+                        // extension will close the window via ui/closeWindow
                     }
-                    function cancel() {
-                        fetch('/api/cancel', {method: 'POST'});
-                        window.close();
+                    async function cancel() {
+                        await fetch('/api/cancel', {method: 'POST'});
+                        // extension will close the window via ui/closeWindow
                     }
                 </script>
             </body>
@@ -292,6 +293,7 @@ def handle_search_command(request_id):
     global search_result
     search_result = None
     search_complete.clear()
+    window_id = None
 
     # start HTTP server
     server = HTTPServer(("localhost", 9876), WizardHandler)
@@ -299,54 +301,62 @@ def handle_search_command(request_id):
     server_thread.daemon = True
     server_thread.start()
 
-    # open window
-    response = send_request("ui/openWindow", {
-        "url": "http://localhost:9876/wizard",
-        "title": "Patient Search",
-        "width": 400,
-        "height": 200,
-        "modal": True
-    })
+    try:
+        # open window
+        response = send_request("ui/openWindow", {
+            "url": "http://localhost:9876/wizard",
+            "title": "Patient Search",
+            "width": 400,
+            "height": 200,
+            "modal": True
+        })
 
-    if "error" in response:
+        if "error" in response:
+            return error_response(request_id, "Failed to open window")
+
+        # save window ID for closing later
+        window_id = response.get("result", {}).get("windowId")
+
+        # wait for user interaction
+        search_complete.wait(timeout=300)  # 5 minute timeout
+
+        if not search_result or search_result.get("cancelled"):
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {"success": False, "message": "Search cancelled"}
+            }
+
+        if not search_result.get("found"):
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {"success": False, "message": "Patient not found"}
+            }
+
+        # update the message with patient data
+        patient = search_result["patient"]
+        send_request("editor/patchMessage", {
+            "patches": [
+                {"path": "PID.3.1", "value": patient["mrn"]},
+                {"path": "PID.5.1", "value": patient["lastName"]},
+                {"path": "PID.5.2", "value": patient["firstName"]},
+                {"path": "PID.7", "value": patient["dob"]},
+                {"path": "PID.8", "value": patient["sex"]}
+            ]
+        })
+
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {"success": True, "message": "Patient data loaded"}
+        }
+
+    finally:
+        # close the window via API (window.close() doesn't work)
+        if window_id:
+            send_request("ui/closeWindow", {"windowId": window_id})
         server.shutdown()
-        return error_response(request_id, "Failed to open window")
-
-    # wait for user interaction
-    search_complete.wait(timeout=300)  # 5 minute timeout
-    server.shutdown()
-
-    if not search_result or search_result.get("cancelled"):
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {"success": False, "message": "Search cancelled"}
-        }
-
-    if not search_result.get("found"):
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {"success": False, "message": "Patient not found"}
-        }
-
-    # update the message with patient data
-    patient = search_result["patient"]
-    send_request("editor/patchMessage", {
-        "patches": [
-            {"path": "PID.3.1", "value": patient["mrn"]},
-            {"path": "PID.5.1", "value": patient["lastName"]},
-            {"path": "PID.5.2", "value": patient["firstName"]},
-            {"path": "PID.7", "value": patient["dob"]},
-            {"path": "PID.8", "value": patient["sex"]}
-        ]
-    })
-
-    return {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "result": {"success": True, "message": "Patient data loaded"}
-    }
 ```
 
 ### Security Considerations
@@ -360,11 +370,12 @@ def handle_search_command(request_id):
 
 ### Best Practices
 
-1. **Use modal windows for wizards** - Prevents the user from making conflicting changes
-2. **Provide a cancel button** - Always let users abort
-3. **Clean up on completion** - Shut down the HTTP server when done
-4. **Handle window close** - The user may close the window without using your buttons
-5. **Set reasonable timeouts** - Avoid waiting indefinitely for user input
+1. **Use `ui/closeWindow` to close windows** - JavaScript's `window.close()` does not work in Hermes windows. Extensions must call `ui/closeWindow` with the window ID returned from `ui/openWindow`.
+2. **Use modal windows for wizards** - Prevents the user from making conflicting changes
+3. **Provide a cancel button** - Always let users abort
+4. **Clean up on completion** - Shut down the HTTP server when done
+5. **Handle window close** - The user may close the window without using your buttons
+6. **Set reasonable timeouts** - Avoid waiting indefinitely for user input
 
 ### Framework Suggestions
 

@@ -179,6 +179,13 @@ Add your extension to Hermes settings:
 3. **Fail Safe:** Extension crashes don't affect Hermes stability
 4. **Minimal Footprint:** Extensions only load what they need via capabilities
 
+## Important Notes
+
+**Window management:** JavaScript's `window.close()` does not work in Hermes extension
+windows. Extensions must track the `windowId` returned from `ui/openWindow` and call
+`ui/closeWindow` to close windows programmatically. See [ui.md](messages/ui.md) for
+details.
+
 ## Current Limitations
 
 The following features are not yet supported:
