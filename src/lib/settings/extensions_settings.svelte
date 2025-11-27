@@ -57,6 +57,7 @@
 -->
 <script lang="ts">
   import { listen } from "@tauri-apps/api/event";
+  import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import type { Settings, ExtensionConfig } from "../../settings";
   import {
@@ -117,6 +118,16 @@
     settings.extensions = [...settings.extensions, newExtension];
     extensionsList = settings.extensions;
     newExtensionCommand = "";
+  }
+
+  async function browseForExtension() {
+    const result = await openDialog({
+      multiple: false,
+      title: "Select Extension",
+    });
+    if (result) {
+      newExtensionCommand = result;
+    }
   }
 
   function removeExtension(index: number) {
@@ -214,6 +225,9 @@
       placeholder="python3 /path/to/extension.py or /path/to/extension"
       onkeydown={(e) => e.key === "Enter" && addExtension()}
     />
+    <Button variant="ghost" onclick={browseForExtension}>
+      Browse
+    </Button>
     <Button variant="primary" onclick={addExtension} disabled={!newExtensionCommand.trim()}>
       Add Extension
     </Button>
