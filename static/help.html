@@ -378,9 +378,89 @@
           padding: 24px 16px;
         }
       }
+
+      /* Find bar */
+      .find-bar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        background: var(--col-surface);
+        border: 1px solid var(--col-highlightMed);
+        border-top: none;
+        border-right: none;
+        border-radius: 0 0 0 8px;
+        padding: 8px 12px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .find-bar.visible {
+        display: flex;
+      }
+
+      .find-bar input {
+        background: var(--col-base);
+        border: 1px solid var(--col-highlightMed);
+        color: var(--col-text);
+        padding: 4px 8px;
+        border-radius: 4px;
+        width: 200px;
+        font-size: 0.875rem;
+      }
+
+      .find-bar input:focus {
+        outline: none;
+        border-color: var(--col-pine);
+      }
+
+      .find-bar button {
+        background: transparent;
+        border: none;
+        color: var(--col-subtle);
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .find-bar button:hover {
+        color: var(--col-text);
+        background: var(--col-highlightLow);
+      }
+
+      .find-bar .match-count {
+        color: var(--col-muted);
+        font-size: 0.8125rem;
+        min-width: 70px;
+        text-align: center;
+      }
+
+      mark.find-highlight {
+        background: var(--col-gold);
+        color: var(--col-base);
+        border-radius: 2px;
+        padding: 0 2px;
+      }
+
+      mark.find-highlight.current {
+        background: var(--col-love);
+      }
     </style>
   </head>
   <body>
+    <!-- Find bar (Cmd/Ctrl+F) -->
+    <div class="find-bar" id="find-bar">
+      <input type="text" id="find-input" placeholder="Search..." />
+      <button id="find-prev" title="Previous (Shift+Enter)">↑</button>
+      <button id="find-next" title="Next (Enter)">↓</button>
+      <span class="match-count" id="match-count"></span>
+      <button id="find-close" title="Close (Escape)">×</button>
+    </div>
+
     <nav>
       <h1>Hermes Help</h1>
       <p class="subtitle">HL7 Message Editor</p>
@@ -3152,6 +3232,205 @@
       document.addEventListener("click", openExternalLink);
       document.addEventListener("auxclick", openExternalLink); // middle-click
       document.addEventListener("touchend", openExternalLink); // touch screens
+    </script>
+
+    <script>
+      // find bar functionality
+      const findBar = document.getElementById("find-bar");
+      const findInput = document.getElementById("find-input");
+      const matchCountEl = document.getElementById("match-count");
+      const mainContent = document.querySelector("main");
+
+      let matches = [];
+      let currentMatchIndex = 0;
+
+      // keyboard shortcuts
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+          e.preventDefault();
+          openFindBar();
+        }
+        if (e.key === "Escape" && findBar.classList.contains("visible")) {
+          e.preventDefault();
+          closeFindBar();
+        }
+      });
+
+      function openFindBar() {
+        findBar.classList.add("visible");
+        findInput.focus();
+        findInput.select();
+      }
+
+      function closeFindBar() {
+        findBar.classList.remove("visible");
+        clearHighlights();
+        matchCountEl.textContent = "";
+      }
+
+      function performSearch(query) {
+        clearHighlights();
+        matches = [];
+        currentMatchIndex = 0;
+
+        if (!query) {
+          matchCountEl.textContent = "";
+          return;
+        }
+
+        // walk text nodes in main content and wrap matches in <mark>
+        const lowerQuery = query.toLowerCase();
+        const walker = document.createTreeWalker(
+          mainContent,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+
+        const textNodes = [];
+        while (walker.nextNode()) {
+          textNodes.push(walker.currentNode);
+        }
+
+        textNodes.forEach((node) => {
+          const text = node.textContent;
+          const lowerText = text.toLowerCase();
+          let startIndex = 0;
+          let index;
+
+          while ((index = lowerText.indexOf(lowerQuery, startIndex)) !== -1) {
+            // split the text node and wrap the match
+            const before = text.substring(0, index);
+            const match = text.substring(index, index + query.length);
+            const after = text.substring(index + query.length);
+
+            const mark = document.createElement("mark");
+            mark.className = "find-highlight";
+            mark.textContent = match;
+
+            const parent = node.parentNode;
+            const beforeNode = document.createTextNode(before);
+            const afterNode = document.createTextNode(after);
+
+            parent.insertBefore(beforeNode, node);
+            parent.insertBefore(mark, node);
+            parent.insertBefore(afterNode, node);
+            parent.removeChild(node);
+
+            matches.push(mark);
+
+            // continue searching in the remaining text
+            node = afterNode;
+            startIndex = 0;
+            break; // break to avoid issues with modified DOM; next iteration will catch more
+          }
+        });
+
+        // re-run to catch all matches (simple approach for static content)
+        if (matches.length > 0) {
+          // second pass to find any remaining matches
+          const walker2 = document.createTreeWalker(
+            mainContent,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+          const moreTextNodes = [];
+          while (walker2.nextNode()) {
+            if (!walker2.currentNode.parentElement?.classList.contains("find-highlight")) {
+              moreTextNodes.push(walker2.currentNode);
+            }
+          }
+          moreTextNodes.forEach((node) => highlightInNode(node, lowerQuery, query.length));
+        }
+
+        // collect all marks
+        matches = Array.from(mainContent.querySelectorAll("mark.find-highlight"));
+
+        updateMatchDisplay();
+        if (matches.length > 0) {
+          scrollToCurrentMatch();
+        }
+      }
+
+      function highlightInNode(node, lowerQuery, queryLength) {
+        const text = node.textContent;
+        const lowerText = text.toLowerCase();
+        const index = lowerText.indexOf(lowerQuery);
+
+        if (index === -1) return;
+
+        const before = text.substring(0, index);
+        const match = text.substring(index, index + queryLength);
+        const after = text.substring(index + queryLength);
+
+        const mark = document.createElement("mark");
+        mark.className = "find-highlight";
+        mark.textContent = match;
+
+        const parent = node.parentNode;
+        if (before) parent.insertBefore(document.createTextNode(before), node);
+        parent.insertBefore(mark, node);
+        if (after) parent.insertBefore(document.createTextNode(after), node);
+        parent.removeChild(node);
+      }
+
+      function navigateMatch(direction) {
+        if (matches.length === 0) return;
+
+        // remove current highlight
+        if (matches[currentMatchIndex]) {
+          matches[currentMatchIndex].classList.remove("current");
+        }
+
+        currentMatchIndex =
+          (currentMatchIndex + direction + matches.length) % matches.length;
+
+        updateMatchDisplay();
+        scrollToCurrentMatch();
+      }
+
+      function scrollToCurrentMatch() {
+        if (matches[currentMatchIndex]) {
+          matches[currentMatchIndex].classList.add("current");
+          matches[currentMatchIndex].scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }
+
+      function updateMatchDisplay() {
+        if (matches.length === 0) {
+          matchCountEl.textContent = "No matches";
+        } else {
+          matchCountEl.textContent = `${currentMatchIndex + 1} of ${matches.length}`;
+        }
+      }
+
+      function clearHighlights() {
+        const marks = mainContent.querySelectorAll("mark.find-highlight");
+        marks.forEach((mark) => {
+          const parent = mark.parentNode;
+          const text = document.createTextNode(mark.textContent);
+          parent.replaceChild(text, mark);
+          // normalise adjacent text nodes
+          parent.normalize();
+        });
+        matches = [];
+        currentMatchIndex = 0;
+      }
+
+      // event listeners
+      findInput.addEventListener("input", (e) => performSearch(e.target.value));
+      findInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          navigateMatch(e.shiftKey ? -1 : 1);
+        }
+      });
+
+      document.getElementById("find-prev").addEventListener("click", () => navigateMatch(-1));
+      document.getElementById("find-next").addEventListener("click", () => navigateMatch(1));
+      document.getElementById("find-close").addEventListener("click", closeFindBar);
     </script>
   </body>
 </html>

@@ -259,7 +259,8 @@ pub fn setup_menu_event_handler(app: &App) {
         };
 
         if let Some(name) = event_name {
-            let _ = app_handle.emit(name, ());
+            // emit to main window only so other windows can handle shortcuts independently
+            let _ = app_handle.emit_to("main", name, ());
             return;
         }
 
