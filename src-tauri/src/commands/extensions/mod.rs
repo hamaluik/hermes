@@ -15,10 +15,7 @@ pub mod editor;
 pub mod ui;
 
 use crate::extensions::host::{ExtensionStatus, ToolbarButtonInfo};
-use crate::extensions::types::{
-    CommandExecuteResult, ExtensionConfig, ExtensionLog, GetMessageResult, Patch, PatchError,
-    PatchMessageResult,
-};
+use crate::extensions::types::{ExtensionConfig, ExtensionLog};
 use crate::AppData;
 use tauri::State;
 
@@ -81,157 +78,34 @@ pub async fn reload_extensions(
         .map_err(|e| e.to_string())
 }
 
-/// Execute an extension command.
+/// Send a command notification to an extension.
 ///
-/// This is called when a user clicks an extension toolbar button. The command
-/// string identifies which extension and action to invoke.
+/// This is fire-and-forget - we don't wait for acknowledgement or results.
 #[tauri::command]
-pub async fn execute_extension_command(
+pub async fn send_extension_command(
     command: String,
     state: State<'_, AppData>,
-) -> Result<CommandExecuteResult, String> {
-    // start the command without holding the lock for the entire duration
-    // this prevents deadlock when the frontend calls provide_extension_patch_result
-    let mut host = state.extension_host.lock().await;
-    let receiver = host
-        .start_command_async(&command, &state.window_manager)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    // release the lock before waiting for the response
-    drop(host);
-
-    // wait for the response (lock is released, so frontend can call complete_pending_request)
-    let result = receiver.await.map_err(|e| e.to_string())?;
-
-    result.map_err(|e| e.to_string())
-}
-
-/// Provide the message content in response to an extension's `editor/getMessage` request.
-///
-/// Called by the frontend after receiving an `extension-get-message-request` event.
-/// The frontend converts the message to the requested format and sends it back,
-/// which is then routed to the waiting extension.
-#[tauri::command]
-pub async fn provide_extension_message(
-    extension_id: String,
-    request_id: String,
-    message: String,
-    has_file: bool,
-    file_path: Option<String>,
-    state: State<'_, AppData>,
 ) -> Result<(), String> {
-    let result = GetMessageResult {
-        message,
-        has_file,
-        file_path,
-    };
-
-    let result_value =
-        serde_json::to_value(result).map_err(|e| format!("failed to serialize result: {e}"))?;
-
     let mut host = state.extension_host.lock().await;
-    host.complete_pending_request(&extension_id, &request_id, result_value)
+    host.send_command_notification(&command)
         .await
         .map_err(|e| e.to_string())
 }
 
-/// Provide the result of applying patches in response to an extension's
-/// `editor/patchMessage` request.
+/// Sync the current editor message content from frontend to backend.
 ///
-/// Called by the frontend after receiving an `extension-patch-message-request` event,
-/// applying the patches locally, and updating the editor.
+/// Called by the frontend whenever the message changes, this keeps a copy
+/// of the current editor state in AppData for synchronous access by extensions.
 #[tauri::command]
-pub async fn provide_extension_patch_result(
-    extension_id: String,
-    request_id: String,
-    success: bool,
-    patches_applied: usize,
-    errors: Option<Vec<PatchError>>,
-    state: State<'_, AppData>,
-) -> Result<(), String> {
-    let result = PatchMessageResult {
-        success,
-        patches_applied,
-        errors,
-    };
-
-    let result_value =
-        serde_json::to_value(result).map_err(|e| format!("failed to serialize result: {e}"))?;
-
-    let mut host = state.extension_host.lock().await;
-    host.complete_pending_request(&extension_id, &request_id, result_value)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-/// Apply patches to an HL7 message.
-///
-/// This Tauri command is called by the frontend when it needs to apply patches
-/// from an extension's `editor/patchMessage` request. It uses the same patch
-/// logic as the internal editor handlers.
-#[tauri::command]
-pub fn apply_extension_patches(
-    message: String,
-    patches: Vec<Patch>,
-) -> Result<ApplyPatchesResult, String> {
-    use crate::extensions::types::PatchMessageParams;
-
-    let params = PatchMessageParams { patches };
-    let (new_message, result) =
-        editor::handle_patch_message(params, &message).map_err(|e| e.to_string())?;
-
-    Ok(ApplyPatchesResult {
-        message: new_message,
-        success: result.success,
-        patches_applied: result.patches_applied,
-        errors: result.errors,
-    })
-}
-
-/// Result type for apply_extension_patches command.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ApplyPatchesResult {
-    /// The patched message content (HL7 format).
-    pub message: String,
-    /// Whether all patches were applied successfully.
-    pub success: bool,
-    /// Number of patches applied.
-    #[serde(rename = "patchesApplied")]
-    pub patches_applied: usize,
-    /// Errors for patches that failed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub errors: Option<Vec<PatchError>>,
+pub async fn sync_editor_message(message: String, state: State<'_, AppData>) -> Result<(), String> {
+    let mut editor_msg = state.editor_message.lock().await;
+    *editor_msg = message;
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_command_execute_result_serialisation() {
-        let result = CommandExecuteResult {
-            success: true,
-            message: Some("Operation completed".to_string()),
-        };
-
-        let json = serde_json::to_string(&result).unwrap();
-        assert!(json.contains("\"success\":true"));
-        assert!(json.contains("\"message\":\"Operation completed\""));
-    }
-
-    #[test]
-    fn test_command_execute_result_without_message() {
-        let result = CommandExecuteResult {
-            success: false,
-            message: None,
-        };
-
-        let json = serde_json::to_string(&result).unwrap();
-        assert!(json.contains("\"success\":false"));
-        // message should be omitted when None
-        assert!(!json.contains("\"message\""));
-    }
 
     /// Test that ExtensionConfig deserialises correctly from the format
     /// produced by the TypeScript frontend (matching settings.ts).

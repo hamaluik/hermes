@@ -6,64 +6,27 @@
 //! - Aggregating toolbar buttons from all extensions
 //! - Handling requests from extensions (editor/*, ui/*)
 
-use crate::commands::extensions::editor::handle_set_message;
+use crate::commands::extensions::editor::{
+    handle_get_message, handle_patch_message, handle_set_message,
+};
 use crate::commands::extensions::ui::{
     close_extension_windows, handle_close_window, handle_open_window, SharedWindowManager,
 };
-use crate::extensions::process::{ExtensionError, ExtensionProcess};
-use crate::extensions::protocol::{Notification, Request, RequestId, Response, RpcError};
+use crate::extensions::process::{
+    ExtensionError, ExtensionProcess, InternalMessage, ResponseSender,
+};
+use crate::extensions::protocol::{ErrorResponse, Request, Response, RpcError};
 use crate::extensions::types::{
-    CloseWindowParams, CommandExecuteResult, ExtensionConfig, ExtensionState, GetMessageParams,
+    CloseWindowParams, CommandExecuteParams, ExtensionConfig, ExtensionState, GetMessageParams,
     OpenWindowParams, PatchMessageParams, SchemaOverride, SetMessageParams, ShutdownReason,
     ToolbarButton,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter};
-
-/// A pending request from an extension awaiting a response from the frontend.
-///
-/// Used for editor operations that require frontend interaction, such as
-/// `editor/getMessage` and `editor/patchMessage`.
-#[derive(Debug)]
-pub struct PendingRequest {
-    /// The JSON-RPC request ID to include in the response.
-    pub request_id: RequestId,
-    /// The method that was called.
-    pub method: String,
-    /// Original request params (for patchMessage).
-    ///
-    /// TODO: Phase 6 - this field can be used for error recovery or logging.
-    /// Currently unused but kept for potential future diagnostic use.
-    #[allow(dead_code)]
-    pub params: Option<serde_json::Value>,
-}
-
-/// Payload emitted for `extension-get-message-request` event.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct GetMessageRequestPayload {
-    /// Extension ID that made the request.
-    #[serde(rename = "extensionId")]
-    pub extension_id: String,
-    /// JSON-RPC request ID.
-    #[serde(rename = "requestId")]
-    pub request_id: String,
-    /// Requested message format.
-    pub format: String,
-}
-
-/// Payload emitted for `extension-patch-message-request` event.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct PatchMessageRequestPayload {
-    /// Extension ID that made the request.
-    #[serde(rename = "extensionId")]
-    pub extension_id: String,
-    /// JSON-RPC request ID.
-    #[serde(rename = "requestId")]
-    pub request_id: String,
-    /// Patch operations to apply.
-    pub patches: Vec<serde_json::Value>,
-}
+use std::sync::Arc;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::sync::{mpsc, Mutex};
+use tokio::task::JoinHandle;
 
 /// Current extension API version.
 pub const API_VERSION: &str = "1.0";
@@ -120,11 +83,10 @@ pub struct ExtensionHost {
     /// SchemaCache via `set_extension_overrides()`.
     merged_schema: Option<SchemaOverride>,
 
-    /// Pending requests awaiting responses from the frontend.
+    /// Background tasks that handle incoming requests from extensions.
     ///
-    /// Keyed by a composite key: "{extension_id}:{request_id}".
-    /// Used for editor operations that require frontend interaction.
-    pending_requests: HashMap<String, PendingRequest>,
+    /// One task per extension, consuming from the extension's incoming_rx channel.
+    request_handler_tasks: HashMap<String, JoinHandle<()>>,
 }
 
 impl ExtensionHost {
@@ -137,7 +99,7 @@ impl ExtensionHost {
             hermes_version,
             toolbar_buttons: Vec::new(),
             merged_schema: None,
-            pending_requests: HashMap::new(),
+            request_handler_tasks: HashMap::new(),
         }
     }
 
@@ -148,6 +110,7 @@ impl ExtensionHost {
     pub async fn start_extensions(
         &mut self,
         configs: Vec<ExtensionConfig>,
+        window_manager: &SharedWindowManager,
         schema_cache: &crate::schema::cache::SchemaCache,
     ) -> Result<(), ExtensionError> {
         for config in configs {
@@ -156,7 +119,7 @@ impl ExtensionHost {
                 continue;
             }
 
-            if let Err(e) = self.start_extension(config).await {
+            if let Err(e) = self.start_extension(config, window_manager).await {
                 // log error but continue with other extensions
                 log::error!("failed to start extension: {e}");
             }
@@ -176,7 +139,11 @@ impl ExtensionHost {
     }
 
     /// Start a single extension.
-    async fn start_extension(&mut self, config: ExtensionConfig) -> Result<(), ExtensionError> {
+    async fn start_extension(
+        &mut self,
+        config: ExtensionConfig,
+        window_manager: &SharedWindowManager,
+    ) -> Result<(), ExtensionError> {
         let ext_data_dir = self.data_dir.join("extensions");
         std::fs::create_dir_all(&ext_data_dir).map_err(|e| {
             ExtensionError::SpawnFailed(std::io::Error::other(format!(
@@ -197,16 +164,43 @@ impl ExtensionHost {
         self.emit_extension_status(&ext_id).await;
 
         // perform initialization handshake
-        if let Some(ext) = self.extensions.get_mut(&ext_id) {
-            let init_result = ext
-                .initialize(&self.hermes_version, API_VERSION, &ext_data_dir)
-                .await;
+        let init_result = {
+            let ext = self
+                .extensions
+                .get_mut(&ext_id)
+                .expect("extension was just inserted");
+            ext.initialize(&self.hermes_version, API_VERSION, &ext_data_dir)
+                .await
+        };
 
-            // emit final status (running or failed)
-            self.emit_extension_status(&ext_id).await;
+        // emit final status (running or failed)
+        self.emit_extension_status(&ext_id).await;
 
-            init_result?;
+        if init_result.is_ok() {
+            // spawn request handler task for this extension
+            if let Some(ext) = self.extensions.get_mut(&ext_id) {
+                if let (Some(incoming_rx), Some(response_sender)) =
+                    (ext.take_incoming_rx(), ext.response_sender())
+                {
+                    // get editor_message from app data
+                    let state = self.app_handle.state::<crate::AppData>();
+                    let editor_message = state.editor_message.clone();
+
+                    let task = Self::spawn_request_handler_task(
+                        ext_id.clone(),
+                        incoming_rx,
+                        response_sender,
+                        self.app_handle.clone(),
+                        window_manager.clone(),
+                        editor_message,
+                    );
+                    self.request_handler_tasks.insert(ext_id.clone(), task);
+                    log::debug!("spawned request handler task for {ext_id}");
+                }
+            }
         }
+
+        init_result?;
 
         Ok(())
     }
@@ -226,6 +220,11 @@ impl ExtensionHost {
         }
 
         for ext_id in ext_ids {
+            // abort the request handler task
+            if let Some(task) = self.request_handler_tasks.remove(&ext_id) {
+                task.abort();
+            }
+
             if let Some(mut ext) = self.extensions.remove(&ext_id) {
                 if let Err(e) = ext.shutdown(ShutdownReason::Closing).await {
                     log::warn!("error shutting down extension {ext_id}: {e}");
@@ -235,6 +234,7 @@ impl ExtensionHost {
 
         self.toolbar_buttons.clear();
         self.merged_schema = None;
+        self.request_handler_tasks.clear();
     }
 
     /// Reload all extensions (stop, then start with new configs).
@@ -256,6 +256,11 @@ impl ExtensionHost {
         }
 
         for ext_id in ext_ids {
+            // abort the request handler task
+            if let Some(task) = self.request_handler_tasks.remove(&ext_id) {
+                task.abort();
+            }
+
             if let Some(mut ext) = self.extensions.remove(&ext_id) {
                 if let Err(e) = ext.shutdown(ShutdownReason::Reload).await {
                     log::warn!("error shutting down extension {ext_id} for reload: {e}");
@@ -264,509 +269,34 @@ impl ExtensionHost {
         }
 
         // start with new configs
-        self.start_extensions(configs, schema_cache).await
+        self.start_extensions(configs, window_manager, schema_cache)
+            .await
     }
 
-    /// Start executing a command asynchronously.
+    /// Send a command notification to the appropriate extension.
     ///
-    /// Returns a channel that will receive the result when the command completes.
-    /// This allows the caller to release the host lock while waiting for the response,
-    /// preventing deadlock when the frontend needs to call back into the host.
-    pub async fn start_command_async(
-        &mut self,
-        command: &str,
-        window_manager: &SharedWindowManager,
-    ) -> Result<
-        tokio::sync::oneshot::Receiver<Result<CommandExecuteResult, ExtensionError>>,
-        ExtensionError,
-    > {
-        // find extension that registered this command
-        let ext_id = self.find_extension_for_command(command).await;
+    /// This is a fire-and-forget operation - we don't wait for acknowledgement or results.
+    pub async fn send_command_notification(&mut self, command: &str) -> Result<(), ExtensionError> {
+        // find extension that owns this command
+        let ext_id = self
+            .find_extension_for_command(command)
+            .await
+            .ok_or_else(|| ExtensionError::CommandNotFound(command.to_string()))?;
 
-        let ext_id = ext_id
-            .ok_or_else(|| ExtensionError::Rpc(RpcError::command_not_found(command)))?
-            .clone();
-
-        // start the command execution
-        let ext = self
-            .extensions
-            .get_mut(&ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        let mut response_rx = ext.start_command(command).await?;
-
-        // create a channel for the final result
-        let (result_tx, result_rx) = tokio::sync::oneshot::channel();
-
-        // clone what we need for the background task
-        let window_manager = window_manager.clone();
-        let app_handle = self.app_handle.clone();
-        let command = command.to_string();
-
-        // spawn a background task to process messages
-        tokio::spawn(async move {
-            use crate::extensions::process::InternalMessage;
-            use tauri::Manager;
-            use tokio::time::{sleep, timeout, Duration};
-
-            let deadline = Duration::from_secs(30);
-            let result = timeout(deadline, async {
-                loop {
-                    // try to receive the command response (non-blocking via try_recv)
-                    match response_rx.try_recv() {
-                        Ok(result) => {
-                            // got the response!
-                            return result;
-                        }
-                        Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
-                            // no response yet, continue
-                        }
-                        Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
-                            return Err(ExtensionError::Channel(
-                                "response channel closed".to_string(),
-                            ));
-                        }
-                    }
-
-                    // process incoming messages from the extension
-                    // note: we need to access the extension through AppData's host
-                    // this requires acquiring the lock briefly
-                    let app_data = app_handle.state::<crate::AppData>();
-                    let mut host = app_data.extension_host.lock().await;
-
-                    let ext = match host.extensions.get_mut(&ext_id) {
-                        Some(ext) => ext,
-                        None => {
-                            return Err(ExtensionError::InvalidState(format!(
-                                "extension {ext_id} not found"
-                            )))
-                        }
-                    };
-
-                    if let Some(msg) = ext.process_incoming().await {
-                        let mut is_async_response = false;
-
-                        match msg {
-                            InternalMessage::Request(request) => {
-                                // handle the request
-                                let response = host
-                                    .handle_extension_request(&ext_id, request, &window_manager)
-                                    .await;
-
-                                match response {
-                                    Ok(Some(response)) => {
-                                        // send response back to extension
-                                        if let Some(ext) = host.extensions.get_mut(&ext_id) {
-                                            let _ = ext.send_response(response).await;
-                                        }
-                                    }
-                                    Ok(None) => {
-                                        // async response - will be completed later via complete_pending_request
-                                        is_async_response = true;
-                                    }
-                                    Err(e) => {
-                                        // send error response
-                                        if let Some(ext) = host.extensions.get_mut(&ext_id) {
-                                            let _ = ext.send_error_response(None, e).await;
-                                        }
-                                    }
-                                }
-                            }
-                            InternalMessage::Notification(notification) => {
-                                host.handle_extension_notification(&ext_id, notification);
-                            }
-                            InternalMessage::ReaderError(_) => {
-                                return Err(ExtensionError::Channel(
-                                    "extension reader error".to_string(),
-                                ));
-                            }
-                            InternalMessage::Send(_) | InternalMessage::Response(_, _) => {
-                                log::warn!(
-                                    "unexpected internal message type in start_command_async"
-                                );
-                            }
-                        }
-
-                        // drop the lock before continuing the loop
-                        drop(host);
-
-                        if is_async_response {
-                            // HACK: sleep to give frontend time to call back with the response.
-                            // Without this, the background task immediately re-acquires the lock,
-                            // blocking provideExtensionPatchResult for ~30 seconds until timeout.
-                            // See protocol_issue.md for full explanation and long-term solutions.
-                            sleep(Duration::from_millis(50)).await;
-                        } else {
-                            // yield to give other tasks a chance to acquire the lock
-                            tokio::task::yield_now().await;
-                        }
-                    } else {
-                        // drop the lock before sleeping
-                        drop(host);
-                        // no incoming messages, yield to avoid busy loop
-                        sleep(Duration::from_millis(10)).await;
-                    }
-                }
-            })
-            .await;
-
-            // complete the command and send the result
-            let final_result = match result {
-                Ok(Ok(response)) => {
-                    let app_data = app_handle.state::<crate::AppData>();
-                    let mut host = app_data.extension_host.lock().await;
-
-                    if let Some(ext) = host.extensions.get_mut(&ext_id) {
-                        ext.complete_command(&command, Ok(response.clone())).await;
-                    }
-
-                    // parse the result
-                    serde_json::from_value(response.result).map_err(|e| {
-                        ExtensionError::Protocol(crate::extensions::protocol::ProtocolError::Json(
-                            e,
-                        ))
-                    })
-                }
-                Ok(Err(e)) => {
-                    let app_data = app_handle.state::<crate::AppData>();
-                    let mut host = app_data.extension_host.lock().await;
-
-                    if let Some(ext) = host.extensions.get_mut(&ext_id) {
-                        let err_msg = e.to_string();
-                        ext.complete_command(&command, Err(ExtensionError::InvalidState(err_msg)))
-                            .await;
-                    }
-                    Err(e)
-                }
-                Err(_) => {
-                    let app_data = app_handle.state::<crate::AppData>();
-                    let mut host = app_data.extension_host.lock().await;
-
-                    if let Some(ext) = host.extensions.get_mut(&ext_id) {
-                        ext.complete_command(
-                            &command,
-                            Err(ExtensionError::Timeout(format!("command/{command}"))),
-                        )
-                        .await;
-                    }
-                    Err(ExtensionError::Timeout(format!("command/{command}")))
-                }
+        if let Some(ext) = self.extensions.get_mut(&ext_id) {
+            let params = CommandExecuteParams {
+                command: command.to_string(),
             };
+            let params_value = serde_json::to_value(params)
+                .map_err(|e| ExtensionError::InvalidState(format!("failed to serialize: {e}")))?;
 
-            let _ = result_tx.send(final_result);
-        });
-
-        Ok(result_rx)
-    }
-
-    /// Execute a command on the appropriate extension.
-    ///
-    /// This method processes incoming messages from the extension while waiting for
-    /// the command response, preventing deadlocks when the extension makes requests
-    /// back to Hermes (e.g., editor/patchMessage) during command execution.
-    ///
-    /// Note: This method holds the host lock for the entire duration. For Tauri commands,
-    /// prefer using start_command_async which releases the lock while waiting.
-    #[allow(dead_code)]
-    pub async fn execute_command(
-        &mut self,
-        command: &str,
-        window_manager: &SharedWindowManager,
-    ) -> Result<CommandExecuteResult, ExtensionError> {
-        use crate::extensions::process::InternalMessage;
-        use tokio::time::{timeout, Duration};
-
-        // find extension that registered this command
-        let ext_id = self.find_extension_for_command(command).await;
-
-        let ext_id =
-            ext_id.ok_or_else(|| ExtensionError::Rpc(RpcError::command_not_found(command)))?;
-
-        // start the command execution (sends request but doesn't wait)
-        let ext = self
-            .extensions
-            .get_mut(&ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        let mut response_rx = ext.start_command(command).await?;
-
-        // process incoming messages while waiting for response
-        let deadline = Duration::from_secs(30);
-        let result = timeout(deadline, async {
-            loop {
-                // try to receive the command response (non-blocking via try_recv)
-                match response_rx.try_recv() {
-                    Ok(result) => {
-                        // got the response!
-                        return result;
-                    }
-                    Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
-                        // no response yet, continue processing incoming messages
-                    }
-                    Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
-                        return Err(ExtensionError::Channel(
-                            "response channel closed".to_string(),
-                        ));
-                    }
-                }
-
-                // process any incoming messages from the extension
-                let ext = self.extensions.get_mut(&ext_id).ok_or_else(|| {
-                    ExtensionError::InvalidState(format!("extension {ext_id} not found"))
-                })?;
-
-                if let Some(msg) = ext.process_incoming().await {
-                    let mut is_async_response = false;
-
-                    match msg {
-                        InternalMessage::Request(request) => {
-                            // handle the request
-                            let response = self
-                                .handle_extension_request(&ext_id, request, window_manager)
-                                .await;
-
-                            match response {
-                                Ok(Some(response)) => {
-                                    // send response back to extension
-                                    if let Some(ext) = self.extensions.get_mut(&ext_id) {
-                                        let _ = ext.send_response(response).await;
-                                    }
-                                }
-                                Ok(None) => {
-                                    // async response - will be completed later via complete_pending_request
-                                    is_async_response = true;
-                                }
-                                Err(e) => {
-                                    // send error response
-                                    if let Some(ext) = self.extensions.get_mut(&ext_id) {
-                                        let _ = ext.send_error_response(None, e).await;
-                                    }
-                                }
-                            }
-                        }
-                        InternalMessage::Notification(notification) => {
-                            self.handle_extension_notification(&ext_id, notification);
-                        }
-                        InternalMessage::ReaderError(_) => {
-                            return Err(ExtensionError::Channel(
-                                "extension reader error".to_string(),
-                            ));
-                        }
-                        // these shouldn't appear in process_incoming since they're handled internally
-                        InternalMessage::Send(_) | InternalMessage::Response(_, _) => {
-                            log::warn!("unexpected internal message type in execute_command");
-                        }
-                    }
-
-                    if is_async_response {
-                        // HACK: sleep to give frontend time to call back with the response.
-                        // Without this, we immediately re-acquire the lock, blocking
-                        // provideExtensionPatchResult. See protocol_issue.md.
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                    } else {
-                        // yield to give other tasks a chance to acquire the lock
-                        tokio::task::yield_now().await;
-                    }
-                } else {
-                    // no incoming messages, yield to avoid busy loop
-                    tokio::time::sleep(Duration::from_millis(10)).await;
-                }
-            }
-        })
-        .await;
-
-        let ext = self
-            .extensions
-            .get_mut(&ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        match result {
-            Ok(Ok(response)) => {
-                ext.complete_command(command, Ok(response.clone())).await;
-
-                // parse the result
-                let result: CommandExecuteResult = serde_json::from_value(response.result)
-                    .map_err(|e| {
-                        ExtensionError::Protocol(crate::extensions::protocol::ProtocolError::Json(
-                            e,
-                        ))
-                    })?;
-
-                Ok(result)
-            }
-            Ok(Err(e)) => {
-                let err_msg = e.to_string();
-                ext.complete_command(command, Err(ExtensionError::InvalidState(err_msg)))
-                    .await;
-                Err(e)
-            }
-            Err(_) => {
-                let err = ExtensionError::Timeout(format!("command/{command}"));
-                ext.complete_command(
-                    command,
-                    Err(ExtensionError::Timeout(format!("command/{command}"))),
-                )
-                .await;
-                Err(err)
-            }
+            // send notification (no response expected)
+            ext.send_notification("command/execute", params_value).await
+        } else {
+            Err(ExtensionError::InvalidState(format!(
+                "extension {ext_id} not found"
+            )))
         }
-    }
-
-    /// Handle a request from an extension.
-    ///
-    /// This routes editor/* and ui/* requests from extensions to the appropriate handlers.
-    ///
-    /// For editor operations, the handler emits events to the frontend for processing.
-    /// For UI operations, the handler uses the window manager to create/close windows.
-    ///
-    /// Note: `editor/getMessage` and `editor/patchMessage` require async frontend interaction.
-    /// They return `None` to indicate the response will be provided later via
-    /// `complete_pending_request()`. The caller should not send a response for these.
-    pub async fn handle_extension_request(
-        &mut self,
-        ext_id: &str,
-        request: Request,
-        window_manager: &SharedWindowManager,
-    ) -> Result<Option<Response>, RpcError> {
-        log::debug!("handling request from {ext_id}: {}", request.method);
-
-        match request.method.as_str() {
-            "editor/getMessage" => {
-                let params_value = request
-                    .params
-                    .clone()
-                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
-                let params: GetMessageParams = serde_json::from_value(params_value)
-                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
-
-                // store pending request
-                let request_id_str = request.id.to_string();
-                let key = format!("{ext_id}:{request_id_str}");
-
-                self.pending_requests.insert(
-                    key,
-                    PendingRequest {
-                        request_id: request.id,
-                        method: "editor/getMessage".to_string(),
-                        params: request.params,
-                    },
-                );
-
-                // emit event to frontend
-                let payload = GetMessageRequestPayload {
-                    extension_id: ext_id.to_string(),
-                    request_id: request_id_str,
-                    format: format!("{:?}", params.format).to_lowercase(),
-                };
-
-                self.app_handle
-                    .emit("extension-get-message-request", &payload)
-                    .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
-
-                // return None to indicate async response
-                Ok(None)
-            }
-            "editor/setMessage" => {
-                let params_value = request
-                    .params
-                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
-                let params: SetMessageParams = serde_json::from_value(params_value)
-                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
-
-                let (hl7_message, result) = handle_set_message(params)?;
-
-                if result.success {
-                    // emit event to frontend with the converted HL7 message
-                    self.app_handle
-                        .emit("extension-set-message", &hl7_message)
-                        .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
-                }
-
-                Ok(Some(Response::new(
-                    request.id,
-                    serde_json::to_value(result).unwrap(),
-                )))
-            }
-            "editor/patchMessage" => {
-                let params_value = request
-                    .params
-                    .clone()
-                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
-                let params: PatchMessageParams = serde_json::from_value(params_value.clone())
-                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
-
-                // store pending request
-                let request_id_str = request.id.to_string();
-                let key = format!("{ext_id}:{request_id_str}");
-
-                self.pending_requests.insert(
-                    key,
-                    PendingRequest {
-                        request_id: request.id,
-                        method: "editor/patchMessage".to_string(),
-                        params: request.params,
-                    },
-                );
-
-                // emit event to frontend with patches
-                let patches: Vec<serde_json::Value> = params
-                    .patches
-                    .iter()
-                    .map(|p| serde_json::to_value(p).unwrap())
-                    .collect();
-
-                let payload = PatchMessageRequestPayload {
-                    extension_id: ext_id.to_string(),
-                    request_id: request_id_str.clone(),
-                    patches,
-                };
-
-                self.app_handle
-                    .emit("extension-patch-message-request", &payload)
-                    .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
-
-                // return None to indicate async response
-                Ok(None)
-            }
-            "ui/openWindow" => {
-                let params_value = request
-                    .params
-                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
-                let params: OpenWindowParams = serde_json::from_value(params_value)
-                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
-
-                let result =
-                    handle_open_window(&self.app_handle, ext_id, params, window_manager).await?;
-                Ok(Some(Response::new(
-                    request.id,
-                    serde_json::to_value(result).unwrap(),
-                )))
-            }
-            "ui/closeWindow" => {
-                let params_value = request
-                    .params
-                    .ok_or_else(|| RpcError::invalid_params("missing params"))?;
-                let params: CloseWindowParams = serde_json::from_value(params_value)
-                    .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
-
-                let result =
-                    handle_close_window(&self.app_handle, ext_id, params, window_manager).await?;
-                Ok(Some(Response::new(
-                    request.id,
-                    serde_json::to_value(result).unwrap(),
-                )))
-            }
-            _ => Err(RpcError::method_not_found(&request.method)),
-        }
-    }
-
-    /// Handle a notification from an extension.
-    pub fn handle_extension_notification(&mut self, ext_id: &str, notification: Notification) {
-        log::debug!(
-            "received notification from {ext_id}: {}",
-            notification.method
-        );
-        // notifications are informational; log and continue
     }
 
     /// Get all toolbar buttons from all extensions.
@@ -822,92 +352,6 @@ impl ExtensionHost {
         } else {
             None
         }
-    }
-
-    /// Send a notification to an extension.
-    pub async fn send_notification(
-        &mut self,
-        ext_id: &str,
-        method: &str,
-        params: serde_json::Value,
-    ) -> Result<(), ExtensionError> {
-        let ext = self
-            .extensions
-            .get_mut(ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        ext.send_notification(method, params).await
-    }
-
-    /// Complete a pending request by sending the response to the extension.
-    ///
-    /// Called by the frontend when it has processed an async request like
-    /// `editor/getMessage` or `editor/patchMessage`.
-    ///
-    /// # Arguments
-    ///
-    /// * `ext_id` - Extension ID that made the original request
-    /// * `request_id` - JSON-RPC request ID from the original request
-    /// * `result` - The result value to send as the response
-    pub async fn complete_pending_request(
-        &mut self,
-        ext_id: &str,
-        request_id: &str,
-        result: serde_json::Value,
-    ) -> Result<(), ExtensionError> {
-        let key = format!("{ext_id}:{request_id}");
-
-        let pending = self
-            .pending_requests
-            .remove(&key)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("no pending request for {key}")))?;
-
-        log::debug!(
-            "completing pending request {key} for method {}",
-            pending.method
-        );
-
-        // get the extension process
-        let ext = self
-            .extensions
-            .get_mut(ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        // send the response
-        let response = Response::new(pending.request_id, result);
-        ext.send_response(response).await
-    }
-
-    /// Complete a pending request with an error.
-    ///
-    /// Called when the frontend cannot process a request (e.g., conversion error).
-    pub async fn complete_pending_request_with_error(
-        &mut self,
-        ext_id: &str,
-        request_id: &str,
-        error: RpcError,
-    ) -> Result<(), ExtensionError> {
-        let key = format!("{ext_id}:{request_id}");
-
-        let pending = self
-            .pending_requests
-            .remove(&key)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("no pending request for {key}")))?;
-
-        log::debug!(
-            "completing pending request {key} with error for method {}",
-            pending.method
-        );
-
-        // get the extension process
-        let ext = self
-            .extensions
-            .get_mut(ext_id)
-            .ok_or_else(|| ExtensionError::InvalidState(format!("extension {ext_id} not found")))?;
-
-        // send the error response
-        ext.send_error_response(Some(pending.request_id), error)
-            .await
     }
 
     /// Find the extension that registered a given command.
@@ -1012,6 +456,183 @@ impl ExtensionHost {
                 log::warn!("failed to emit extension-status-changed event: {e}");
             }
         }
+    }
+
+    /// Spawn a background task that handles incoming requests from an extension.
+    ///
+    /// Consumes from the extension's `incoming_rx` channel and routes requests
+    /// to the appropriate handlers. Responses are sent back via `ResponseSender`.
+    fn spawn_request_handler_task(
+        ext_id: String,
+        mut incoming_rx: mpsc::Receiver<InternalMessage>,
+        response_sender: ResponseSender,
+        app_handle: AppHandle,
+        window_manager: SharedWindowManager,
+        editor_message: Arc<Mutex<String>>,
+    ) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            while let Some(msg) = incoming_rx.recv().await {
+                match msg {
+                    InternalMessage::Request(request) => {
+                        let request_id = request.id.clone();
+                        let method = request.method.clone();
+
+                        let result = handle_extension_request_standalone(
+                            &ext_id,
+                            request,
+                            &app_handle,
+                            &window_manager,
+                            &editor_message,
+                        )
+                        .await;
+
+                        match result {
+                            Ok(Some(response)) => {
+                                // send response back to extension
+                                if let Err(e) = response_sender.send(response).await {
+                                    log::error!(
+                                        "failed to send response for {method} to {ext_id}: {e}"
+                                    );
+                                }
+                            }
+                            Ok(None) => {
+                                // async request - response will be sent later via complete_pending_request
+                                log::debug!("request {method} from {ext_id} deferred (async)");
+                            }
+                            Err(e) => {
+                                // send error response
+                                let error_response = ErrorResponse::new(Some(request_id), e);
+                                if let Err(send_err) =
+                                    response_sender.send_error(error_response).await
+                                {
+                                    log::error!(
+                                        "failed to send error for {method} to {ext_id}: {send_err}"
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    InternalMessage::Notification(notification) => {
+                        // notifications don't need responses - just log for now
+                        log::debug!(
+                            "received notification from {ext_id}: {}",
+                            notification.method
+                        );
+                    }
+                    InternalMessage::ReaderError(e) => {
+                        log::warn!("reader error for extension {ext_id}: {e}");
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            log::debug!("request handler task for {ext_id} ended");
+        })
+    }
+}
+
+/// Handle a request from an extension (standalone version).
+///
+/// This is a standalone function that can be called from spawned tasks without
+/// needing mutable access to `ExtensionHost`.
+async fn handle_extension_request_standalone(
+    ext_id: &str,
+    request: Request,
+    app_handle: &AppHandle,
+    window_manager: &SharedWindowManager,
+    editor_message: &Arc<Mutex<String>>,
+) -> Result<Option<Response>, RpcError> {
+    log::debug!("handling request from {ext_id}: {}", request.method);
+
+    match request.method.as_str() {
+        "editor/getMessage" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: GetMessageParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let editor_msg = editor_message.lock().await;
+            let result = handle_get_message(&editor_msg, params.format)
+                .map_err(|e| RpcError::internal(e.to_string()))?;
+
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "editor/setMessage" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: SetMessageParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let (hl7_message, result) = handle_set_message(params)?;
+
+            if result.success {
+                let mut editor_msg = editor_message.lock().await;
+                *editor_msg = hl7_message.clone();
+                // emit event to frontend with the converted HL7 message
+                app_handle
+                    .emit("extension-set-message", &hl7_message)
+                    .map_err(|e| RpcError::internal(format!("failed to emit event: {e}")))?;
+            }
+
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "editor/patchMessage" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: PatchMessageParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let mut editor_msg = editor_message.lock().await;
+            let (new_message, result) = handle_patch_message(&editor_msg, params.patches);
+
+            // update if any patches were applied (even partial success)
+            if result.patches_applied > 0 {
+                *editor_msg = new_message.clone();
+                // notify frontend of the new message
+                let _ = app_handle.emit("extension-set-message", &new_message);
+            }
+
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/openWindow" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: OpenWindowParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_open_window(app_handle, ext_id, params, window_manager).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/closeWindow" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: CloseWindowParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_close_window(app_handle, ext_id, params, window_manager).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        _ => Err(RpcError::method_not_found(&request.method)),
     }
 }
 

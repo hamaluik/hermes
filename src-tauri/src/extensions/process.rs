@@ -25,8 +25,6 @@ use tokio::time::{timeout, Duration};
 /// Timeouts for extension operations.
 const INITIALIZE_TIMEOUT: Duration = Duration::from_secs(10);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
-#[allow(dead_code)]
-const COMMAND_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Maximum number of log entries to keep per extension.
 const MAX_LOG_ENTRIES: usize = 100;
@@ -34,6 +32,33 @@ const MAX_LOG_ENTRIES: usize = 100;
 /// Type alias for pending request tracking.
 type PendingRequests =
     Arc<Mutex<HashMap<RequestId, oneshot::Sender<Result<Response, ErrorResponse>>>>>;
+
+/// Cloneable handle for sending responses back to an extension.
+///
+/// This allows spawned tasks to send responses without needing mutable access
+/// to the `ExtensionProcess`.
+#[derive(Clone)]
+pub struct ResponseSender {
+    tx: mpsc::Sender<Message>,
+}
+
+impl ResponseSender {
+    /// Send a successful response to the extension.
+    pub async fn send(&self, response: Response) -> Result<(), ExtensionError> {
+        self.tx
+            .send(Message::Response(response))
+            .await
+            .map_err(|_| ExtensionError::Channel("failed to send response".to_string()))
+    }
+
+    /// Send an error response to the extension.
+    pub async fn send_error(&self, error: ErrorResponse) -> Result<(), ExtensionError> {
+        self.tx
+            .send(Message::Error(error))
+            .await
+            .map_err(|_| ExtensionError::Channel("failed to send error response".to_string()))
+    }
+}
 
 /// Errors that can occur during extension process operations.
 #[derive(Debug)]
@@ -52,6 +77,8 @@ pub enum ExtensionError {
     Channel(String),
     /// Extension process exited unexpectedly.
     ProcessExited,
+    /// Command not found in any extension.
+    CommandNotFound(String),
 }
 
 impl std::fmt::Display for ExtensionError {
@@ -64,6 +91,7 @@ impl std::fmt::Display for ExtensionError {
             ExtensionError::InvalidState(msg) => write!(f, "invalid state: {msg}"),
             ExtensionError::Channel(msg) => write!(f, "channel error: {msg}"),
             ExtensionError::ProcessExited => write!(f, "extension process exited unexpectedly"),
+            ExtensionError::CommandNotFound(cmd) => write!(f, "command not found: {cmd}"),
         }
     }
 }
@@ -431,170 +459,6 @@ impl ExtensionProcess {
         }
     }
 
-    /// Send a response to the extension for a pending request.
-    ///
-    /// Used when responding to requests from the extension that required
-    /// async processing (e.g., editor/getMessage where we needed to get
-    /// data from the frontend).
-    pub async fn send_response(&mut self, response: Response) -> Result<(), ExtensionError> {
-        if let Some(tx) = &self.outgoing_tx {
-            tx.send(Message::Response(response))
-                .await
-                .map_err(|_| ExtensionError::Channel("failed to send response".to_string()))?;
-            Ok(())
-        } else {
-            Err(ExtensionError::InvalidState(
-                "extension not connected".to_string(),
-            ))
-        }
-    }
-
-    /// Send an error response to the extension for a pending request.
-    pub async fn send_error_response(
-        &mut self,
-        id: Option<RequestId>,
-        error: RpcError,
-    ) -> Result<(), ExtensionError> {
-        let error_response = ErrorResponse::new(id, error);
-
-        if let Some(tx) = &self.outgoing_tx {
-            tx.send(Message::Error(error_response)).await.map_err(|_| {
-                ExtensionError::Channel("failed to send error response".to_string())
-            })?;
-            Ok(())
-        } else {
-            Err(ExtensionError::InvalidState(
-                "extension not connected".to_string(),
-            ))
-        }
-    }
-
-    /// Execute a command on the extension.
-    #[allow(dead_code)]
-    pub async fn execute_command(&mut self, command: &str) -> Result<Response, ExtensionError> {
-        let state = self.state.lock().await.clone();
-        if !state.is_running() {
-            return Err(ExtensionError::InvalidState(format!(
-                "cannot execute command in state {:?}",
-                state
-            )));
-        }
-
-        self.add_log(LogLevel::Info, format!("executing command: {command}"))
-            .await;
-
-        let params = serde_json::json!({ "command": command });
-
-        let result = timeout(
-            COMMAND_TIMEOUT,
-            self.send_request("command/execute", params),
-        )
-        .await;
-
-        match result {
-            Ok(response) => {
-                self.add_log(LogLevel::Info, format!("command completed: {command}"))
-                    .await;
-                Ok(response?)
-            }
-            Err(_) => {
-                let msg = format!("command timed out: {command}");
-                self.add_log(LogLevel::Error, msg.clone()).await;
-                Err(ExtensionError::Timeout(format!("command/{command}")))
-            }
-        }
-    }
-
-    /// Start executing a command without waiting for the response.
-    ///
-    /// Returns a oneshot receiver that will receive the response when it arrives.
-    /// This allows the caller to process incoming messages while waiting for the response.
-    pub async fn start_command(
-        &mut self,
-        command: &str,
-    ) -> Result<tokio::sync::oneshot::Receiver<Result<Response, ExtensionError>>, ExtensionError>
-    {
-        let state = self.state.lock().await.clone();
-        if !state.is_running() {
-            return Err(ExtensionError::InvalidState(format!(
-                "cannot execute command in state {:?}",
-                state
-            )));
-        }
-
-        self.add_log(LogLevel::Info, format!("executing command: {command}"))
-            .await;
-
-        let params = serde_json::json!({ "command": command });
-
-        // generate request ID
-        let id = {
-            let mut next_id = self.next_request_id.lock().await;
-            let id = *next_id;
-            *next_id += 1;
-            RequestId::Number(id)
-        };
-
-        // create channels for the response
-        let (internal_tx, internal_rx) = oneshot::channel();
-        let (external_tx, external_rx) = tokio::sync::oneshot::channel();
-
-        // register pending request
-        {
-            let mut pending = self.pending_requests.lock().await;
-            pending.insert(id.clone(), internal_tx);
-        }
-
-        // spawn a task to forward the response
-        tokio::spawn(async move {
-            let result = match internal_rx.await {
-                Ok(Ok(response)) => Ok(response),
-                Ok(Err(error_response)) => Err(ExtensionError::Rpc(error_response.error)),
-                Err(_) => Err(ExtensionError::Channel(
-                    "response channel closed".to_string(),
-                )),
-            };
-            let _ = external_tx.send(result);
-        });
-
-        let request = Request::new(
-            id.clone(),
-            "command/execute",
-            if params.is_null() { None } else { Some(params) },
-        );
-
-        // send the request
-        if let Some(tx) = &self.outgoing_tx {
-            tx.send(Message::Request(request))
-                .await
-                .map_err(|_| ExtensionError::Channel("failed to send request".to_string()))?;
-        } else {
-            return Err(ExtensionError::InvalidState(
-                "extension not connected".to_string(),
-            ));
-        }
-
-        Ok(external_rx)
-    }
-
-    /// Complete a command that was started with start_command.
-    pub async fn complete_command(
-        &mut self,
-        command: &str,
-        result: Result<Response, ExtensionError>,
-    ) {
-        match &result {
-            Ok(_) => {
-                self.add_log(LogLevel::Info, format!("command completed: {command}"))
-                    .await;
-            }
-            Err(e) => {
-                self.add_log(LogLevel::Error, format!("command failed: {command}: {e}"))
-                    .await;
-            }
-        }
-    }
-
     /// Initiate graceful shutdown of the extension.
     pub async fn shutdown(&mut self, reason: ShutdownReason) -> Result<(), ExtensionError> {
         {
@@ -665,15 +529,20 @@ impl ExtensionProcess {
 
     /// Take the incoming message receiver for the host to process.
     ///
-    /// NOTE: This method supports the infrastructure for extension-initiated requests
-    /// (e.g., editor/getMessage). Currently, the host handles messages inline during
-    /// execute_command calls. For full bidirectional communication where extensions
-    /// can initiate requests asynchronously, the host would spawn a task per extension
-    /// to continuously process this channel. This is not currently needed since
-    /// extensions only send requests in response to command execution.
-    #[allow(dead_code)]
+    /// The host spawns a task per extension to continuously process this channel,
+    /// handling extension-initiated requests like `ui/openWindow` and `editor/getMessage`.
     pub fn take_incoming_rx(&mut self) -> Option<mpsc::Receiver<InternalMessage>> {
         self.incoming_rx.take()
+    }
+
+    /// Get a cloneable handle for sending responses back to this extension.
+    ///
+    /// Used by spawned tasks that need to send responses without holding a
+    /// mutable reference to the `ExtensionProcess`.
+    pub fn response_sender(&self) -> Option<ResponseSender> {
+        self.outgoing_tx
+            .as_ref()
+            .map(|tx| ResponseSender { tx: tx.clone() })
     }
 
     /// Clean up resources after process termination.
@@ -692,17 +561,6 @@ impl ExtensionProcess {
         // clear pending requests
         let mut pending = self.pending_requests.lock().await;
         pending.clear();
-    }
-
-    /// Process an incoming message from the extension.
-    ///
-    /// Returns requests/notifications that need to be handled by the host.
-    pub async fn process_incoming(&mut self) -> Option<InternalMessage> {
-        if let Some(rx) = &mut self.incoming_rx {
-            rx.recv().await
-        } else {
-            None
-        }
     }
 
     /// Mark the extension as failed with the given error message.

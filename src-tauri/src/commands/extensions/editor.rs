@@ -13,8 +13,8 @@ use crate::commands::editor::export::{export_to_json, export_to_toml, export_to_
 use crate::commands::editor::import::{import_from_json, import_from_toml, import_from_yaml};
 use crate::extensions::protocol::RpcError;
 use crate::extensions::types::{
-    GetMessageParams, GetMessageResult, MessageFormat, Patch, PatchError, PatchMessageParams,
-    PatchMessageResult, SetMessageParams, SetMessageResult,
+    GetMessageResult, MessageFormat, Patch, PatchError, PatchMessageResult, SetMessageParams,
+    SetMessageResult,
 };
 use hl7_parser::builder::{
     ComponentBuilder, FieldBuilder, MessageBuilder, RepeatBuilder, SegmentBuilder,
@@ -24,18 +24,12 @@ use hl7_parser::query::LocationQuery;
 /// Handle `editor/getMessage` request from an extension.
 ///
 /// Converts the current HL7 message to the requested format (hl7, json, yaml, toml).
-/// The raw HL7 message and file path info must be provided by the caller (from frontend).
-///
-/// TODO: Phase 4 - this function will be called by the frontend when it receives
-/// the "extension-get-message-request" event from the backend.
-#[allow(dead_code)] // used in Phase 4 frontend integration
+/// Now called synchronously from host.rs using the backend's copy of the message.
 pub fn handle_get_message(
-    params: GetMessageParams,
     raw_message: &str,
-    has_file: bool,
-    file_path: Option<String>,
+    format: MessageFormat,
 ) -> Result<GetMessageResult, RpcError> {
-    let message = match params.format {
+    let message = match format {
         MessageFormat::Hl7 => raw_message.to_string(),
         MessageFormat::Json => export_to_json(raw_message)
             .map_err(|e| RpcError::internal(format!("failed to export to JSON: {e}")))?,
@@ -47,8 +41,8 @@ pub fn handle_get_message(
 
     Ok(GetMessageResult {
         message,
-        has_file,
-        file_path,
+        has_file: false,
+        file_path: None,
     })
 }
 
@@ -98,18 +92,16 @@ pub fn handle_set_message(
 /// Uses best-effort semantics: patches are applied in order, failures are recorded
 /// but don't stop subsequent patches from being attempted.
 ///
-/// TODO: Phase 4 - this function will be called by the frontend when it receives
-/// the "extension-patch-message-request" event from the backend.
-#[allow(dead_code)] // used in Phase 4 frontend integration
+/// Returns the new message and the result. Now called synchronously from host.rs.
 pub fn handle_patch_message(
-    params: PatchMessageParams,
     raw_message: &str,
-) -> Result<(String, PatchMessageResult), RpcError> {
+    patches: Vec<Patch>,
+) -> (String, PatchMessageResult) {
     let mut message = raw_message.to_string();
     let mut errors: Vec<PatchError> = Vec::new();
     let mut patches_applied = 0;
 
-    for (index, patch) in params.patches.iter().enumerate() {
+    for (index, patch) in patches.iter().enumerate() {
         match apply_patch(&message, patch) {
             Ok(new_message) => {
                 message = new_message;
@@ -135,7 +127,7 @@ pub fn handle_patch_message(
         },
     };
 
-    Ok((message, result))
+    (message, result)
 }
 
 /// Validates basic HL7 message structure.
@@ -157,7 +149,6 @@ fn validate_hl7_structure(message: &str) -> Result<(), String> {
 }
 
 /// Apply a single patch operation to an HL7 message.
-#[allow(dead_code)] // used by handle_patch_message in Phase 4
 fn apply_patch(message: &str, patch: &Patch) -> Result<String, String> {
     // parse the path using hl7_parser's LocationQuery
     let query = LocationQuery::parse(&patch.path)
@@ -197,7 +188,6 @@ fn apply_patch(message: &str, patch: &Patch) -> Result<String, String> {
 }
 
 /// Create a new segment in the message.
-#[allow(dead_code)] // used by apply_patch in Phase 4
 fn create_segment(
     message: &str,
     segment_name: &str,
@@ -238,7 +228,6 @@ fn create_segment(
 }
 
 /// Remove a segment from the message.
-#[allow(dead_code)] // used by apply_patch in Phase 4
 fn remove_segment(
     message: &str,
     segment_name: &str,
@@ -266,7 +255,6 @@ fn remove_segment(
 
 /// Set a field value in the message using the hl7-parser builder API.
 #[allow(clippy::too_many_arguments)]
-#[allow(dead_code)] // used by apply_patch in Phase 4
 fn set_field_value(
     message: &str,
     segment_name: &str,
@@ -305,7 +293,6 @@ fn set_field_value(
 ///
 /// Sets the value at the specified field/component/subcomponent location. The builder
 /// handles proper HL7 encoding and delimiter handling automatically.
-#[allow(dead_code)] // used by set_field_value in Phase 4
 fn modify_segment_field(
     segment: &mut SegmentBuilder,
     field_num: usize,
@@ -507,27 +494,19 @@ mod tests {
 
     #[test]
     fn test_handle_get_message_hl7() {
-        let params = GetMessageParams {
-            format: MessageFormat::Hl7,
-        };
         let message = "MSH|^~\\&|APP|FAC|||20231215||ADT^A01|123|P|2.5.1";
-        let result = handle_get_message(params, message, false, None).unwrap();
+        let result = handle_get_message(message, MessageFormat::Hl7).unwrap();
         assert_eq!(result.message, message);
         assert!(!result.has_file);
     }
 
     #[test]
     fn test_handle_get_message_json() {
-        let params = GetMessageParams {
-            format: MessageFormat::Json,
-        };
         let message = "MSH|^~\\&|APP|FAC|||20231215||ADT^A01|123|P|2.5.1";
-        let result =
-            handle_get_message(params, message, true, Some("/path/to/file.hl7".to_string()))
-                .unwrap();
+        let result = handle_get_message(message, MessageFormat::Json).unwrap();
         assert!(result.message.contains("\"MSH\""));
-        assert!(result.has_file);
-        assert_eq!(result.file_path, Some("/path/to/file.hl7".to_string()));
+        assert!(!result.has_file);
+        assert_eq!(result.file_path, None);
     }
 
     #[test]
@@ -554,16 +533,14 @@ mod tests {
 
     #[test]
     fn test_handle_patch_message() {
-        let params = PatchMessageParams {
-            patches: vec![Patch {
-                path: "PID.5.1".to_string(),
-                value: Some("SMITH".to_string()),
-                remove: None,
-                create: None,
-            }],
-        };
+        let patches = vec![Patch {
+            path: "PID.5.1".to_string(),
+            value: Some("SMITH".to_string()),
+            remove: None,
+            create: None,
+        }];
         let message = "MSH|^~\\&|APP|FAC|||20231215||ADT^A01|123|P|2.5.1\rPID|||12345||DOE^JOHN";
-        let (new_msg, result) = handle_patch_message(params, message).unwrap();
+        let (new_msg, result) = handle_patch_message(message, patches);
         assert!(result.success);
         assert_eq!(result.patches_applied, 1);
         assert!(new_msg.contains("SMITH^JOHN"));
@@ -571,24 +548,22 @@ mod tests {
 
     #[test]
     fn test_handle_patch_message_partial_failure() {
-        let params = PatchMessageParams {
-            patches: vec![
-                Patch {
-                    path: "PID.5.1".to_string(),
-                    value: Some("SMITH".to_string()),
-                    remove: None,
-                    create: None,
-                },
-                Patch {
-                    path: "XYZ.1".to_string(), // invalid segment
-                    value: Some("VALUE".to_string()),
-                    remove: None,
-                    create: None,
-                },
-            ],
-        };
+        let patches = vec![
+            Patch {
+                path: "PID.5.1".to_string(),
+                value: Some("SMITH".to_string()),
+                remove: None,
+                create: None,
+            },
+            Patch {
+                path: "XYZ.1".to_string(), // invalid segment
+                value: Some("VALUE".to_string()),
+                remove: None,
+                create: None,
+            },
+        ];
         let message = "MSH|^~\\&|APP|FAC|||20231215||ADT^A01|123|P|2.5.1\rPID|||12345||DOE^JOHN";
-        let (new_msg, result) = handle_patch_message(params, message).unwrap();
+        let (new_msg, result) = handle_patch_message(message, patches);
         assert!(!result.success);
         assert_eq!(result.patches_applied, 1);
         assert!(result.errors.is_some());

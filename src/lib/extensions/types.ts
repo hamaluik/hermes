@@ -119,3 +119,4 @@ export interface PatchMessageResult {
  * Contains the HL7 message to set in the editor.
  */
 export type SetMessagePayload = string;
+

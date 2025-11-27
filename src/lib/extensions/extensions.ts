@@ -95,16 +95,6 @@ export interface ToolbarButtonInfo {
   };
 }
 
-/**
- * Result of executing an extension command.
- */
-export interface CommandExecuteResult {
-  /** Whether the command executed successfully. */
-  success: boolean;
-
-  /** Optional message (error or informational). */
-  message?: string;
-}
 
 /**
  * Log level for extension events.
@@ -167,15 +157,13 @@ export async function getExtensionToolbarButtons(): Promise<
 }
 
 /**
- * Execute an extension command.
+ * Send a command to an extension.
  *
  * This is called when a user clicks an extension toolbar button. The command
  * string identifies which extension and action to invoke.
  */
-export async function executeExtensionCommand(
-  command: string,
-): Promise<CommandExecuteResult> {
-  return invoke("execute_extension_command", { command });
+export async function sendExtensionCommand(command: string): Promise<void> {
+  await invoke("send_extension_command", { command });
 }
 
 /**
@@ -189,69 +177,6 @@ export async function getExtensionLogs(
   extensionId: string,
 ): Promise<ExtensionLog[]> {
   return invoke("get_extension_logs", { extensionId });
-}
-
-// ============================================================================
-// Editor Bridge Response Functions
-// ============================================================================
-
-/**
- * Provide the message content in response to an extension's `editor/getMessage` request.
- *
- * Called by the frontend after receiving an `extension-get-message-request` event.
- * The frontend converts the message to the requested format and sends it back
- * to the backend, which routes it to the waiting extension.
- *
- * @param extensionId - ID of the extension that made the request
- * @param requestId - JSON-RPC request ID from the original request (string or number per JSON-RPC 2.0 spec; backend RequestId enum supports both)
- * @param message - The message content in the requested format
- * @param hasFile - Whether a file is currently open
- * @param filePath - The file path, if one is open
- */
-export async function provideExtensionMessage(
-  extensionId: string,
-  requestId: string | number,
-  message: string,
-  hasFile: boolean,
-  filePath?: string,
-): Promise<void> {
-  return invoke("provide_extension_message", {
-    extensionId,
-    requestId: String(requestId),
-    message,
-    hasFile,
-    filePath,
-  });
-}
-
-/**
- * Provide the result of applying patches in response to an extension's
- * `editor/patchMessage` request.
- *
- * Called by the frontend after receiving an `extension-patch-message-request` event,
- * applying the patches locally, and updating the editor. The result is sent back
- * to the backend, which routes it to the waiting extension.
- *
- * @param extensionId - ID of the extension that made the request
- * @param requestId - JSON-RPC request ID from the original request (string or number per JSON-RPC 2.0 spec; backend RequestId enum supports both)
- * @param success - Whether all patches were applied successfully
- * @param patchesApplied - Number of patches that were applied
- * @param errors - Optional array of patch errors
- */
-export async function provideExtensionPatchResult(
-  extensionId: string,
-  requestId: string | number,
-  success: boolean,
-  patchesApplied: number,
-  errors?: Array<{ index: number; path: string; message: string }>,
-): Promise<void> {
-  return invoke("provide_extension_patch_result", {
-    extensionId,
-    requestId: String(requestId),
-    success,
-    patchesApplied,
-    errors,
-  });
 }
 
 // ============================================================================

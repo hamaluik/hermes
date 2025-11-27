@@ -113,19 +113,10 @@
     reloadExtensions,
     getExtensionToolbarButtons,
     getExtensions,
-    executeExtensionCommand,
-    provideExtensionMessage,
-    provideExtensionPatchResult,
-    isExtensionRunning,
+    sendExtensionCommand,
     type ToolbarButtonInfo,
     type ExtensionStatus,
   } from "$lib/extensions/extensions";
-  import type {
-    GetMessageRequestPayload,
-    PatchMessageRequestPayload,
-    MessageFormat,
-  } from "$lib/extensions/types";
-  import { handleGetMessage, handlePatchMessage } from "$lib/extensions/editor_bridge";
   import DOMPurify from "dompurify";
 
   let { data }: PageProps = $props();
@@ -232,14 +223,21 @@
   }
 
   /**
-   * Centralized message update function
+   * Sync message to backend for extension access.
+   * Fire-and-forget - errors are logged but don't block.
+   */
+  function syncMessage(msg: string) {
+    invoke("sync_editor_message", { message: msg }).catch((e) =>
+      console.error("failed to sync editor message:", e)
+    );
+  }
+
+  /**
+   * Centralized message update function.
    *
    * All edits to the message should go through this function to ensure proper
    * history tracking. The coalesce option is used for rapid changes like typing
    * to group them into a single undo entry.
-   *
-   * @param newMessage - The new message content
-   * @param options.coalesce - If true, rapid calls will be merged into one history entry
    */
   function updateMessage(
     newMessage: string,
@@ -247,15 +245,17 @@
   ) {
     history.push(message, options?.coalesce ?? false);
     message = newMessage;
+    syncMessage(newMessage);
   }
 
   /**
-   * Undo the last message change
+   * Undo the last message change.
    */
   function handleUndo() {
     const previous = history.undo(message);
     if (previous !== null) {
       message = previous;
+      syncMessage(previous);
     }
   }
 
@@ -266,6 +266,7 @@
     const next = history.redo(message);
     if (next !== null) {
       message = next;
+      syncMessage(next);
     }
   }
 
@@ -364,6 +365,7 @@
 
   onMount(() => {
     message = get(data.message);
+    syncMessage(message);
 
     /**
      * Listen Server Integration
@@ -522,9 +524,7 @@
 
     // Extension event listeners
     let unlistenExtensionsChanged: UnlistenFn | undefined = undefined;
-    let unlistenGetMessageRequest: UnlistenFn | undefined = undefined;
     let unlistenSetMessage: UnlistenFn | undefined = undefined;
-    let unlistenPatchMessageRequest: UnlistenFn | undefined = undefined;
 
     // Listen for extensions-changed events (emitted when extensions start/stop)
     listen("extensions-changed", async () => {
@@ -537,77 +537,12 @@
       unlistenExtensionsChanged = unlisten;
     });
 
-    // Listen for extension getMessage requests
-    listen<GetMessageRequestPayload>("extension-get-message-request", async (event) => {
-      const { extensionId, requestId, format } = event.payload;
-
-      try {
-        const result = await handleGetMessage(message, format as MessageFormat);
-
-        if (result.error) {
-          console.error("Error handling getMessage:", result.error);
-          // still provide response with error message
-        }
-
-        await provideExtensionMessage(
-          extensionId,
-          requestId,
-          result.message,
-          currentFilePath !== undefined,
-          currentFilePath
-        );
-      } catch (error) {
-        console.error("Failed to handle getMessage request:", error);
-      }
-    }).then((unlisten) => {
-      unlistenGetMessageRequest = unlisten;
-    });
-
     // Listen for extension setMessage events
     listen<string>("extension-set-message", (event) => {
       const newMessage = event.payload;
       updateMessage(newMessage);
     }).then((unlisten) => {
       unlistenSetMessage = unlisten;
-    });
-
-    // Listen for extension patchMessage requests
-    listen<PatchMessageRequestPayload>("extension-patch-message-request", async (event) => {
-      const { extensionId, requestId, patches } = event.payload;
-
-      try {
-        const result = await handlePatchMessage(message, patches);
-
-        // update the editor with patched message
-        if (result.success || result.patchesApplied > 0) {
-          updateMessage(result.message);
-        }
-
-        // send result back to extension
-        await provideExtensionPatchResult(
-          extensionId,
-          requestId,
-          result.success,
-          result.patchesApplied,
-          result.errors
-        );
-      } catch (error) {
-        console.error("Failed to handle patchMessage request:", error);
-        // send error response back to extension so it doesn't timeout
-        try {
-          await provideExtensionPatchResult(
-            extensionId,
-            requestId,
-            false,
-            0,
-            [{ index: 0, path: "", message: String(error) }]
-          );
-        } catch (innerError) {
-          console.error("Failed to send error response:", innerError);
-        }
-      }
-    }).then((unlisten) => {
-      unlistenPatchMessageRequest = unlisten;
     });
 
     /**
@@ -669,6 +604,7 @@
         message = templateMessage;
         savedMessage = message;
         currentFilePath = undefined;
+        syncMessage(message);
       } catch (error) {
         console.error("Failed to generate template message:", error);
         messageDialog(`Failed to generate template: ${error}`, {
@@ -908,9 +844,7 @@
       unlistenMenuImportYaml?.();
       unlistenMenuImportToml?.();
       unlistenExtensionsChanged?.();
-      unlistenGetMessageRequest?.();
       unlistenSetMessage?.();
-      unlistenPatchMessageRequest?.();
       window.removeEventListener("resize", handleWindowResize);
     };
   });
@@ -972,6 +906,7 @@
       if (newMessage) {
         message = newMessage;
         savedMessage = message;
+        syncMessage(message);
       }
     });
   }
@@ -1020,6 +955,7 @@
     savedMessage = message;
     currentFilePath = filePath;
     data.settings.addRecentFile(filePath);
+    syncMessage(message);
   }
 
   let handleSave = $derived.by(() => {
@@ -1148,20 +1084,9 @@
 
   /**
    * Handle extension toolbar button click.
-   *
-   * Executes the command registered by the extension and displays any
-   * error messages to the user.
    */
   async function handleExtensionButtonClick(command: string) {
-    try {
-      const result = await executeExtensionCommand(command);
-      if (!result.success && result.message) {
-        await messageDialog(result.message, { title: "Extension Error", kind: "error" });
-      }
-    } catch (error) {
-      console.error("Extension command failed:", error);
-      await messageDialog(String(error), { title: "Extension Error", kind: "error" });
-    }
+    await sendExtensionCommand(command);
   }
 
   const handleSaveAs = async () => {
@@ -1283,6 +1208,7 @@
       message = imported;
       savedMessage = message;
       currentFilePath = undefined;
+      syncMessage(message);
     } catch (error) {
       console.error(`Error importing from ${format}:`, error);
       messageDialog(`${error}`, { title: `Import Error`, kind: "error" });

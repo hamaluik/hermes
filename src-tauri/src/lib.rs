@@ -29,6 +29,7 @@
 use color_eyre::eyre::Context;
 use commands::extensions::ui::SharedWindowManager;
 use schema::cache::SchemaCache;
+use std::sync::Arc;
 use tauri::menu::{CheckMenuItem, MenuItem, Submenu};
 use tauri::{Manager, Wry};
 use tokio::sync::Mutex;
@@ -53,6 +54,10 @@ pub struct AppData {
 
     /// Extension host for managing third-party extensions.
     pub extension_host: Mutex<extensions::ExtensionHost>,
+
+    /// Current editor message content, synced from frontend.
+    /// Wrapped in Arc so it can be shared with extension request handlers.
+    pub editor_message: Arc<Mutex<String>>,
 
     /// Reference to the Save menu item for dynamic enable/disable.
     pub save_menu_item: MenuItem<Wry>,
@@ -166,10 +171,8 @@ pub fn run() {
             commands::get_extension_toolbar_buttons,
             commands::get_extension_logs,
             commands::reload_extensions,
-            commands::execute_extension_command,
-            commands::provide_extension_message,
-            commands::provide_extension_patch_result,
-            commands::apply_extension_patches,
+            commands::send_extension_command,
+            commands::sync_editor_message,
         ])
         .setup(|app| {
             let menu_items =
@@ -198,6 +201,7 @@ pub fn run() {
                     .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
                 listen_join: Mutex::new(None),
                 extension_host: Mutex::new(extension_host),
+                editor_message: Arc::new(Mutex::new(String::new())),
                 save_menu_item: menu_items.save_menu_item,
                 auto_save_menu_item: menu_items.auto_save_menu_item,
                 undo_menu_item: menu_items.undo_menu_item,

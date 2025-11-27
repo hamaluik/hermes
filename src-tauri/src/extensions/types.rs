@@ -536,22 +536,11 @@ pub enum ShutdownReason {
 // Command execution types
 // ============================================================================
 
-/// Parameters for `command/execute` request.
+/// Parameters for `command/execute` notification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandExecuteParams {
     /// Command identifier to execute.
     pub command: String,
-}
-
-/// Result of `command/execute` response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommandExecuteResult {
-    /// Whether the command succeeded.
-    pub success: bool,
-
-    /// Optional message (error or informational).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
 }
 
 // ============================================================================
