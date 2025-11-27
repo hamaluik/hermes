@@ -429,6 +429,16 @@
             <li><a href="#listen-tab">Listen Tab</a></li>
           </ul>
         </li>
+        <li>
+          <a href="#extensions">Extensions</a>
+          <ul>
+            <li><a href="#what-extensions-do">What Extensions Do</a></li>
+            <li><a href="#managing-extensions">Managing Extensions</a></li>
+            <li><a href="#extension-toolbar-buttons">Toolbar Buttons</a></li>
+            <li><a href="#extension-windows">Extension Windows</a></li>
+            <li><a href="#extension-logs">Viewing Logs</a></li>
+          </ul>
+        </li>
         <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
         <li><a href="#message-types">Message Types Reference</a></li>
         <li><a href="#troubleshooting">Troubleshooting</a></li>
@@ -684,7 +694,7 @@
             <tr>
               <td>MSH-4</td>
               <td>Sending Facility</td>
-              <td>Organization sending the message</td>
+              <td>Organisation sending the message</td>
             </tr>
             <tr>
               <td>MSH-5</td>
@@ -694,7 +704,7 @@
             <tr>
               <td>MSH-6</td>
               <td>Receiving Facility</td>
-              <td>Organization receiving the message</td>
+              <td>Organisation receiving the message</td>
             </tr>
             <tr>
               <td>MSH-7</td>
@@ -2231,6 +2241,249 @@
         </p>
       </section>
 
+      <!-- Extensions -->
+      <section id="extensions">
+        <h2>Extensions</h2>
+        <p>
+          Extensions add third-party functionality to Hermes without modifying
+          the core application. They are standalone programs that communicate
+          with Hermes, allowing developers to create custom tools for specific
+          workflows or organisation needs.
+        </p>
+
+        <div class="note">
+          <strong>For Developers</strong>
+          <p>
+            If you want to create your own extension, see the API documentation
+            in the <code>extensions/api-docs/</code> directory of the
+            <a href="https://github.com/hamaluik/hermes">Hermes repository</a>.
+          </p>
+        </div>
+
+        <h3 id="what-extensions-do">What Extensions Do</h3>
+        <p>Extensions can provide several types of functionality:</p>
+        <ul>
+          <li>
+            <strong>Toolbar buttons</strong>: Add custom buttons to the Hermes
+            toolbar that trigger extension commands when clicked.
+          </li>
+          <li>
+            <strong>Message operations</strong>: Read the current HL7 message,
+            modify specific fields, or replace the entire message content.
+          </li>
+          <li>
+            <strong>Web-based interfaces</strong>: Display interactive windows
+            for complex workflows like patient lookup wizards, data entry forms,
+            or search interfaces.
+          </li>
+          <li>
+            <strong>Custom schemas</strong>: Provide organisation-specific field
+            definitions, validation rules, and allowed values that supplement
+            the built-in HL7 schema.
+          </li>
+        </ul>
+
+        <h3 id="managing-extensions">Managing Extensions</h3>
+        <p>
+          Extensions are configured through the Settings modal. Open Settings by
+          pressing <kbd>Cmd</kbd>+<kbd>,</kbd> or selecting
+          <strong>File</strong> &rarr; <strong>Settings</strong>, then scroll to
+          the <strong>Extensions</strong> section.
+        </p>
+
+        <h4>Adding an Extension</h4>
+        <ol>
+          <li>Click <strong>Add Extension</strong> in the Extensions section.</li>
+          <li>Browse to select the extension executable file.</li>
+          <li>
+            The extension is added to the list and enabled by default.
+          </li>
+          <li>
+            Click <strong>Reload Extensions</strong> to start the newly added
+            extension.
+          </li>
+        </ol>
+
+        <h4>Enabling and Disabling Extensions</h4>
+        <p>
+          Each extension has a toggle switch next to its name. Turn the switch
+          off to disable an extension without removing it from your
+          configuration. Disabled extensions remain in your settings but will
+          not be started when you reload extensions.
+        </p>
+
+        <h4>Removing Extensions</h4>
+        <p>
+          Click the trash icon next to an extension to remove it from your
+          configuration entirely. This does not delete the extension file from
+          your computer.
+        </p>
+
+        <h4>Applying Changes</h4>
+        <p>
+          After adding, removing, or enabling/disabling extensions, click
+          <strong>Reload Extensions</strong> to apply your changes. This
+          restarts the extension system with the updated configuration.
+        </p>
+
+        <h4>Extension Status</h4>
+        <p>
+          Each extension shows a status indicator reflecting its current state:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Indicator</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Running</td>
+              <td
+                style="
+                  background-color: var(--col-foam);
+                  color: #000;
+                  padding: 2px 6px;
+                  border-radius: 3px;
+                "
+              >
+                Green
+              </td>
+              <td>Extension is active and ready to use</td>
+            </tr>
+            <tr>
+              <td>Failed</td>
+              <td
+                style="
+                  background-color: var(--col-love);
+                  color: #fff;
+                  padding: 2px 6px;
+                  border-radius: 3px;
+                "
+              >
+                Red
+              </td>
+              <td>Extension crashed or failed to initialise</td>
+            </tr>
+            <tr>
+              <td>Stopped</td>
+              <td
+                style="
+                  background-color: var(--col-muted);
+                  color: #fff;
+                  padding: 2px 6px;
+                  border-radius: 3px;
+                "
+              >
+                Grey
+              </td>
+              <td>Extension is not running</td>
+            </tr>
+            <tr>
+              <td>Starting</td>
+              <td>—</td>
+              <td>Extension is loading</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          If an extension fails to start, an error message appears below its
+          entry explaining what went wrong. Check the extension logs for more
+          details.
+        </p>
+
+        <h3 id="extension-toolbar-buttons">Toolbar Buttons</h3>
+        <p>
+          Extensions can add custom buttons to the Hermes toolbar. These buttons
+          appear at the right end of the toolbar, separated from the built-in
+          buttons by a divider.
+        </p>
+        <ul>
+          <li>
+            <strong>Availability</strong>: Extension buttons are only enabled
+            when their extension is in the Running state. If an extension stops
+            or crashes, its buttons become disabled.
+          </li>
+          <li>
+            <strong>Icons</strong>: Each button displays a custom icon provided
+            by the extension, helping you identify its function at a glance.
+          </li>
+          <li>
+            <strong>Usage</strong>: Click a button to trigger the corresponding
+            extension command. The extension then performs its action, which may
+            include modifying the message, opening a window, or other operations.
+          </li>
+        </ul>
+
+        <h3 id="extension-windows">Extension Windows</h3>
+        <p>
+          Some extensions display web-based interfaces in separate windows. These
+          windows allow for complex interactions like forms, search interfaces,
+          or configuration dialogs.
+        </p>
+
+        <h4>Window Types</h4>
+        <ul>
+          <li>
+            <strong>Modal windows</strong>: Appear above the main Hermes window
+            and prevent interaction with Hermes until closed. Use these when the
+            extension needs your full attention before proceeding.
+          </li>
+          <li>
+            <strong>Non-modal windows</strong>: Open independently, allowing you
+            to interact with both the extension window and Hermes simultaneously.
+          </li>
+        </ul>
+
+        <h4>Closing Windows</h4>
+        <p>
+          Close extension windows using the standard window close button or by
+          pressing <kbd>Cmd</kbd>+<kbd>W</kbd>. Some extensions may also provide
+          their own close buttons within the interface.
+        </p>
+
+        <h3 id="extension-logs">Viewing Logs</h3>
+        <p>
+          Extensions can write log messages to help diagnose issues or provide
+          status information. To view these logs:
+        </p>
+        <ol>
+          <li>Open <strong>Settings</strong> (<kbd>Cmd</kbd>+<kbd>,</kbd>).</li>
+          <li>Scroll to the <strong>Extensions</strong> section.</li>
+          <li>Click <strong>View Logs</strong>.</li>
+        </ol>
+        <p>The Extension Logs modal shows:</p>
+        <ul>
+          <li>
+            <strong>Timestamps</strong>: When each log entry was recorded.
+          </li>
+          <li>
+            <strong>Log levels</strong>: Info (informational), Warn (warnings),
+            or Error (problems).
+          </li>
+          <li>
+            <strong>Messages</strong>: The actual log content from each extension.
+          </li>
+        </ul>
+        <p>
+          Use the filter dropdown to view logs from a specific extension or all
+          extensions at once. Click <strong>Copy to Clipboard</strong> to copy
+          the logs for sharing with extension developers when troubleshooting.
+        </p>
+
+        <div class="warning">
+          <strong>Security</strong>
+          <p>
+            Extensions are trusted code that can read and modify your HL7
+            messages. Only install extensions from sources you trust. Review an
+            extension's documentation and source code before installing it.
+          </p>
+        </div>
+      </section>
+
       <!-- Keyboard Shortcuts -->
       <section id="keyboard-shortcuts">
         <h2>Keyboard Shortcuts</h2>
@@ -2791,6 +3044,66 @@
             <kbd>Ctrl</kbd>.
           </li>
         </ul>
+
+        <h3>Extension Issues</h3>
+
+        <h4>Extension Won't Start</h4>
+        <ul>
+          <li>
+            Verify the executable path is correct and the file exists.
+          </li>
+          <li>
+            Check that the file has execute permissions.
+          </li>
+          <li>
+            View the extension logs for error messages.
+          </li>
+          <li>
+            Ensure the extension responds within 10 seconds during
+            initialisation; slow-starting extensions may time out.
+          </li>
+        </ul>
+
+        <h4>Toolbar Buttons Not Appearing</h4>
+        <ul>
+          <li>
+            Click <strong>Reload Extensions</strong> in Settings to restart the
+            extension system.
+          </li>
+          <li>
+            Check the extension status—buttons only appear when the extension is
+            Running.
+          </li>
+          <li>
+            If the extension shows as Failed, view the logs to diagnose the
+            problem.
+          </li>
+        </ul>
+
+        <h4>Extension Crashed</h4>
+        <ul>
+          <li>
+            View the extension logs for error messages that may indicate what
+            went wrong.
+          </li>
+          <li>
+            Try clicking <strong>Reload Extensions</strong> to restart the
+            extension.
+          </li>
+          <li>
+            Contact the extension developer with the log output if the problem
+            persists.
+          </li>
+        </ul>
+
+        <div class="tip">
+          <strong>Sharing Logs</strong>
+          <p>
+            When reporting extension issues to developers, use the
+            <strong>Copy to Clipboard</strong> button in the Extension Logs
+            modal to capture the relevant log entries.
+          </p>
+        </div>
       </section>
     </main>
 
@@ -2819,6 +3132,26 @@
 
       window.addEventListener("scroll", updateActiveLink);
       window.addEventListener("load", updateActiveLink);
+    </script>
+
+    <script>
+      // open external links in OS default browser when running in Tauri
+      function openExternalLink(e) {
+        if (!window.__TAURI__) return;
+
+        const link = e.target.closest("a[href]");
+        if (!link) return;
+
+        const href = link.getAttribute("href");
+        if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+          e.preventDefault();
+          window.__TAURI__.core.invoke("open_url", { url: href });
+        }
+      }
+
+      document.addEventListener("click", openExternalLink);
+      document.addEventListener("auxclick", openExternalLink); // middle-click
+      document.addEventListener("touchend", openExternalLink); // touch screens
     </script>
   </body>
 </html>

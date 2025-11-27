@@ -173,6 +173,7 @@ pub fn run() {
             commands::reload_extensions,
             commands::send_extension_command,
             commands::sync_editor_message,
+            commands::open_url,
         ])
         .setup(|app| {
             let menu_items =
