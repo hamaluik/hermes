@@ -8,6 +8,7 @@ task with minimal explanation.
 
 - [Read and Modify Messages](read-modify-messages.md) - Working with the editor
   content in different formats
+- [Handle Events](handle-events.md) - React to message changes, opens, and saves
 - [Show Dialogs](show-dialogs.md) - Display system dialogs for user input and
   feedback
 - [Manage Windows](manage-windows.md) - Open and control web UI windows

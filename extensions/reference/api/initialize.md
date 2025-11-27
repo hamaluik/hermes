@@ -38,10 +38,29 @@ Request (expects response)
 
 ### Capabilities
 
-| Field          | Type     | Required | Description                        |
-|----------------|----------|----------|------------------------------------|
-| commands       | string[] | No       | Command IDs this extension handles |
-| schemaProvider | boolean  | No       | Whether extension provides schema  |
+| Field          | Type                | Required | Description                        |
+|----------------|---------------------|----------|------------------------------------|
+| commands       | string[]            | No       | Command IDs this extension handles |
+| schemaProvider | boolean             | No       | Whether extension provides schema  |
+| events         | EventSubscription[] | No       | Events to subscribe to             |
+
+### EventSubscription
+
+| Field   | Type         | Required | Description                            |
+|---------|--------------|----------|----------------------------------------|
+| name    | EventName    | Yes      | Event name to subscribe to             |
+| options | EventOptions | No       | Event-specific options                 |
+
+Event names: `message/changed`, `message/opened`, `message/saved`
+
+### EventOptions
+
+Options for `message/changed` only:
+
+| Field          | Type          | Default | Description                |
+|----------------|---------------|---------|----------------------------|
+| includeContent | boolean       | false   | Include message content    |
+| format         | MessageFormat | "hl7"   | Format for content         |
 
 ### ToolbarButton
 
@@ -100,6 +119,31 @@ Icon requirements:
         "command": "patientLookup/search"
       }
     ]
+  }
+}
+```
+
+## Example Response (with events)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "name": "Message Logger",
+    "version": "1.0.0",
+    "description": "Log all message changes to external system",
+    "capabilities": {
+      "commands": ["logger/configure"],
+      "events": [
+        { "name": "message/opened" },
+        { "name": "message/saved" },
+        {
+          "name": "message/changed",
+          "options": { "includeContent": true, "format": "json" }
+        }
+      ]
+    }
   }
 }
 ```

@@ -78,6 +78,33 @@ interface InitializeResult {
 interface Capabilities {
   commands?: string[];
   schemaProvider?: boolean;
+  events?: EventSubscription[];
+}
+```
+
+### EventSubscription
+
+```typescript
+interface EventSubscription {
+  name: EventName;
+  options?: EventOptions;
+}
+```
+
+### EventName
+
+```typescript
+type EventName = "message/changed" | "message/opened" | "message/saved";
+```
+
+### EventOptions
+
+Options for event subscriptions. Currently only `message/changed` uses options.
+
+```typescript
+interface EventOptions {
+  includeContent?: boolean;  // include message content (default: false)
+  format?: MessageFormat;    // format for content (default: "hl7")
 }
 ```
 
@@ -246,6 +273,35 @@ interface CloseWindowResult {
 interface WindowClosedParams {
   windowId: string;
   reason: "user" | "extension" | "shutdown";
+}
+```
+
+### MessageChangedParams
+
+```typescript
+interface MessageChangedParams {
+  message?: string;       // present if includeContent=true
+  format?: MessageFormat; // present if includeContent=true
+  hasFile: boolean;
+  filePath?: string;      // present if hasFile=true
+}
+```
+
+### MessageOpenedParams
+
+```typescript
+interface MessageOpenedParams {
+  filePath?: string;  // present if isNew=false
+  isNew: boolean;
+}
+```
+
+### MessageSavedParams
+
+```typescript
+interface MessageSavedParams {
+  filePath: string;
+  saveAs: boolean;
 }
 ```
 

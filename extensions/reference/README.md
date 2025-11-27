@@ -10,6 +10,9 @@ Quick lookup reference for the Hermes Extension API.
 | shutdown              | Hermes→Extension   | Request      | Graceful termination          |
 | command/execute       | Hermes→Extension   | Notification | Execute command               |
 | window/closed         | Hermes→Extension   | Notification | Window closed event           |
+| message/changed       | Hermes→Extension   | Notification | Editor content changed        |
+| message/opened        | Hermes→Extension   | Notification | File opened/created           |
+| message/saved         | Hermes→Extension   | Notification | File saved to disk            |
 | editor/getMessage     | Extension→Hermes   | Request      | Retrieve current message      |
 | editor/patchMessage   | Extension→Hermes   | Request      | Modify specific fields        |
 | editor/setMessage     | Extension→Hermes   | Request      | Replace entire message        |
@@ -44,6 +47,12 @@ Quick lookup reference for the Hermes Extension API.
 ### Window Events
 
 - [window/closed](api/window-closed.md) - Window closed notification
+
+### Message Events
+
+- [message/changed](api/message-changed.md) - Editor content changed
+- [message/opened](api/message-opened.md) - File opened or created
+- [message/saved](api/message-saved.md) - File saved to disk
 
 ### Editor Operations
 

@@ -29,6 +29,7 @@ Subsequent tutorials reference the first and show only the new additions.
 | [Adding Toolbar Buttons](toolbar-buttons.md)          | Beginner     | Multiple buttons with custom SVG icons            |
 | [Using Dialogs](dialogs.md)                           | Beginner     | Show messages, confirmations, and file dialogs    |
 | [Working with Messages](working-with-messages.md)     | Intermediate | Read and modify HL7 messages in the editor        |
+| [Responding to Events](responding-to-events.md)       | Intermediate | React to open, save, and change events            |
 | [Building a Wizard with UI](wizard-with-ui.md)        | Advanced     | Create a multi-step extension with a web UI       |
 | [Providing Schema Overrides](schema-overrides.md)     | Advanced     | Customise field validation for your organisation  |
 
@@ -45,6 +46,8 @@ If you're completely new to Hermes extensions:
    - **Adding Toolbar Buttons** — Multiple buttons with custom SVG icons
    - **Using Dialogs** — Messages, confirmations, and file dialogs
    - **Working with Messages** — Read and transform HL7 messages programmatically
+   - **Responding to Events** — React to open, save, and change events in
+     real-time
    - **Building a Wizard with UI** — Rich web interfaces with HTTP servers
    - **Providing Schema Overrides** — Field validation for your organisation
 
@@ -61,6 +64,7 @@ that exercise specific API features:
 | `echo.py`             | Minimal extension for protocol testing       |
 | `dialogs.py`          | Tests all dialog API methods                 |
 | `editor-ops.py`       | Tests message read/write operations          |
+| `events.py`           | Tests event notification subscriptions       |
 | `schema-override.py`  | Tests schema merging behaviour               |
 | `windows.py`          | Tests window management API                  |
 

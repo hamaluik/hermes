@@ -16,6 +16,7 @@ clarifying and illuminating topics.
 | Document                              | Description                          |
 |---------------------------------------|--------------------------------------|
 | [Architecture](architecture.md)       | Why extensions use separate processes, JSON-RPC, and stdio |
+| [Events](events.md)                   | Push notifications, subscription model, debouncing |
 | [Lifecycle](lifecycle.md)             | Understanding extension states, transitions, and error handling |
 | [Schema Merging](schema-merging.md)   | How Hermes combines schemas from multiple sources |
 

@@ -54,6 +54,23 @@ correctly. Responds to initialize and provides a single command that logs
 
 **Use this to:** Verify Hermes can start your extension and route commands.
 
+### events.py
+
+**Tests:** Event notification subscriptions
+
+Subscribes to all three event types and logs when each is received. Use this to
+verify event delivery and debouncing behaviour.
+
+**Events subscribed:**
+- `message/opened` - Logs file path and isNew flag
+- `message/saved` - Logs file path and saveAs flag
+- `message/changed` - Logs file path and message preview (with content)
+
+**Commands:**
+- `events-test/status` - Log event counters
+
+**Use this to:** Verify events are delivered to subscribed extensions.
+
 ### editor-ops.py
 
 **Tests:** All editor API methods
