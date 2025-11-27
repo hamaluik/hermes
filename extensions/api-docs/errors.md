@@ -139,6 +139,7 @@ These codes are specific to the Hermes Extension API. They use the range -32000 
 | -32009 | Command not found       | Unknown command ID                       |
 | -32010 | Command timeout         | Command took too long                    |
 | -32011 | Validation error        | Schema validation failed                 |
+| -32012 | Dialog error            | Failed to show system dialog             |
 
 ### Code Ranges
 
@@ -334,6 +335,25 @@ Schema validation failed:
   }
 }
 ```
+
+### -32012: Dialog error
+
+System dialog failed to open:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "error": {
+    "code": -32012,
+    "message": "Dialog error",
+    "data": "failed to show save file dialog: task panicked"
+  }
+}
+```
+
+**Note:** User cancellation of dialogs is NOT an error. File dialogs return `null` for
+the path when cancelled, and confirmation dialogs return `confirmed: false`.
 
 ## Error Handling Best Practices
 

@@ -251,7 +251,8 @@ interface Patch {
 - Delete a segment: `{ "path": "NK1", "remove": true }` or `{ "path": "OBX[2]", "remove": true }`
 - Create a segment: `{ "path": "NK1", "create": true }`
 
-Note: `remove` is for deleting entire segments, not individual fields. To clear a field's value, set it to an empty string.
+**Note:** `remove` is for deleting entire segments, not individual fields. To clear a
+field's value, set it to an empty string.
 
 ### PatchMessageResult
 
@@ -373,6 +374,162 @@ interface WindowClosedParams {
 
   /** How the window was closed */
   reason: "user" | "extension" | "shutdown";
+}
+```
+
+### ShowMessageParams
+
+```typescript
+interface ShowMessageParams {
+  /** Message text to display */
+  message: string;
+
+  /** Dialog title */
+  title?: string;
+
+  /** Message kind */
+  kind?: "info" | "warning" | "error";
+}
+```
+
+### ShowMessageResult
+
+```typescript
+interface ShowMessageResult {
+  /** Whether the user acknowledged the message */
+  acknowledged: boolean;
+}
+```
+
+### ShowConfirmParams
+
+```typescript
+interface ShowConfirmParams {
+  /** Question or message to display */
+  message: string;
+
+  /** Dialog title */
+  title?: string;
+
+  /** Button style */
+  buttons?: "yesNo" | "okCancel";
+}
+```
+
+### ShowConfirmResult
+
+```typescript
+interface ShowConfirmResult {
+  /** Whether the user confirmed (clicked Yes or OK) */
+  confirmed: boolean;
+}
+```
+
+### FileFilter
+
+```typescript
+interface FileFilter {
+  /** Display name for the filter (e.g., "HL7 Files") */
+  name: string;
+
+  /** File extensions without dots (e.g., ["hl7", "txt"]) */
+  extensions: string[];
+}
+```
+
+### OpenFileParams
+
+```typescript
+interface OpenFileParams {
+  /** Dialog title */
+  title?: string;
+
+  /** Starting directory */
+  defaultPath?: string;
+
+  /** File filters */
+  filters?: FileFilter[];
+}
+```
+
+### OpenFileResult
+
+```typescript
+interface OpenFileResult {
+  /** Selected file path, or null if cancelled */
+  path: string | null;
+}
+```
+
+### OpenFilesParams
+
+```typescript
+interface OpenFilesParams {
+  /** Dialog title */
+  title?: string;
+
+  /** Starting directory */
+  defaultPath?: string;
+
+  /** File filters */
+  filters?: FileFilter[];
+}
+```
+
+### OpenFilesResult
+
+```typescript
+interface OpenFilesResult {
+  /** Selected file paths, or null if cancelled */
+  paths: string[] | null;
+}
+```
+
+### SaveFileParams
+
+```typescript
+interface SaveFileParams {
+  /** Dialog title */
+  title?: string;
+
+  /** Starting directory */
+  defaultPath?: string;
+
+  /** Default filename */
+  defaultName?: string;
+
+  /** File filters */
+  filters?: FileFilter[];
+}
+```
+
+### SaveFileResult
+
+```typescript
+interface SaveFileResult {
+  /** Selected save path, or null if cancelled */
+  path: string | null;
+}
+```
+
+### SelectDirectoryParams
+
+```typescript
+interface SelectDirectoryParams {
+  /** Dialog title */
+  title?: string;
+
+  /** Starting directory */
+  defaultPath?: string;
+}
+```
+
+### SelectDirectoryResult
+
+```typescript
+interface SelectDirectoryResult {
+  /** Selected directory path, or null if cancelled */
+  path: string | null;
 }
 ```
 

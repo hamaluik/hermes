@@ -731,6 +731,162 @@ pub enum WindowClosedReason {
     Shutdown,
 }
 
+// ============================================================================
+// Dialog operation types
+// ============================================================================
+
+/// Message dialog kind for `ui/showMessage`.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MessageKind {
+    #[default]
+    Info,
+    Warning,
+    Error,
+}
+
+/// Button style for `ui/showConfirm`.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConfirmButtons {
+    #[default]
+    YesNo,
+    OkCancel,
+}
+
+/// File filter for file dialogs.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileFilter {
+    /// Display name for the filter (e.g., "HL7 Files").
+    pub name: String,
+    /// File extensions without dots (e.g., ["hl7", "txt"]).
+    pub extensions: Vec<String>,
+}
+
+/// Parameters for `ui/showMessage` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowMessageParams {
+    /// Message text to display.
+    pub message: String,
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Message kind (info, warning, error).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<MessageKind>,
+}
+
+/// Result of `ui/showMessage` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowMessageResult {
+    /// Whether the user acknowledged the message.
+    pub acknowledged: bool,
+}
+
+/// Parameters for `ui/showConfirm` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowConfirmParams {
+    /// Question or message to display.
+    pub message: String,
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Button style.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buttons: Option<ConfirmButtons>,
+}
+
+/// Result of `ui/showConfirm` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShowConfirmResult {
+    /// Whether the user confirmed (clicked Yes or OK).
+    pub confirmed: bool,
+}
+
+/// Parameters for `ui/openFile` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenFileParams {
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Starting directory.
+    #[serde(rename = "defaultPath", skip_serializing_if = "Option::is_none")]
+    pub default_path: Option<String>,
+    /// File filters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filters: Option<Vec<FileFilter>>,
+}
+
+/// Result of `ui/openFile` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenFileResult {
+    /// Selected file path, or null if cancelled.
+    pub path: Option<String>,
+}
+
+/// Parameters for `ui/openFiles` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenFilesParams {
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Starting directory.
+    #[serde(rename = "defaultPath", skip_serializing_if = "Option::is_none")]
+    pub default_path: Option<String>,
+    /// File filters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filters: Option<Vec<FileFilter>>,
+}
+
+/// Result of `ui/openFiles` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenFilesResult {
+    /// Selected file paths, or null if cancelled.
+    pub paths: Option<Vec<String>>,
+}
+
+/// Parameters for `ui/saveFile` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveFileParams {
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Starting directory.
+    #[serde(rename = "defaultPath", skip_serializing_if = "Option::is_none")]
+    pub default_path: Option<String>,
+    /// Default filename.
+    #[serde(rename = "defaultName", skip_serializing_if = "Option::is_none")]
+    pub default_name: Option<String>,
+    /// File filters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filters: Option<Vec<FileFilter>>,
+}
+
+/// Result of `ui/saveFile` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveFileResult {
+    /// Selected save path, or null if cancelled.
+    pub path: Option<String>,
+}
+
+/// Parameters for `ui/selectDirectory` request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelectDirectoryParams {
+    /// Dialog title.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Starting directory.
+    #[serde(rename = "defaultPath", skip_serializing_if = "Option::is_none")]
+    pub default_path: Option<String>,
+}
+
+/// Result of `ui/selectDirectory` response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelectDirectoryResult {
+    /// Selected directory path, or null if cancelled.
+    pub path: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -4,18 +4,28 @@
 //!
 //! - `ui/openWindow` - Open a browser window with extension-served URL
 //! - `ui/closeWindow` - Close a previously opened window
+//! - `ui/showMessage` - Show info/warning/error message dialog
+//! - `ui/showConfirm` - Show yes/no or ok/cancel confirmation dialog
+//! - `ui/openFile` - Show file open dialog (single file)
+//! - `ui/openFiles` - Show file open dialog (multiple files)
+//! - `ui/saveFile` - Show file save dialog
+//! - `ui/selectDirectory` - Show directory selection dialog
 //!
 //! Also provides the `window/closed` notification for informing extensions
 //! when their windows are closed.
 
 use crate::extensions::protocol::RpcError;
 use crate::extensions::types::{
-    CloseWindowParams, CloseWindowResult, OpenWindowParams, OpenWindowResult, WindowClosedParams,
-    WindowClosedReason,
+    CloseWindowParams, CloseWindowResult, ConfirmButtons, MessageKind, OpenFileParams,
+    OpenFileResult, OpenFilesParams, OpenFilesResult, OpenWindowParams, OpenWindowResult,
+    SaveFileParams, SaveFileResult, SelectDirectoryParams, SelectDirectoryResult,
+    ShowConfirmParams, ShowConfirmResult, ShowMessageParams, ShowMessageResult,
+    WindowClosedParams, WindowClosedReason,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tokio::sync::Mutex;
 use url::Url;
 
@@ -280,6 +290,206 @@ pub async fn close_extension_windows(
         )
         .await;
     }
+}
+
+// ============================================================================
+// Dialog handlers
+// ============================================================================
+
+/// Handle `ui/showMessage` request from an extension.
+///
+/// Shows a message dialog with info, warning, or error styling.
+pub async fn handle_show_message(
+    app: &AppHandle,
+    params: ShowMessageParams,
+) -> Result<ShowMessageResult, RpcError> {
+    let kind = match params.kind.unwrap_or(MessageKind::Info) {
+        MessageKind::Info => MessageDialogKind::Info,
+        MessageKind::Warning => MessageDialogKind::Warning,
+        MessageKind::Error => MessageDialogKind::Error,
+    };
+
+    let app = app.clone();
+    let message = params.message;
+    let title = params.title;
+
+    tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().message(&message).kind(kind);
+        if let Some(t) = title {
+            builder = builder.title(&t);
+        }
+        builder.blocking_show();
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show message dialog: {e}")))?;
+
+    Ok(ShowMessageResult { acknowledged: true })
+}
+
+/// Handle `ui/showConfirm` request from an extension.
+///
+/// Shows a confirmation dialog with yes/no or ok/cancel buttons.
+pub async fn handle_show_confirm(
+    app: &AppHandle,
+    params: ShowConfirmParams,
+) -> Result<ShowConfirmResult, RpcError> {
+    let buttons = match params.buttons.unwrap_or(ConfirmButtons::YesNo) {
+        ConfirmButtons::YesNo => MessageDialogButtons::YesNo,
+        ConfirmButtons::OkCancel => MessageDialogButtons::OkCancel,
+    };
+
+    let app = app.clone();
+    let message = params.message;
+    let title = params.title;
+
+    let confirmed = tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().message(&message).buttons(buttons);
+        if let Some(t) = title {
+            builder = builder.title(&t);
+        }
+        builder.blocking_show()
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show confirm dialog: {e}")))?;
+
+    Ok(ShowConfirmResult { confirmed })
+}
+
+/// Handle `ui/openFile` request from an extension.
+///
+/// Shows a file open dialog for selecting a single file.
+pub async fn handle_open_file(
+    app: &AppHandle,
+    params: OpenFileParams,
+) -> Result<OpenFileResult, RpcError> {
+    let app = app.clone();
+
+    let path = tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().file();
+
+        if let Some(title) = params.title {
+            builder = builder.set_title(&title);
+        }
+        if let Some(default_path) = params.default_path {
+            builder = builder.set_directory(&default_path);
+        }
+        if let Some(filters) = params.filters {
+            for filter in filters {
+                let exts: Vec<&str> = filter.extensions.iter().map(|s| s.as_str()).collect();
+                builder = builder.add_filter(&filter.name, &exts);
+            }
+        }
+
+        builder.blocking_pick_file()
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show open file dialog: {e}")))?;
+
+    Ok(OpenFileResult {
+        path: path.map(|p| p.to_string()),
+    })
+}
+
+/// Handle `ui/openFiles` request from an extension.
+///
+/// Shows a file open dialog for selecting multiple files.
+pub async fn handle_open_files(
+    app: &AppHandle,
+    params: OpenFilesParams,
+) -> Result<OpenFilesResult, RpcError> {
+    let app = app.clone();
+
+    let paths = tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().file();
+
+        if let Some(title) = params.title {
+            builder = builder.set_title(&title);
+        }
+        if let Some(default_path) = params.default_path {
+            builder = builder.set_directory(&default_path);
+        }
+        if let Some(filters) = params.filters {
+            for filter in filters {
+                let exts: Vec<&str> = filter.extensions.iter().map(|s| s.as_str()).collect();
+                builder = builder.add_filter(&filter.name, &exts);
+            }
+        }
+
+        builder.blocking_pick_files()
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show open files dialog: {e}")))?;
+
+    Ok(OpenFilesResult {
+        paths: paths.map(|ps| ps.into_iter().map(|p| p.to_string()).collect()),
+    })
+}
+
+/// Handle `ui/saveFile` request from an extension.
+///
+/// Shows a file save dialog for selecting a save location.
+pub async fn handle_save_file(
+    app: &AppHandle,
+    params: SaveFileParams,
+) -> Result<SaveFileResult, RpcError> {
+    let app = app.clone();
+
+    let path = tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().file();
+
+        if let Some(title) = params.title {
+            builder = builder.set_title(&title);
+        }
+        if let Some(default_path) = params.default_path {
+            builder = builder.set_directory(&default_path);
+        }
+        if let Some(default_name) = params.default_name {
+            builder = builder.set_file_name(&default_name);
+        }
+        if let Some(filters) = params.filters {
+            for filter in filters {
+                let exts: Vec<&str> = filter.extensions.iter().map(|s| s.as_str()).collect();
+                builder = builder.add_filter(&filter.name, &exts);
+            }
+        }
+
+        builder.blocking_save_file()
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show save file dialog: {e}")))?;
+
+    Ok(SaveFileResult {
+        path: path.map(|p| p.to_string()),
+    })
+}
+
+/// Handle `ui/selectDirectory` request from an extension.
+///
+/// Shows a directory selection dialog.
+pub async fn handle_select_directory(
+    app: &AppHandle,
+    params: SelectDirectoryParams,
+) -> Result<SelectDirectoryResult, RpcError> {
+    let app = app.clone();
+
+    let path = tokio::task::spawn_blocking(move || {
+        let mut builder = app.dialog().file();
+
+        if let Some(title) = params.title {
+            builder = builder.set_title(&title);
+        }
+        if let Some(default_path) = params.default_path {
+            builder = builder.set_directory(&default_path);
+        }
+
+        builder.blocking_pick_folder()
+    })
+    .await
+    .map_err(|e| RpcError::dialog_error(format!("failed to show directory dialog: {e}")))?;
+
+    Ok(SelectDirectoryResult {
+        path: path.map(|p| p.to_string()),
+    })
 }
 
 #[cfg(test)]

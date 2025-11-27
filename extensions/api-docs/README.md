@@ -164,6 +164,12 @@ Add your extension to Hermes settings:
 | `editor/setMessage`   | Replace the entire message                       |
 | `ui/openWindow`       | Open a new window with a URL                     |
 | `ui/closeWindow`      | Close a window opened by the extension           |
+| `ui/showMessage`      | Show info/warning/error message dialog           |
+| `ui/showConfirm`      | Show yes/no or ok/cancel confirmation dialog     |
+| `ui/openFile`         | Show file open dialog (single file)              |
+| `ui/openFiles`        | Show file open dialog (multiple files)           |
+| `ui/saveFile`         | Show file save dialog                            |
+| `ui/selectDirectory`  | Show directory selection dialog                  |
 
 ### Notifications (Hermes → Extension)
 

@@ -34,6 +34,7 @@ pub mod error_codes {
     pub const COMMAND_NOT_FOUND: i32 = -32009;
     pub const COMMAND_TIMEOUT: i32 = -32010;
     pub const VALIDATION_ERROR: i32 = -32011;
+    pub const DIALOG_ERROR: i32 = -32012;
 }
 
 /// Errors that can occur during protocol operations.
@@ -245,6 +246,11 @@ impl RpcError {
     /// Create a window error (-32008).
     pub fn window_error(message: impl Into<String>) -> Self {
         Self::new(error_codes::WINDOW_ERROR, message)
+    }
+
+    /// Create a dialog error (-32012).
+    pub fn dialog_error(message: impl Into<String>) -> Self {
+        Self::new(error_codes::DIALOG_ERROR, message)
     }
 }
 

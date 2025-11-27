@@ -25,6 +25,12 @@ These messages are sent from your extension to Hermes:
 | `editor/setMessage`   | [editor.md](editor.md) | Replace the entire message               |
 | `ui/openWindow`       | [ui.md](ui.md)        | Open a new window with a URL             |
 | `ui/closeWindow`      | [ui.md](ui.md)        | Close a window opened by the extension   |
+| `ui/showMessage`      | [ui.md](ui.md)        | Show info/warning/error message dialog   |
+| `ui/showConfirm`      | [ui.md](ui.md)        | Show yes/no or ok/cancel confirmation    |
+| `ui/openFile`         | [ui.md](ui.md)        | Show file open dialog (single file)      |
+| `ui/openFiles`        | [ui.md](ui.md)        | Show file open dialog (multiple files)   |
+| `ui/saveFile`         | [ui.md](ui.md)        | Show file save dialog                    |
+| `ui/selectDirectory`  | [ui.md](ui.md)        | Show directory selection dialog          |
 
 ### Notifications (Hermes → Extension)
 

@@ -10,7 +10,9 @@ use crate::commands::extensions::editor::{
     handle_get_message, handle_patch_message, handle_set_message,
 };
 use crate::commands::extensions::ui::{
-    close_extension_windows, handle_close_window, handle_open_window, SharedWindowManager,
+    close_extension_windows, handle_close_window, handle_open_file, handle_open_files,
+    handle_open_window, handle_save_file, handle_select_directory, handle_show_confirm,
+    handle_show_message, SharedWindowManager,
 };
 use crate::extensions::process::{
     ExtensionError, ExtensionProcess, InternalMessage, ResponseSender,
@@ -18,8 +20,9 @@ use crate::extensions::process::{
 use crate::extensions::protocol::{ErrorResponse, Request, Response, RpcError};
 use crate::extensions::types::{
     CloseWindowParams, CommandExecuteParams, ExtensionConfig, ExtensionState, GetMessageParams,
-    OpenWindowParams, PatchMessageParams, SchemaOverride, SetMessageParams, ShutdownReason,
-    ToolbarButton,
+    OpenFileParams, OpenFilesParams, OpenWindowParams, PatchMessageParams, SaveFileParams,
+    SchemaOverride, SelectDirectoryParams, SetMessageParams, ShowConfirmParams, ShowMessageParams,
+    ShutdownReason, ToolbarButton,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -627,6 +630,84 @@ async fn handle_extension_request_standalone(
                 .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
 
             let result = handle_close_window(app_handle, ext_id, params, window_manager).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/showMessage" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: ShowMessageParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_show_message(app_handle, params).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/showConfirm" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: ShowConfirmParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_show_confirm(app_handle, params).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/openFile" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: OpenFileParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_open_file(app_handle, params).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/openFiles" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: OpenFilesParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_open_files(app_handle, params).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/saveFile" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: SaveFileParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_save_file(app_handle, params).await?;
+            Ok(Some(Response::new(
+                request.id,
+                serde_json::to_value(result).unwrap(),
+            )))
+        }
+        "ui/selectDirectory" => {
+            let params_value = request
+                .params
+                .ok_or_else(|| RpcError::invalid_params("missing params"))?;
+            let params: SelectDirectoryParams = serde_json::from_value(params_value)
+                .map_err(|e| RpcError::invalid_params(format!("invalid params: {e}")))?;
+
+            let result = handle_select_directory(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
                 serde_json::to_value(result).unwrap(),

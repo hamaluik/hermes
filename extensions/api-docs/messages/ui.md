@@ -1,6 +1,8 @@
 # UI Messages
 
-These messages allow extensions to create user interface elements in Hermes.
+These messages allow extensions to create user interface elements in Hermes, including
+browser windows, message dialogs, confirmation dialogs, and file/directory selection
+dialogs.
 
 ## Direction
 
@@ -536,6 +538,504 @@ def handle_notification(msg):
 
 ---
 
+## ui/showMessage
+
+Shows a system-native message dialog with info, warning, or error styling.
+
+### Request
+
+#### Method
+
+```
+ui/showMessage
+```
+
+#### Parameters
+
+```typescript
+interface ShowMessageParams {
+  /** Message text to display */
+  message: string;
+
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Message kind: "info" | "warning" | "error" (default: "info") */
+  kind?: "info" | "warning" | "error";
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "ui/showMessage",
+  "params": {
+    "message": "Patient data imported successfully.",
+    "title": "Import Complete",
+    "kind": "info"
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface ShowMessageResult {
+  /** Always true (user acknowledged the message) */
+  acknowledged: boolean;
+}
+```
+
+#### Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "acknowledged": true
+  }
+}
+```
+
+---
+
+## ui/showConfirm
+
+Shows a system-native confirmation dialog with yes/no or ok/cancel buttons.
+
+### Request
+
+#### Method
+
+```
+ui/showConfirm
+```
+
+#### Parameters
+
+```typescript
+interface ShowConfirmParams {
+  /** Question or message to display */
+  message: string;
+
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Button style: "yesNo" | "okCancel" (default: "yesNo") */
+  buttons?: "yesNo" | "okCancel";
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "ui/showConfirm",
+  "params": {
+    "message": "Overwrite existing patient data?",
+    "title": "Confirm Overwrite",
+    "buttons": "yesNo"
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface ShowConfirmResult {
+  /** true if user clicked Yes/OK, false if No/Cancel */
+  confirmed: boolean;
+}
+```
+
+#### Success Response (user confirmed)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "confirmed": true
+  }
+}
+```
+
+#### Success Response (user declined)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "confirmed": false
+  }
+}
+```
+
+---
+
+## ui/openFile
+
+Shows a system-native file open dialog for selecting a single file.
+
+### Request
+
+#### Method
+
+```
+ui/openFile
+```
+
+#### Parameters
+
+```typescript
+interface FileFilter {
+  /** Display name for the filter (e.g., "HL7 Files") */
+  name: string;
+
+  /** File extensions without dots (e.g., ["hl7", "txt"]) */
+  extensions: string[];
+}
+
+interface OpenFileParams {
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Starting directory path (optional) */
+  defaultPath?: string;
+
+  /** File filters (optional) */
+  filters?: FileFilter[];
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "ui/openFile",
+  "params": {
+    "title": "Select HL7 Message",
+    "defaultPath": "/Users/user/Documents",
+    "filters": [
+      {"name": "HL7 Files", "extensions": ["hl7", "txt"]},
+      {"name": "All Files", "extensions": ["*"]}
+    ]
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface OpenFileResult {
+  /** Selected file path, or null if cancelled */
+  path: string | null;
+}
+```
+
+#### Success Response (file selected)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "path": "/Users/user/Documents/message.hl7"
+  }
+}
+```
+
+#### Success Response (cancelled)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "path": null
+  }
+}
+```
+
+---
+
+## ui/openFiles
+
+Shows a system-native file open dialog for selecting multiple files.
+
+### Request
+
+#### Method
+
+```
+ui/openFiles
+```
+
+#### Parameters
+
+```typescript
+interface OpenFilesParams {
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Starting directory path (optional) */
+  defaultPath?: string;
+
+  /** File filters (optional) */
+  filters?: FileFilter[];
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "ui/openFiles",
+  "params": {
+    "title": "Select Messages to Import",
+    "filters": [
+      {"name": "HL7 Files", "extensions": ["hl7"]}
+    ]
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface OpenFilesResult {
+  /** Selected file paths, or null if cancelled */
+  paths: string[] | null;
+}
+```
+
+#### Success Response (files selected)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "paths": [
+      "/Users/user/Documents/message1.hl7",
+      "/Users/user/Documents/message2.hl7"
+    ]
+  }
+}
+```
+
+#### Success Response (cancelled)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "paths": null
+  }
+}
+```
+
+---
+
+## ui/saveFile
+
+Shows a system-native file save dialog for selecting a save location.
+
+### Request
+
+#### Method
+
+```
+ui/saveFile
+```
+
+#### Parameters
+
+```typescript
+interface SaveFileParams {
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Starting directory path (optional) */
+  defaultPath?: string;
+
+  /** Default filename (optional) */
+  defaultName?: string;
+
+  /** File filters (optional) */
+  filters?: FileFilter[];
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "ui/saveFile",
+  "params": {
+    "title": "Export Message",
+    "defaultName": "message.hl7",
+    "filters": [
+      {"name": "HL7 Files", "extensions": ["hl7"]}
+    ]
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface SaveFileResult {
+  /** Selected save path, or null if cancelled */
+  path: string | null;
+}
+```
+
+#### Success Response (path selected)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "path": "/Users/user/Documents/exported.hl7"
+  }
+}
+```
+
+#### Success Response (cancelled)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "path": null
+  }
+}
+```
+
+---
+
+## ui/selectDirectory
+
+Shows a system-native directory selection dialog.
+
+### Request
+
+#### Method
+
+```
+ui/selectDirectory
+```
+
+#### Parameters
+
+```typescript
+interface SelectDirectoryParams {
+  /** Dialog title (optional) */
+  title?: string;
+
+  /** Starting directory path (optional) */
+  defaultPath?: string;
+}
+```
+
+#### Example Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "ui/selectDirectory",
+  "params": {
+    "title": "Select Output Folder",
+    "defaultPath": "/Users/user/Documents"
+  }
+}
+```
+
+### Response
+
+#### Result
+
+```typescript
+interface SelectDirectoryResult {
+  /** Selected directory path, or null if cancelled */
+  path: string | null;
+}
+```
+
+#### Success Response (directory selected)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "path": "/Users/user/Documents/exports"
+  }
+}
+```
+
+#### Success Response (cancelled)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "path": null
+  }
+}
+```
+
+---
+
+## Dialog Error Handling
+
+All dialog methods may return a `-32012` (Dialog error) if the system fails to show the
+dialog. User cancellation is NOT an error—dialogs return `null` for paths or `false` for
+confirmations when the user cancels.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32012,
+    "message": "Dialog error",
+    "data": "failed to show message dialog: task panicked"
+  }
+}
+```
+
+---
+
 ## Security Considerations
 
 ### Trust Model
@@ -571,6 +1071,7 @@ Future API versions may add:
 
 - `ui/showNotification` - Show toast notifications
 - `ui/updateWindow` - Change window title, size, or position
+- `ui/showInput` - Text input dialog
 - Additional window events (resized, focused, etc.)
 
 ## Related Documentation
