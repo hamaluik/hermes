@@ -102,7 +102,9 @@ def send_request(method, params):
         else:
             # this is a request from Hermes, we need to handle it
             # (shouldn't happen during our request, but handle it)
-            handle_request(msg)
+            response = handle_message(msg)
+            if response:
+                write_message(response)
 
     return _pending.pop(request_id)
 
@@ -123,7 +125,7 @@ def handle_initialize(request_id, params):
             "version": "1.0.0",
             "description": "A minimal example extension",
             "capabilities": {
-                "commands": True
+                "commands": ["minimal/setPatient"]
             },
             "toolbarButtons": [
                 {
@@ -140,28 +142,22 @@ def handle_initialize(request_id, params):
     }
 
 
-def handle_command(request_id, params):
-    """Handle a command execution request."""
+def handle_command(params):
+    """Handle a command execution notification."""
     command = params.get("command")
     log(f"Executing command: {command}")
 
-    if command == "minimal/setPatient":
-        return handle_set_patient(request_id)
-    else:
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "error": {
-                "code": -32009,
-                "message": "Command not found",
-                "data": f"Unknown command: {command}"
-            }
-        }
+    # check if we recognise this command
+    if command != "minimal/setPatient":
+        log(f"Unknown command: {command}")
+        return
+
+    # execute the command directly
+    execute_set_patient()
 
 
-def handle_set_patient(request_id):
-    """Set a sample patient name in the message."""
-
+def execute_set_patient():
+    """Execute the setPatient command."""
     # patch the message with sample data
     response = send_request("editor/patchMessage", {
         "patches": [
@@ -171,35 +167,16 @@ def handle_set_patient(request_id):
     })
 
     if "error" in response:
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "success": False,
-                "message": f"Failed to patch message: {response['error']['message']}"
-            }
-        }
+        log(f"Failed to patch message: {response['error']['message']}")
+        return
 
     if not response.get("result", {}).get("success"):
         errors = response.get("result", {}).get("errors", [])
         error_msg = errors[0]["message"] if errors else "Unknown error"
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "success": False,
-                "message": f"Patch failed: {error_msg}"
-            }
-        }
+        log(f"Patch failed: {error_msg}")
+        return
 
-    return {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "result": {
-            "success": True,
-            "message": "Patient name set to DOE^JOHN"
-        }
-    }
+    log("Patient name set to DOE^JOHN")
 
 
 def handle_shutdown(request_id, params):
@@ -212,20 +189,28 @@ def handle_shutdown(request_id, params):
     }
 
 
-def handle_request(msg):
-    """Route a request to the appropriate handler."""
+def handle_message(msg):
+    """Route a message to the appropriate handler."""
     method = msg.get("method")
     request_id = msg.get("id")
     params = msg.get("params", {})
 
+    # check if this is a notification (no id field)
+    if request_id is None:
+        # handle notifications
+        if method == "command/execute":
+            handle_command(params)
+        else:
+            log(f"Unknown notification: {method}")
+        return None
+
+    # handle requests (with id field)
     if method == "initialize":
         return handle_initialize(request_id, params)
     elif method == "shutdown":
         response = handle_shutdown(request_id, params)
         write_message(response)
         sys.exit(0)
-    elif method == "command/execute":
-        return handle_command(request_id, params)
     else:
         return {
             "jsonrpc": "2.0",
@@ -252,7 +237,7 @@ def main():
                 log("Connection closed")
                 break
 
-            response = handle_request(msg)
+            response = handle_message(msg)
             if response:
                 write_message(response)
 
@@ -373,38 +358,34 @@ function handleInitialize(requestId, params) {
   };
 }
 
-async function handleCommand(requestId, params) {
+function handleCommand(params) {
   const { command } = params;
   log(`Executing command: ${command}`);
 
-  if (command === 'minimal/setPatient') {
-    const response = await sendRequest('editor/patchMessage', {
-      patches: [
-        { path: 'PID.5.1', value: 'DOE' },
-        { path: 'PID.5.2', value: 'JOHN' }
-      ]
-    });
-
-    if (response.error || !response.result?.success) {
-      return {
-        jsonrpc: '2.0',
-        id: requestId,
-        result: { success: false, message: 'Failed to patch message' }
-      };
-    }
-
-    return {
-      jsonrpc: '2.0',
-      id: requestId,
-      result: { success: true, message: 'Patient name set to DOE^JOHN' }
-    };
+  // check if we recognise this command
+  if (command !== 'minimal/setPatient') {
+    log(`Unknown command: ${command}`);
+    return;
   }
 
-  return {
-    jsonrpc: '2.0',
-    id: requestId,
-    error: { code: -32009, message: 'Command not found' }
-  };
+  // execute the command directly (async)
+  executeSetPatient();
+}
+
+async function executeSetPatient() {
+  const response = await sendRequest('editor/patchMessage', {
+    patches: [
+      { path: 'PID.5.1', value: 'DOE' },
+      { path: 'PID.5.2', value: 'JOHN' }
+    ]
+  });
+
+  if (response.error || !response.result?.success) {
+    log('Failed to patch message');
+    return;
+  }
+
+  log('Patient name set to DOE^JOHN');
 }
 
 function handleShutdown(requestId) {
@@ -413,7 +394,7 @@ function handleShutdown(requestId) {
   process.exit(0);
 }
 
-async function handleMessage(msg) {
+function handleMessage(msg) {
   // check if this is a response to one of our requests
   if (msg.result !== undefined || msg.error !== undefined) {
     const resolver = pending.get(msg.id);
@@ -424,16 +405,26 @@ async function handleMessage(msg) {
     return null;
   }
 
-  // handle incoming request
+  // handle incoming message
   const { method, id, params = {} } = msg;
 
+  // check if this is a notification (no id field)
+  if (id === undefined) {
+    // handle notifications
+    if (method === 'command/execute') {
+      handleCommand(params);
+    } else {
+      log(`Unknown notification: ${method}`);
+    }
+    return null;
+  }
+
+  // handle requests (with id field)
   switch (method) {
     case 'initialize':
       return handleInitialize(id, params);
     case 'shutdown':
       return handleShutdown(id);
-    case 'command/execute':
-      return handleCommand(id, params);
     default:
       return {
         jsonrpc: '2.0',
@@ -450,12 +441,12 @@ async function handleMessage(msg) {
 log('Starting');
 
 process.stdin.setEncoding('utf8');
-process.stdin.on('data', async (chunk) => {
+process.stdin.on('data', (chunk) => {
   buffer += chunk;
   const messages = parseMessages();
 
   for (const msg of messages) {
-    const response = await handleMessage(msg);
+    const response = handleMessage(msg);
     if (response) {
       writeMessage(response);
     }
@@ -539,13 +530,28 @@ response = send_request("editor/patchMessage", {
 })
 ```
 
-### 4. Command Response
+### 4. Fire-and-Forget Commands
+
+Commands use a fire-and-forget model: receive notification, handle it, no response needed.
 
 ```python
-return {
-    "success": True,
-    "message": "Patient name set to DOE^JOHN"
-}
+def handle_command(params):
+    """Handle a command/execute notification."""
+    command = params.get("command")
+    log(f"Executing command: {command}")
+
+    # check if we recognise this command
+    if command != "minimal/setPatient":
+        log(f"Unknown command: {command}")
+        return
+
+    # execute the command directly
+    execute_set_patient()
+
+def execute_set_patient():
+    """Execute the setPatient command."""
+    # ... do work ...
+    log("Patient name set to DOE^JOHN")
 ```
 
 ## Next Steps

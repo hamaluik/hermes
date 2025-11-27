@@ -311,19 +311,9 @@ Unknown command ID:
 
 ### -32010: Command timeout
 
-Command execution took too long:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 12,
-  "error": {
-    "code": -32010,
-    "message": "Command timeout",
-    "data": "Command myExtension/search exceeded 30 second timeout"
-  }
-}
-```
+This error code is **reserved but unused**. Commands use a fire-and-forget model (as
+notifications) and have no timeout constraints. This code is reserved for potential
+future use and should not be used by extensions.
 
 ### -32011: Validation error
 
@@ -451,7 +441,6 @@ Transient issues:
 |--------|---------------------------------------|
 | -32000 | Retry or check configuration          |
 | -32008 | Close other windows, retry            |
-| -32010 | Try again (system may be slow)        |
 
 ### Programming Errors (fix code)
 

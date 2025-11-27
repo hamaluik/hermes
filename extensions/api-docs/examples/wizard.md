@@ -73,7 +73,6 @@ import sys
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
 import socket
 
 # ============================================================================
@@ -562,27 +561,23 @@ def handle_initialize(request_id, params):
     }
 
 
-def handle_command(request_id, params):
-    """Handle command execution."""
+def handle_command(params):
+    """Handle command execution notification."""
     command = params.get("command")
     log(f"Executing command: {command}")
 
-    if command == "wizard/patientLookup":
-        return handle_patient_lookup(request_id)
-    else:
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "error": {
-                "code": -32009,
-                "message": "Command not found",
-                "data": f"Unknown command: {command}"
-            }
-        }
+    # check if we recognise this command
+    if command != "wizard/patientLookup":
+        log(f"Unknown command: {command}")
+        return
+
+    # start async work in background thread
+    thread = threading.Thread(target=execute_patient_lookup)
+    thread.start()
 
 
-def handle_patient_lookup(request_id):
-    """Handle the patient lookup wizard command."""
+def execute_patient_lookup():
+    """Execute the patient lookup wizard asynchronously."""
     global search_result
 
     # reset state
@@ -603,42 +598,24 @@ def handle_patient_lookup(request_id):
         })
 
         if "error" in response:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": f"Failed to open wizard: {response['error']['message']}"
-                }
-            }
+            log(f"Failed to open wizard: {response['error']['message']}")
+            return
 
-        # wait for user interaction (5 minute timeout)
-        search_event.wait(timeout=300)
+        # wait for user interaction
+        search_event.wait(timeout=60)
 
         # process result
         if search_result is None:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {"success": False, "message": "Wizard timed out"}
-            }
+            log("Wizard timed out")
+            return
 
         if search_result.get("cancelled"):
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {"success": False, "message": "Cancelled"}
-            }
+            log("Wizard cancelled")
+            return
 
         if not search_result.get("success"):
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": search_result.get("message", "Lookup failed")
-                }
-            }
+            log(search_result.get("message", "Lookup failed"))
+            return
 
         # populate patient data
         patient = search_result["patient"]
@@ -661,35 +638,16 @@ def handle_patient_lookup(request_id):
         patch_response = send_request("editor/patchMessage", {"patches": patches})
 
         if "error" in patch_response:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": f"Failed to update message: {patch_response['error']['message']}"
-                }
-            }
+            log(f"Failed to update message: {patch_response['error']['message']}")
+            return
 
         if not patch_response.get("result", {}).get("success"):
             errors = patch_response.get("result", {}).get("errors", [])
             if errors:
-                return {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "result": {
-                        "success": False,
-                        "message": f"Patch failed: {errors[0]['message']}"
-                    }
-                }
+                log(f"Patch failed: {errors[0]['message']}")
+                return
 
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "success": True,
-                "message": f"Loaded patient: {patient['firstName']} {patient['lastName']}"
-            }
-        }
+        log(f"Loaded patient: {patient['firstName']} {patient['lastName']}")
 
     finally:
         stop_http_server()
@@ -706,20 +664,28 @@ def handle_shutdown(request_id, params):
     }
 
 
-def handle_request(msg):
-    """Route request to appropriate handler."""
+def handle_message(msg):
+    """Route message to appropriate handler."""
     method = msg.get("method")
     request_id = msg.get("id")
     params = msg.get("params", {})
 
+    # check if this is a notification (no id field)
+    if request_id is None:
+        # handle notifications
+        if method == "command/execute":
+            handle_command(params)
+        else:
+            log(f"Unknown notification: {method}")
+        return None
+
+    # handle requests (with id field)
     if method == "initialize":
         return handle_initialize(request_id, params)
     elif method == "shutdown":
         response = handle_shutdown(request_id, params)
         write_message(response)
         sys.exit(0)
-    elif method == "command/execute":
-        return handle_command(request_id, params)
     else:
         return {
             "jsonrpc": "2.0",
@@ -750,8 +716,8 @@ def main():
                 handle_response(msg)
                 continue
 
-            # handle request
-            response = handle_request(msg)
+            # handle request or notification
+            response = handle_message(msg)
             if response:
                 write_message(response)
 

@@ -36,10 +36,10 @@ PATIENTS = {
             "street": "123 MAIN ST",
             "city": "ANYTOWN",
             "state": "ON",
-            "zip": "A1A 1A1",
+            "zip": "A1A 1A1"
         },
         "phone": "5551234567",
-        "accountNumber": "ACC001234",
+        "accountNumber": "ACC001234"
     },
     "87654321": {
         "mrn": "87654321",
@@ -52,11 +52,11 @@ PATIENTS = {
             "street": "456 OAK AVE",
             "city": "SOMEWHERE",
             "state": "BC",
-            "zip": "V1V 1V1",
+            "zip": "V1V 1V1"
         },
         "phone": "5559876543",
-        "accountNumber": "ACC005678",
-    },
+        "accountNumber": "ACC005678"
+    }
 }
 
 # ============================================================================
@@ -71,7 +71,6 @@ search_event = threading.Event()
 # ============================================================================
 # Message I/O
 # ============================================================================
-
 
 def read_message():
     """Read a JSON-RPC message from stdin."""
@@ -125,9 +124,12 @@ def send_request(method, params):
         _next_id += 1
         _pending[request_id] = threading.Event()
 
-        write_message(
-            {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
-        )
+        write_message({
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params
+        })
 
     # wait for response
     _pending[request_id].wait(timeout=30)
@@ -155,7 +157,6 @@ def handle_response(msg):
 # ============================================================================
 # HTTP Server for Web UI
 # ============================================================================
-
 
 def get_wizard_html():
     """Return the wizard HTML page."""
@@ -438,7 +439,6 @@ def stop_http_server():
 # Handlers
 # ============================================================================
 
-
 def handle_initialize(request_id, params):
     """Handle initialize request."""
     log(f"Initializing with Hermes {params.get('hermesVersion')}")
@@ -453,7 +453,7 @@ def handle_initialize(request_id, params):
             "authors": ["Example Author <author@example.com>"],
             "capabilities": {
                 "commands": ["wizard/patientLookup"],
-                "schemaProvider": True,
+                "schemaProvider": True
             },
             "toolbarButtons": [
                 {
@@ -467,7 +467,7 @@ def handle_initialize(request_id, params):
                         <path d="M8 14h6"/>
                     </svg>""",
                     "command": "wizard/patientLookup",
-                    "group": "wizards",
+                    "group": "wizards"
                 }
             ],
             "schema": {
@@ -477,9 +477,13 @@ def handle_initialize(request_id, params):
                             {
                                 "field": 3,
                                 "component": 1,
-                                "note": "8-digit MRN from Patient Master Index",
+                                "note": "8-digit MRN from Patient Master Index"
                             },
-                            {"field": 3, "component": 4, "template": "MRN"},
+                            {
+                                "field": 3,
+                                "component": 4,
+                                "template": "MRN"
+                            },
                             {
                                 "field": 8,
                                 "note": "Administrative sex",
@@ -487,39 +491,34 @@ def handle_initialize(request_id, params):
                                     "M": "Male",
                                     "F": "Female",
                                     "O": "Other",
-                                    "U": "Unknown",
-                                    "X": "Xenomorph",
-                                },
-                            },
+                                    "U": "Unknown"
+                                }
+                            }
                         ]
                     }
                 }
-            },
-        },
+            }
+        }
     }
 
 
-def handle_command(request_id, params):
-    """Handle command execution."""
+def handle_command(params):
+    """Handle command execution notification."""
     command = params.get("command")
     log(f"Executing command: {command}")
 
-    if command == "wizard/patientLookup":
-        return handle_patient_lookup(request_id)
-    else:
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "error": {
-                "code": -32009,
-                "message": "Command not found",
-                "data": f"Unknown command: {command}",
-            },
-        }
+    # check if we recognise this command
+    if command != "wizard/patientLookup":
+        log(f"Unknown command: {command}")
+        return
+
+    # start async work in background thread
+    thread = threading.Thread(target=execute_patient_lookup)
+    thread.start()
 
 
-def handle_patient_lookup(request_id):
-    """Handle the patient lookup wizard command."""
+def execute_patient_lookup():
+    """Execute the patient lookup wizard asynchronously."""
     global search_result
 
     # reset state
@@ -531,54 +530,33 @@ def handle_patient_lookup(request_id):
 
     try:
         # open wizard window
-        response = send_request(
-            "ui/openWindow",
-            {
-                "url": f"http://127.0.0.1:{port}/wizard",
-                "title": "Patient Lookup",
-                "width": 450,
-                "height": 300,
-                "modal": True,
-            },
-        )
+        response = send_request("ui/openWindow", {
+            "url": f"http://127.0.0.1:{port}/wizard",
+            "title": "Patient Lookup",
+            "width": 450,
+            "height": 300,
+            "modal": True
+        })
 
         if "error" in response:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": f"Failed to open wizard: {response['error']['message']}",
-                },
-            }
+            log(f"Failed to open wizard: {response['error']['message']}")
+            return
 
-        # wait for user interaction (5 minute timeout)
-        search_event.wait(timeout=300)
+        # wait for user interaction
+        search_event.wait(timeout=60)
 
         # process result
         if search_result is None:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {"success": False, "message": "Wizard timed out"},
-            }
+            log("Wizard timed out")
+            return
 
         if search_result.get("cancelled"):
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {"success": False, "message": "Cancelled"},
-            }
+            log("Wizard cancelled")
+            return
 
         if not search_result.get("success"):
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": search_result.get("message", "Lookup failed"),
-                },
-            }
+            log(search_result.get("message", "Lookup failed"))
+            return
 
         # populate patient data
         patient = search_result["patient"]
@@ -601,35 +579,16 @@ def handle_patient_lookup(request_id):
         patch_response = send_request("editor/patchMessage", {"patches": patches})
 
         if "error" in patch_response:
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": {
-                    "success": False,
-                    "message": f"Failed to update message: {patch_response['error']['message']}",
-                },
-            }
+            log(f"Failed to update message: {patch_response['error']['message']}")
+            return
 
         if not patch_response.get("result", {}).get("success"):
             errors = patch_response.get("result", {}).get("errors", [])
             if errors:
-                return {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "result": {
-                        "success": False,
-                        "message": f"Patch failed: {errors[0]['message']}",
-                    },
-                }
+                log(f"Patch failed: {errors[0]['message']}")
+                return
 
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "success": True,
-                "message": f"Loaded patient: {patient['firstName']} {patient['lastName']}",
-            },
-        }
+        log(f"Loaded patient: {patient['firstName']} {patient['lastName']}")
 
     finally:
         stop_http_server()
@@ -639,35 +598,49 @@ def handle_shutdown(request_id, params):
     """Handle shutdown request."""
     log("Shutting down")
     stop_http_server()
-    return {"jsonrpc": "2.0", "id": request_id, "result": {"success": True}}
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "result": {"success": True}
+    }
 
 
-def handle_request(msg):
-    """Route request to appropriate handler."""
+def handle_message(msg):
+    """Route message to appropriate handler."""
     method = msg.get("method")
     request_id = msg.get("id")
     params = msg.get("params", {})
 
+    # check if this is a notification (no id field)
+    if request_id is None:
+        # handle notifications
+        if method == "command/execute":
+            handle_command(params)
+        else:
+            log(f"Unknown notification: {method}")
+        return None
+
+    # handle requests (with id field)
     if method == "initialize":
         return handle_initialize(request_id, params)
     elif method == "shutdown":
         response = handle_shutdown(request_id, params)
         write_message(response)
         sys.exit(0)
-    elif method == "command/execute":
-        return handle_command(request_id, params)
     else:
         return {
             "jsonrpc": "2.0",
             "id": request_id,
-            "error": {"code": -32601, "message": "Method not found"},
+            "error": {
+                "code": -32601,
+                "message": "Method not found"
+            }
         }
 
 
 # ============================================================================
 # Main Loop
 # ============================================================================
-
 
 def main():
     log("Starting")
@@ -684,15 +657,14 @@ def main():
                 handle_response(msg)
                 continue
 
-            # handle request
-            response = handle_request(msg)
+            # handle request or notification
+            response = handle_message(msg)
             if response:
                 write_message(response)
 
         except Exception as e:
             log(f"Error: {e}")
             import traceback
-
             traceback.print_exc(file=sys.stderr)
             break
 

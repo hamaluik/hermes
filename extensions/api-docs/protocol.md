@@ -167,6 +167,7 @@ Extensions send these requests to Hermes:
 | `editor/setMessage`   | Replace the entire message             |
 | `ui/openWindow`       | Open a new browser window              |
 
+
 ## Request IDs
 
 - Both Hermes and extensions maintain their own ID sequences
@@ -200,20 +201,24 @@ Both sides may send multiple requests before receiving responses. Implementation
 
 ### During Command Execution
 
-When handling a `command/execute` request, extensions typically need to make their own requests to Hermes (e.g., `editor/getMessage`). This creates nested request/response cycles:
+Command execution uses a **fire-and-forget** model. When Hermes sends `command/execute`,
+the extension handles it asynchronously without sending a response:
 
 ```
 Hermes                              Extension
   │                                     │
-  │──── command/execute (id:1) ────────>│
+  │──── command/execute (notification)─>│
+  │                                     │
+  │         Extension handles work      │
   │                                     │
   │<─── editor/getMessage (id:1) ───────│
   │                                     │
   │──── getMessage response ───────────>│
   │                                     │
-  │<─── command/execute result (id:1) ──│
-  │                                     │
 ```
+
+This fire-and-forget model allows extensions to perform complex operations—including
+making multiple requests to Hermes—without the overhead of acknowledgement tracking.
 
 ### Notifications During Requests
 
@@ -247,11 +252,12 @@ while waiting_for_response:
 
 ### Hermes Timeouts
 
-| Operation       | Timeout | Behaviour on timeout               |
-|-----------------|---------|-------------------------------------|
-| `initialize`    | 10s     | Extension marked as failed          |
-| `shutdown`      | 5s      | Extension process killed            |
-| `command/*`     | 30s     | Error returned to user              |
+| Operation              | Timeout | Behaviour on timeout               |
+|------------------------|---------|-------------------------------------|
+| `initialize`           | 10s     | Extension marked as failed          |
+| `shutdown`             | 5s      | Extension process killed            |
+
+**Note:** Commands are fire-and-forget notifications and do not have timeout constraints.
 
 ### Extension Timeouts
 

@@ -169,6 +169,8 @@ interface ToolbarButton {
 
 ### CommandExecuteParams
 
+Parameters for the `command/execute` notification sent from Hermes to extensions.
+
 ```typescript
 interface CommandExecuteParams {
   /** Command identifier */
@@ -176,17 +178,11 @@ interface CommandExecuteParams {
 }
 ```
 
-### CommandExecuteResult
-
-```typescript
-interface CommandExecuteResult {
-  /** Whether the command succeeded */
-  success: boolean;
-
-  /** Message to display to user */
-  message?: string;
-}
-```
+**Note:** Commands use a fire-and-forget model. The `command/execute` message is sent as
+a JSON-RPC notification (no `id` field), so no response is expected from the extension.
+However, extensions may subsequently initiate their own requests to Hermes (such as
+`editor/getMessage` or `editor/patchMessage`) while handling the command. Progress and
+errors are communicated via stderr logging.
 
 ---
 

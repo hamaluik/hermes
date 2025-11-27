@@ -182,31 +182,36 @@ In the running state:
 
 ### Command Execution Flow
 
+Commands use a **fire-and-forget** model:
+
 ```
-User clicks         Hermes sends           Extension          Extension
-toolbar button  →  command/execute  →  handles command  →  sends response
-                                              │
-                                              ├── editor/getMessage
-                                              ├── editor/patchMessage
-                                              └── ui/openWindow
+User clicks         Hermes sends          Extension handles
+toolbar button  →  command/execute  →    asynchronously
+                   (notification)              │
+                                               ├── editor/getMessage
+                                               ├── editor/patchMessage
+                                               └── ui/openWindow
 ```
 
 A typical command execution:
 
 1. User clicks a toolbar button
-2. Hermes sends `command/execute` with the command ID
-3. Extension receives the request
-4. Extension may make requests to Hermes (getMessage, patchMessage, etc.)
-5. Extension sends the command result back to Hermes
-6. Hermes displays success/error to user
+2. Hermes sends `command/execute` notification with the command ID
+3. Extension handles the command in the background
+4. Extension can make requests to Hermes during execution
+5. Extension logs progress/errors to stderr
+
+This fire-and-forget model eliminates the need for acknowledgement and result
+tracking, allowing extensions to focus on their core functionality.
 
 ### Concurrent Commands
 
-Extensions may receive multiple `command/execute` requests concurrently. Each command has a unique request ID. Your extension should:
+Extensions may receive multiple `command/execute` notifications concurrently. Your
+extension should:
 
 - Handle commands independently
 - Not assume sequential execution
-- Use request IDs to correlate responses
+- Use threads or async handling for concurrent operations if needed
 
 ### Extension State
 
@@ -322,11 +327,12 @@ write_message({
 
 ### Long-Running Operations
 
-For operations that take a long time, consider:
+The fire-and-forget model naturally supports long-running operations:
 
-1. **Immediate acknowledgment** with a "processing" status
-2. **Progress updates** via stderr logging (not visible to user, but useful for debugging)
-3. **Timeout handling** in your extension
+1. Receive `command/execute` notification
+2. Perform work asynchronously (open windows, query databases, etc.)
+3. Use stderr for progress logging (useful for debugging)
+4. No time limits imposed by Hermes
 
 ### Resource Management
 

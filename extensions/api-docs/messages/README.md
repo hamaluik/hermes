@@ -34,6 +34,7 @@ These notifications are sent from Hermes and do not expect a response:
 |-----------------------|-----------------------|------------------------------------------|
 | `window/closed`       | [ui.md](ui.md)        | A window was closed                      |
 
+
 ## Message Flow Diagrams
 
 ### Startup Sequence
@@ -54,11 +55,15 @@ Hermes                                    Extension
 
 ### Command Execution
 
+Commands use a fire-and-forget model:
+
 ```
 Hermes                                    Extension
   │                                           │
-  │──────── command/execute ─────────────────>│
+  │──────── command/execute (notification) ──>│
   │         {command: "ext/doThing"}          │
+  │                                           │
+  │         Extension handles asynchronously  │
   │                                           │
   │<──────── editor/getMessage ───────────────│
   │          {format: "json"}                 │
@@ -72,8 +77,6 @@ Hermes                                    Extension
   │──────── patchMessage result ─────────────>│
   │         {success: true}                   │
   │                                           │
-  │<──────── command/execute result ──────────│
-  │          {success: true}                  │
 ```
 
 ### Shutdown Sequence
@@ -152,6 +155,6 @@ See [errors.md](../errors.md) for:
 
 - [initialize.md](initialize.md) - Startup handshake
 - [shutdown.md](shutdown.md) - Graceful termination
-- [commands.md](commands.md) - Command execution
+- [commands.md](commands.md) - Command execution (fire-and-forget notifications)
 - [editor.md](editor.md) - Message reading and modification
 - [ui.md](ui.md) - User interface operations

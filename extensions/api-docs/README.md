@@ -98,31 +98,23 @@ When Hermes starts your extension, it sends an `initialize` request. Your extens
 
 ### 3. Handle Commands
 
-When a user clicks your toolbar button, Hermes sends a command request:
+When a user clicks your toolbar button, Hermes sends a command notification. Commands use
+a fire-and-forget model: the extension receives the notification and handles it without
+sending a response.
 
 ```json
-// Request from Hermes
+// Notification from Hermes (no id field)
 {
   "jsonrpc": "2.0",
-  "id": 2,
   "method": "command/execute",
   "params": {
     "command": "myExtension/doSomething"
   }
 }
-```
 
-Your extension can then interact with Hermes (get/set the message) and respond:
-
-```json
-// Response from Extension
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
-    "success": true
-  }
-}
+// Extension handles it internally, no response needed
+// Extension can call editor/getMessage, editor/patchMessage, etc.
+// Extension logs progress/errors to stderr
 ```
 
 ### 4. Configure in Hermes
@@ -178,6 +170,7 @@ Add your extension to Hermes settings:
 | Method                | Description                                      |
 |-----------------------|--------------------------------------------------|
 | `window/closed`       | Notifies when a window is closed                 |
+
 
 ## Design Principles
 
