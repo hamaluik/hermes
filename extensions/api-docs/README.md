@@ -137,9 +137,10 @@ Add your extension to Hermes settings:
 
 | Document                             | Description                                    |
 |--------------------------------------|------------------------------------------------|
+| [Reference](reference.md)            | Consolidated API reference (all messages)      |
 | [Protocol](protocol.md)              | JSON-RPC 2.0 transport specification           |
 | [Lifecycle](lifecycle.md)            | Startup, handshake, runtime, and shutdown      |
-| [Messages](messages/README.md)       | Complete message reference                     |
+| [Messages](messages/README.md)       | Detailed message documentation                 |
 | [Types](types.md)                    | Type definitions for all data structures       |
 | [Schema](schema.md)                  | Schema override format                         |
 | [Errors](errors.md)                  | Error codes and handling                       |
