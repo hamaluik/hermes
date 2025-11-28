@@ -12,11 +12,11 @@ Request (expects response)
 
 ## Parameters
 
-| Field   | Type   | Required | Default    | Description      |
-|---------|--------|----------|------------|------------------|
-| message | string | Yes      | -          | Question text    |
-| title   | string | No       | -          | Dialogue title   |
-| buttons | string | No       | `"yesNo"`  | Button style     |
+| Field   | Type   | Required | Default   | Description    |
+| ------- | ------ | -------- | --------- | -------------- |
+| message | string | Yes      | -         | Question text  |
+| title   | string | No       | -         | Dialogue title |
+| buttons | string | No       | `"yesNo"` | Button style   |
 
 ### Buttons Values
 
@@ -25,9 +25,9 @@ Request (expects response)
 
 ## Response
 
-| Field     | Type    | Required | Description                     |
-|-----------|---------|----------|---------------------------------|
-| confirmed | boolean | Yes      | True if user clicked Yes/OK     |
+| Field     | Type    | Required | Description                 |
+| --------- | ------- | -------- | --------------------------- |
+| confirmed | boolean | Yes      | True if user clicked Yes/OK |
 
 ## Error Codes
 

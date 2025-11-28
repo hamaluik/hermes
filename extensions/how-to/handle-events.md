@@ -337,13 +337,13 @@ def process_pending():
 
 ## Events Summary
 
-| Event             | Trigger                         | Key Fields                   |
-|-------------------|---------------------------------|------------------------------|
-| `message/changed` | Editor content modified         | `hasFile`, `filePath`, `message`* |
-| `message/opened`  | File opened or new message      | `isNew`, `filePath`          |
-| `message/saved`   | Message saved to disk           | `filePath`, `saveAs`         |
+| Event             | Trigger                    | Key Fields                        |
+| ----------------- | -------------------------- | --------------------------------- |
+| `message/changed` | Editor content modified    | `hasFile`, `filePath`, `message`† |
+| `message/opened`  | File opened or new message | `isNew`, `filePath`               |
+| `message/saved`   | Message saved to disk      | `filePath`, `saveAs`              |
 
-\* Only present if `includeContent: true` in subscription options.
+ † Only present if `includeContent: true` in subscription options.
 
 ## Related Documentation
 

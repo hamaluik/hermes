@@ -16,9 +16,9 @@ Request (expects response)
 
 ## Parameters
 
-| Field  | Type   | Required | Description             |
-|--------|--------|----------|-------------------------|
-| reason | string | No       | Why shutdown requested  |
+| Field  | Type   | Required | Description            |
+| ------ | ------ | -------- | ---------------------- |
+| reason | string | No       | Why shutdown requested |
 
 ### Reason Values
 
@@ -29,9 +29,9 @@ Request (expects response)
 
 ## Response
 
-| Field   | Type    | Required | Description                  |
-|---------|---------|----------|------------------------------|
-| success | boolean | Yes      | Shutdown completed cleanly   |
+| Field   | Type    | Required | Description                |
+| ------- | ------- | -------- | -------------------------- |
+| success | boolean | Yes      | Shutdown completed cleanly |
 
 ## Error Codes
 

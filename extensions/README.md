@@ -11,17 +11,17 @@ This documentation follows the [Diátaxis](https://diataxis.fr/) framework,
 organising content by your needs:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│                    Learning-oriented                    │
-│                   ┌────────────────┐                    │
-│                   │   TUTORIALS    │                    │
-│                   │                │                    │
-│    Step-by-step   │ Build your     │ Goal-oriented      │
-│    guides for     │ first          │ recipes for        │
-│    learning       │ extension      │ specific tasks     │
-│                   │                │                    │
-│                   └────────────────┘                    │
+┌────────────────────────────────────────────────────────┐
+│                                                        │
+│                    Learning-oriented                   │
+│                   ┌────────────────┐                   │
+│                   │   TUTORIALS    │                   │
+│                   │                │                   │
+│    Step-by-step   │ Build your     │ Goal-oriented     │
+│    guides for     │ first          │ recipes for       │
+│    learning       │ extension      │ specific tasks    │
+│                   │                │                   │
+│                   └────────────────┘                   │
 │  ┌────────────────┐                ┌────────────────┐  │
 │  │  EXPLANATION   │                │   HOW-TO       │  │
 │  │                │                │   GUIDES       │  │
@@ -30,16 +30,16 @@ organising content by your needs:
 │  │ Schema merging │                │ Manage windows │  │
 │  │                │                │ Handle errors  │  │
 │  └────────────────┘                └────────────────┘  │
-│                   ┌────────────────┐                    │
-│                   │   REFERENCE    │                    │
-│  Understanding-   │                │ Information-       │
-│  oriented         │ API methods    │ oriented           │
-│  concepts         │ Protocol       │ specifications     │
-│                   │ Types          │                    │
-│                   │ Error codes    │                    │
-│                   └────────────────┘                    │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+│                   ┌────────────────┐                   │
+│                   │   REFERENCE    │                   │
+│  Understanding-   │                │ Information-      │
+│  oriented         │ API methods    │ oriented          │
+│  concepts         │ Protocol       │ specifications    │
+│                   │ Types          │                   │
+│                   │ Error codes    │                   │
+│                   └────────────────┘                   │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
 
 ### New to Extensions? Start Here
@@ -83,22 +83,22 @@ type definitions, and schema properties.
 
 ### Complete API Method List
 
-| Method                                                      | Purpose                       |
-|-------------------------------------------------------------|-------------------------------|
-| [initialize](reference/api/initialize.md)                   | Startup handshake             |
-| [shutdown](reference/api/shutdown.md)                       | Graceful termination          |
-| [command/execute](reference/api/command-execute.md)         | Execute command               |
-| [editor/getMessage](reference/api/editor-get-message.md)    | Retrieve current message      |
-| [editor/patchMessage](reference/api/editor-patch-message.md)| Modify specific fields        |
-| [editor/setMessage](reference/api/editor-set-message.md)    | Replace entire message        |
-| [ui/openWindow](reference/api/ui-open-window.md)            | Open browser window           |
-| [ui/closeWindow](reference/api/ui-close-window.md)          | Close window                  |
-| [ui/showMessage](reference/api/ui-show-message.md)          | Display message dialogue      |
-| [ui/showConfirm](reference/api/ui-show-confirm.md)          | Display confirmation dialogue |
-| [ui/openFile](reference/api/ui-open-file.md)                | Single file picker            |
-| [ui/openFiles](reference/api/ui-open-files.md)              | Multiple file picker          |
-| [ui/saveFile](reference/api/ui-save-file.md)                | Save file dialogue            |
-| [ui/selectDirectory](reference/api/ui-select-directory.md)  | Directory picker              |
+| Method                                                       | Purpose                       |
+| ------------------------------------------------------------ | ----------------------------- |
+| [initialize](reference/api/initialize.md)                    | Startup handshake             |
+| [shutdown](reference/api/shutdown.md)                        | Graceful termination          |
+| [command/execute](reference/api/command-execute.md)          | Execute command               |
+| [editor/getMessage](reference/api/editor-get-message.md)     | Retrieve current message      |
+| [editor/patchMessage](reference/api/editor-patch-message.md) | Modify specific fields        |
+| [editor/setMessage](reference/api/editor-set-message.md)     | Replace entire message        |
+| [ui/openWindow](reference/api/ui-open-window.md)             | Open browser window           |
+| [ui/closeWindow](reference/api/ui-close-window.md)           | Close window                  |
+| [ui/showMessage](reference/api/ui-show-message.md)           | Display message dialogue      |
+| [ui/showConfirm](reference/api/ui-show-confirm.md)           | Display confirmation dialogue |
+| [ui/openFile](reference/api/ui-open-file.md)                 | Single file picker            |
+| [ui/openFiles](reference/api/ui-open-files.md)               | Multiple file picker          |
+| [ui/saveFile](reference/api/ui-save-file.md)                 | Save file dialogue            |
+| [ui/selectDirectory](reference/api/ui-select-directory.md)   | Directory picker              |
 
 ## Test Extensions
 

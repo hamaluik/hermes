@@ -27,12 +27,12 @@ You'll add message handling capabilities to that extension.
 
 Hermes can export messages in multiple formats via `editor/getMessage`:
 
-| Format | Best For                                              |
-|--------|-------------------------------------------------------|
-| `hl7`  | Working with raw HL7 text, line-by-line processing    |
-| `json` | Parsing and navigating structure programmatically     |
-| `yaml` | Human-readable export, debugging                      |
-| `toml` | Configuration-style export                            |
+| Format | Best For                                           |
+| ------ | -------------------------------------------------- |
+| `hl7`  | Working with raw HL7 text, line-by-line processing |
+| `json` | Parsing and navigating structure programmatically  |
+| `yaml` | Human-readable export, debugging                   |
+| `toml` | Configuration-style export                         |
 
 For transformations, JSON is usually the best choice—it gives you structured
 access to fields without manual parsing.
@@ -433,11 +433,11 @@ def handle_command(params):
 
 Different approaches for different needs:
 
-| Pattern                   | Best For                               |
-|---------------------------|----------------------------------------|
-| Raw HL7 read/write        | Line-by-line transformations           |
-| JSON read + patchMessage  | Targeted field updates                 |
-| JSON read + setMessage    | Complex restructuring                  |
+x 2025-11-27 | Pattern                  | Best For                     |
+| ------------------------ | ---------------------------- |
+| Raw HL7 read/write       | Line-by-line transformations |
+| JSON read + patchMessage | Targeted field updates       |
+| JSON read + setMessage   | Complex restructuring        |
 
 **When to use each:**
 

@@ -12,10 +12,10 @@ Request (expects response)
 
 ## Parameters
 
-| Field   | Type   | Required | Description       |
-|---------|--------|----------|-------------------|
-| message | string | Yes      | Message content   |
-| format  | string | Yes      | Input format      |
+| Field   | Type   | Required | Description     |
+| ------- | ------ | -------- | --------------- |
+| message | string | Yes      | Message content |
+| format  | string | Yes      | Input format    |
 
 ### Format Values
 
@@ -26,10 +26,10 @@ Request (expects response)
 
 ## Response
 
-| Field   | Type    | Required | Description              |
-|---------|---------|----------|--------------------------|
-| success | boolean | Yes      | Whether message was set  |
-| error   | string  | No       | Error message if failed  |
+| Field   | Type    | Required | Description             |
+| ------- | ------- | -------- | ----------------------- |
+| success | boolean | Yes      | Whether message was set |
+| error   | string  | No       | Error message if failed |
 
 ## Error Codes
 

@@ -342,12 +342,12 @@ def handle_shutdown(request_id, params):
 
 ## Security Best Practices
 
-| Practice                    | Why                                              |
-|-----------------------------|--------------------------------------------------|
-| Bind to `127.0.0.1` only    | Prevents external access to your HTTP server     |
-| Use dynamic port allocation | Avoids conflicts with other services             |
-| Validate all web UI input   | Protects against injection attacks               |
-| Close windows explicitly    | Prevents resource leaks                          |
+| Practice                    | Why                                          |
+| --------------------------- | -------------------------------------------- |
+| Bind to `127.0.0.1` only    | Prevents external access to your HTTP server |
+| Use dynamic port allocation | Avoids conflicts with other services         |
+| Validate all web UI input   | Protects against injection attacks           |
+| Close windows explicitly    | Prevents resource leaks                      |
 
 **Never bind to `0.0.0.0`** - this would expose your extension's HTTP server to
 the network.
@@ -364,12 +364,12 @@ server = HTTPServer(("0.0.0.0", port), Handler)
 
 For richer UIs, consider using:
 
-| Framework     | Notes                                      |
-|---------------|--------------------------------------------|
-| Vanilla HTML  | Simple, no dependencies                    |
-| Alpine.js     | Lightweight reactivity                     |
-| htmx          | Server-driven interactions                 |
-| React/Vue     | Complex UIs (requires build step)          |
+| Framework    | Notes                             |
+| ------------ | --------------------------------- |
+| Vanilla HTML | Simple, no dependencies           |
+| Alpine.js    | Lightweight reactivity            |
+| htmx         | Server-driven interactions        |
+| React/Vue    | Complex UIs (requires build step) |
 
 ## Common Gotchas
 
@@ -420,5 +420,5 @@ finally:
 
 - [Reference: ui/openWindow](../reference/methods.md#uiopenwindow)
 - [Reference: ui/closeWindow](../reference/methods.md#uiclosewindow)
-- [Tutorial: Building a Wizard Extension](../tutorials/wizard-extension.md)
+- [Tutorial: Building a Wizard Extension](../tutorials/wizard-with-ui.md)
 - [How-To: Show Dialogs](show-dialogs.md)

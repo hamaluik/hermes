@@ -384,14 +384,14 @@ Create `test_patient.json`:
 
 ## Dialog Types Summary
 
-| Method               | Purpose                    | User Can Cancel |
-|----------------------|----------------------------|-----------------|
-| `ui/showMessage`     | Show info, warning, error  | No              |
-| `ui/showConfirm`     | Ask yes/no or ok/cancel    | Yes             |
-| `ui/openFile`        | Select a file to open      | Yes             |
-| `ui/openFiles`       | Select multiple files      | Yes             |
-| `ui/saveFile`        | Choose where to save       | Yes             |
-| `ui/selectDirectory` | Choose a folder            | Yes             |
+| Method               | Purpose                   | User Can Cancel |
+| -------------------- | ------------------------- | --------------- |
+| `ui/showMessage`     | Show info, warning, error | No              |
+| `ui/showConfirm`     | Ask yes/no or ok/cancel   | Yes             |
+| `ui/openFile`        | Select a file to open     | Yes             |
+| `ui/openFiles`       | Select multiple files     | Yes             |
+| `ui/saveFile`        | Choose where to save      | Yes             |
+| `ui/selectDirectory` | Choose a folder           | Yes             |
 
 ## What You've Learned
 

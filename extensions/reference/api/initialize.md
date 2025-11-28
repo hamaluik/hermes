@@ -18,38 +18,38 @@ Request (expects response)
 ## Parameters
 
 | Field         | Type   | Required | Description                   |
-|---------------|--------|----------|-------------------------------|
+| ------------- | ------ | -------- | ----------------------------- |
 | hermesVersion | string | Yes      | Hermes application version    |
 | apiVersion    | string | Yes      | Extension API version         |
 | dataDirectory | string | Yes      | Path to Hermes data directory |
 
 ## Response
 
-| Field          | Type             | Required | Description                     |
-|----------------|------------------|----------|---------------------------------|
-| name           | string           | Yes      | Extension display name          |
-| version        | string           | Yes      | Extension version (semver)      |
-| description    | string           | No       | Brief description               |
-| authors        | string[]         | No       | Author names                    |
-| homepage       | string           | No       | URL for more information        |
-| capabilities   | Capabilities     | Yes      | Extension capabilities          |
-| toolbarButtons | ToolbarButton[]  | No       | Toolbar buttons to register     |
-| schema         | SchemaOverride   | No       | Field definition overrides      |
+| Field          | Type            | Required | Description                 |
+| -------------- | --------------- | -------- | --------------------------- |
+| name           | string          | Yes      | Extension display name      |
+| version        | string          | Yes      | Extension version (semver)  |
+| description    | string          | No       | Brief description           |
+| authors        | string[]        | No       | Author names                |
+| homepage       | string          | No       | URL for more information    |
+| capabilities   | Capabilities    | Yes      | Extension capabilities      |
+| toolbarButtons | ToolbarButton[] | No       | Toolbar buttons to register |
+| schema         | SchemaOverride  | No       | Field definition overrides  |
 
 ### Capabilities
 
 | Field          | Type                | Required | Description                        |
-|----------------|---------------------|----------|------------------------------------|
+| -------------- | ------------------- | -------- | ---------------------------------- |
 | commands       | string[]            | No       | Command IDs this extension handles |
 | schemaProvider | boolean             | No       | Whether extension provides schema  |
 | events         | EventSubscription[] | No       | Events to subscribe to             |
 
 ### EventSubscription
 
-| Field   | Type         | Required | Description                            |
-|---------|--------------|----------|----------------------------------------|
-| name    | EventName    | Yes      | Event name to subscribe to             |
-| options | EventOptions | No       | Event-specific options                 |
+| Field   | Type         | Required | Description                |
+| ------- | ------------ | -------- | -------------------------- |
+| name    | EventName    | Yes      | Event name to subscribe to |
+| options | EventOptions | No       | Event-specific options     |
 
 Event names: `message/changed`, `message/opened`, `message/saved`
 
@@ -57,20 +57,20 @@ Event names: `message/changed`, `message/opened`, `message/saved`
 
 Options for `message/changed` only:
 
-| Field          | Type          | Default | Description                |
-|----------------|---------------|---------|----------------------------|
-| includeContent | boolean       | false   | Include message content    |
-| format         | MessageFormat | "hl7"   | Format for content         |
+| Field          | Type          | Default | Description             |
+| -------------- | ------------- | ------- | ----------------------- |
+| includeContent | boolean       | false   | Include message content |
+| format         | MessageFormat | "hl7"   | Format for content      |
 
 ### ToolbarButton
 
-| Field   | Type   | Required | Description                   |
-|---------|--------|----------|-------------------------------|
-| id      | string | Yes      | Unique button identifier      |
-| label   | string | Yes      | Tooltip text                  |
-| icon    | string | Yes      | SVG markup                    |
-| command | string | Yes      | Command ID to execute         |
-| group   | string | No       | Visual grouping               |
+| Field   | Type   | Required | Description              |
+| ------- | ------ | -------- | ------------------------ |
+| id      | string | Yes      | Unique button identifier |
+| label   | string | Yes      | Tooltip text             |
+| icon    | string | Yes      | SVG markup               |
+| command | string | Yes      | Command ID to execute    |
+| group   | string | No       | Visual grouping          |
 
 Icon requirements:
 - Valid SVG

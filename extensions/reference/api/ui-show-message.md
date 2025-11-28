@@ -13,7 +13,7 @@ Request (expects response)
 ## Parameters
 
 | Field   | Type   | Required | Default  | Description      |
-|---------|--------|----------|----------|------------------|
+| ------- | ------ | -------- | -------- | ---------------- |
 | message | string | Yes      | -        | Message text     |
 | title   | string | No       | -        | Dialogue title   |
 | kind    | string | No       | `"info"` | Dialogue styling |
@@ -26,9 +26,9 @@ Request (expects response)
 
 ## Response
 
-| Field        | Type    | Required | Description                      |
-|--------------|---------|----------|----------------------------------|
-| acknowledged | boolean | Yes      | Always true (user clicked OK)    |
+| Field        | Type    | Required | Description                   |
+| ------------ | ------- | -------- | ----------------------------- |
+| acknowledged | boolean | Yes      | Always true (user clicked OK) |
 
 ## Error Codes
 

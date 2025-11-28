@@ -23,15 +23,15 @@ Subsequent tutorials reference the first and show only the new additions.
 
 ## Available Tutorials
 
-| Tutorial                                              | Difficulty   | Description                                       |
-|-------------------------------------------------------|--------------|---------------------------------------------------|
-| [Your First Extension](first-extension.md)            | Beginner     | Build a minimal extension with one toolbar button |
-| [Adding Toolbar Buttons](toolbar-buttons.md)          | Beginner     | Multiple buttons with custom SVG icons            |
-| [Using Dialogs](dialogs.md)                           | Beginner     | Show messages, confirmations, and file dialogs    |
-| [Working with Messages](working-with-messages.md)     | Intermediate | Read and modify HL7 messages in the editor        |
-| [Responding to Events](responding-to-events.md)       | Intermediate | React to open, save, and change events            |
-| [Building a Wizard with UI](wizard-with-ui.md)        | Advanced     | Create a multi-step extension with a web UI       |
-| [Providing Schema Overrides](schema-overrides.md)     | Advanced     | Customise field validation for your organisation  |
+| Tutorial                                          | Difficulty   | Description                                       |
+| ------------------------------------------------- | ------------ | ------------------------------------------------- |
+| [Your First Extension](first-extension.md)        | Beginner     | Build a minimal extension with one toolbar button |
+| [Adding Toolbar Buttons](toolbar-buttons.md)      | Beginner     | Multiple buttons with custom SVG icons            |
+| [Using Dialogs](dialogs.md)                       | Beginner     | Show messages, confirmations, and file dialogs    |
+| [Working with Messages](working-with-messages.md) | Intermediate | Read and modify HL7 messages in the editor        |
+| [Responding to Events](responding-to-events.md)   | Intermediate | React to open, save, and change events            |
+| [Building a Wizard with UI](wizard-with-ui.md)    | Advanced     | Create a multi-step extension with a web UI       |
+| [Providing Schema Overrides](schema-overrides.md) | Advanced     | Customise field validation for your organisation  |
 
 ## Suggested Learning Path
 
@@ -59,14 +59,14 @@ from Your First Extension" and shows only the new additions needed.
 The [test-extensions](../test-extensions/) directory contains focused scripts
 that exercise specific API features:
 
-| Extension             | Purpose                                      |
-|-----------------------|----------------------------------------------|
-| `echo.py`             | Minimal extension for protocol testing       |
-| `dialogs.py`          | Tests all dialog API methods                 |
-| `editor-ops.py`       | Tests message read/write operations          |
-| `events.py`           | Tests event notification subscriptions       |
-| `schema-override.py`  | Tests schema merging behaviour               |
-| `windows.py`          | Tests window management API                  |
+| Extension            | Purpose                                |
+| -------------------- | -------------------------------------- |
+| `echo.py`            | Minimal extension for protocol testing |
+| `dialogs.py`         | Tests all dialog API methods           |
+| `editor-ops.py`      | Tests message read/write operations    |
+| `events.py`          | Tests event notification subscriptions |
+| `schema-override.py` | Tests schema merging behaviour         |
+| `windows.py`         | Tests window management API            |
 
 These are useful for understanding individual APIs but lack the step-by-step
 explanations that tutorials provide.

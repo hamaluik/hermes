@@ -4,26 +4,26 @@ Quick lookup reference for the Hermes Extension API.
 
 ## API Methods
 
-| Method                | Direction          | Type         | Purpose                       |
-|-----------------------|--------------------|--------------|-------------------------------|
-| initialize            | Hermes→Extension   | Request      | Startup handshake             |
-| shutdown              | Hermes→Extension   | Request      | Graceful termination          |
-| command/execute       | Hermes→Extension   | Notification | Execute command               |
-| window/closed         | Hermes→Extension   | Notification | Window closed event           |
-| message/changed       | Hermes→Extension   | Notification | Editor content changed        |
-| message/opened        | Hermes→Extension   | Notification | File opened/created           |
-| message/saved         | Hermes→Extension   | Notification | File saved to disk            |
-| editor/getMessage     | Extension→Hermes   | Request      | Retrieve current message      |
-| editor/patchMessage   | Extension→Hermes   | Request      | Modify specific fields        |
-| editor/setMessage     | Extension→Hermes   | Request      | Replace entire message        |
-| ui/openWindow         | Extension→Hermes   | Request      | Open browser window           |
-| ui/closeWindow        | Extension→Hermes   | Request      | Close window                  |
-| ui/showMessage        | Extension→Hermes   | Request      | Display message dialogue      |
-| ui/showConfirm        | Extension→Hermes   | Request      | Display confirmation dialogue |
-| ui/openFile           | Extension→Hermes   | Request      | Single file picker            |
-| ui/openFiles          | Extension→Hermes   | Request      | Multiple file picker          |
-| ui/saveFile           | Extension→Hermes   | Request      | Save file dialogue            |
-| ui/selectDirectory    | Extension→Hermes   | Request      | Directory picker              |
+| Method              | Direction        | Type         | Purpose                       |
+| ------------------- | ---------------- | ------------ | ----------------------------- |
+| initialize          | Hermes→Extension | Request      | Startup handshake             |
+| shutdown            | Hermes→Extension | Request      | Graceful termination          |
+| command/execute     | Hermes→Extension | Notification | Execute command               |
+| window/closed       | Hermes→Extension | Notification | Window closed event           |
+| message/changed     | Hermes→Extension | Notification | Editor content changed        |
+| message/opened      | Hermes→Extension | Notification | File opened/created           |
+| message/saved       | Hermes→Extension | Notification | File saved to disk            |
+| editor/getMessage   | Extension→Hermes | Request      | Retrieve current message      |
+| editor/patchMessage | Extension→Hermes | Request      | Modify specific fields        |
+| editor/setMessage   | Extension→Hermes | Request      | Replace entire message        |
+| ui/openWindow       | Extension→Hermes | Request      | Open browser window           |
+| ui/closeWindow      | Extension→Hermes | Request      | Close window                  |
+| ui/showMessage      | Extension→Hermes | Request      | Display message dialogue      |
+| ui/showConfirm      | Extension→Hermes | Request      | Display confirmation dialogue |
+| ui/openFile         | Extension→Hermes | Request      | Single file picker            |
+| ui/openFiles        | Extension→Hermes | Request      | Multiple file picker          |
+| ui/saveFile         | Extension→Hermes | Request      | Save file dialogue            |
+| ui/selectDirectory  | Extension→Hermes | Request      | Directory picker              |
 
 ## Reference Documents
 

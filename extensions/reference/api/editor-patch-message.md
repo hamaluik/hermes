@@ -12,28 +12,28 @@ Request (expects response)
 
 ## Parameters
 
-| Field   | Type    | Required | Description               |
-|---------|---------|----------|---------------------------|
-| patches | Patch[] | Yes      | List of patches to apply  |
+| Field   | Type    | Required | Description              |
+| ------- | ------- | -------- | ------------------------ |
+| patches | Patch[] | Yes      | List of patches to apply |
 
 ### Patch
 
-| Field  | Type    | Required | Description                           |
-|--------|---------|----------|---------------------------------------|
-| path   | string  | Yes      | HL7 path (e.g., `PID.5.1`, `OBX[2].3`)|
-| value  | string  | No       | New value (omit to clear)             |
-| remove | boolean | No       | Remove entire segment                 |
-| create | boolean | No       | Create segment if missing             |
+| Field  | Type    | Required | Description                            |
+| ------ | ------- | -------- | -------------------------------------- |
+| path   | string  | Yes      | HL7 path (e.g., `PID.5.1`, `OBX[2].3`) |
+| value  | string  | No       | New value (omit to clear)              |
+| remove | boolean | No       | Remove entire segment                  |
+| create | boolean | No       | Create segment if missing              |
 
 ### Path Syntax (1-based)
 
-| Pattern      | Description                     | Example    |
-|--------------|---------------------------------|------------|
-| `SEG.F`      | Field F of segment              | `PID.5`    |
-| `SEG.F.C`    | Component C of field F          | `PID.5.1`  |
-| `SEG.F.C.S`  | Subcomponent S                  | `PID.5.1.1`|
-| `SEG[N].F`   | Field F of Nth segment          | `OBX[2].5` |
-| `SEG.F[N]`   | Nth repetition of field F       | `PID.13[2]`|
+| Pattern     | Description               | Example     |
+| ----------- | ------------------------- | ----------- |
+| `SEG.F`     | Field F of segment        | `PID.5`     |
+| `SEG.F.C`   | Component C of field F    | `PID.5.1`   |
+| `SEG.F.C.S` | Subcomponent S            | `PID.5.1.1` |
+| `SEG[N].F`  | Field F of Nth segment    | `OBX[2].5`  |
+| `SEG.F[N]`  | Nth repetition of field F | `PID.13[2]` |
 
 ### Patch Operations
 
@@ -45,7 +45,7 @@ Request (expects response)
 ## Response
 
 | Field          | Type         | Required | Description                 |
-|----------------|--------------|----------|-----------------------------|
+| -------------- | ------------ | -------- | --------------------------- |
 | success        | boolean      | Yes      | All patches applied?        |
 | patchesApplied | number       | Yes      | Count of successful patches |
 | errors         | PatchError[] | No       | Details for failed patches  |
@@ -53,7 +53,7 @@ Request (expects response)
 ### PatchError
 
 | Field   | Type   | Required | Description         |
-|---------|--------|----------|---------------------|
+| ------- | ------ | -------- | ------------------- |
 | index   | number | Yes      | 0-based patch index |
 | path    | string | Yes      | Path that failed    |
 | message | string | Yes      | Error description   |

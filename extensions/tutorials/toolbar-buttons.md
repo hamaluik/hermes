@@ -1,7 +1,7 @@
 # Tutorial: Adding Toolbar Buttons
 
-This tutorial builds on [Your First Extension](first-extension.md) to add multiple
-toolbar buttons with custom SVG icons.
+This tutorial builds on [Your First Extension](first-extension.md) to add
+multiple toolbar buttons with custom SVG icons.
 
 ## What You'll Build
 
@@ -56,7 +56,8 @@ You can find free icons at [Lucide](https://lucide.dev/) or
 
 ## Step 2: Register Both Buttons
 
-Update your `handle_initialize()` function to register both commands and buttons:
+Update your `handle_initialize()` function to register both commands and
+buttons:
 
 ```python
 def handle_initialize(request_id, params):
@@ -203,8 +204,8 @@ The patches are applied atomically—either all succeed or all fail.
 
 ## Going Further: Conditional Logic
 
-Make the fill button smarter by only filling empty fields. Update `execute_fill()`
-to read the message first:
+Make the fill button smarter by only filling empty fields. Update
+`execute_fill()` to read the message first:
 
 ```python
 def execute_fill():

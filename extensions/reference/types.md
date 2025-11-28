@@ -466,11 +466,11 @@ interface SegmentOverride {
 
 Field overrides use three-state semantics:
 
-| JSON Value | Meaning                           |
-|------------|-----------------------------------|
-| Absent     | Inherit from base schema          |
-| `null`     | Explicitly unset (remove value)   |
-| Value      | Override with this value          |
+| JSON Value | Meaning                         |
+| ---------- | ------------------------------- |
+| Absent     | Inherit from base schema        |
+| `null`     | Explicitly unset (remove value) |
+| Value      | Override with this value        |
 
 ```typescript
 interface FieldOverride {

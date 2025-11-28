@@ -7,7 +7,7 @@ Communication occurs over stdio using JSON-RPC 2.0.
 ### Channel Assignment
 
 | Stream | Direction          | Purpose                     |
-|--------|--------------------|-----------------------------|
+| ------ | ------------------ | --------------------------- |
 | stdin  | Hermes → Extension | Incoming requests/responses |
 | stdout | Extension → Hermes | Outgoing requests/responses |
 | stderr | Extension only     | Debug logging (not parsed)  |
@@ -146,9 +146,9 @@ presence of `result`/`error` (response) vs `method` (notification/request).
 
 ## Timeouts
 
-| Operation  | Timeout | On Timeout                   |
-|------------|---------|------------------------------|
-| initialize | 10s     | Extension marked as failed   |
-| shutdown   | 5s      | Process killed (SIGKILL)     |
+| Operation  | Timeout | On Timeout                 |
+| ---------- | ------- | -------------------------- |
+| initialize | 10s     | Extension marked as failed |
+| shutdown   | 5s      | Process killed (SIGKILL)   |
 
 Commands (fire-and-forget notifications) have no timeout.

@@ -12,14 +12,14 @@ Request (expects response)
 
 ## Parameters
 
-| Field     | Type    | Required | Default | Description                      |
-|-----------|---------|----------|---------|----------------------------------|
-| url       | string  | Yes      | -       | URL to load (http:// or https://)|
-| title     | string  | Yes      | -       | Window title                     |
-| width     | number  | No       | 800     | Width in pixels                  |
-| height    | number  | No       | 600     | Height in pixels                 |
-| modal     | boolean | No       | false   | Block main window interaction    |
-| resizable | boolean | No       | true    | Allow window resizing            |
+| Field     | Type    | Required | Default | Description                       |
+| --------- | ------- | -------- | ------- | --------------------------------- |
+| url       | string  | Yes      | -       | URL to load (http:// or https://) |
+| title     | string  | Yes      | -       | Window title                      |
+| width     | number  | No       | 800     | Width in pixels                   |
+| height    | number  | No       | 600     | Height in pixels                  |
+| modal     | boolean | No       | false   | Block main window interaction     |
+| resizable | boolean | No       | true    | Allow window resizing             |
 
 ### URL Requirements
 
@@ -29,7 +29,7 @@ Request (expects response)
 ## Response
 
 | Field    | Type   | Required | Description              |
-|----------|--------|----------|--------------------------|
+| -------- | ------ | -------- | ------------------------ |
 | windowId | string | Yes      | Unique window identifier |
 
 ## Error Codes

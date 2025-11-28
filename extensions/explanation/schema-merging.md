@@ -68,12 +68,12 @@ extension later specifies `{M, F, O}`, that extension's values win.
 
 Within a single field, properties merge at the property level:
 
-| Scenario                          | Result                               |
-|-----------------------------------|--------------------------------------|
-| Base: `name: "Sex"`<br>Override: `note: "Required"` | Both `name` and `note` are present |
-| Base: `maxlength: 1`<br>Override: `maxlength: 10` | `maxlength: 10` wins |
-| Base: `values: {M, F}`<br>Override: `values: {M, F, U}` | `values: {M, F, U}` wins |
-| Base: `note: "Standard"`<br>Override: `note: null` | `note` is removed (see Nullable below) |
+| Scenario                                                | Result                                 |
+| ------------------------------------------------------- | -------------------------------------- |
+| Base: `name: "Sex"`<br>Override: `note: "Required"`     | Both `name` and `note` are present     |
+| Base: `maxlength: 1`<br>Override: `maxlength: 10`       | `maxlength: 10` wins                   |
+| Base: `values: {M, F}`<br>Override: `values: {M, F, U}` | `values: {M, F, U}` wins               |
+| Base: `note: "Standard"`<br>Override: `note: null`      | `note` is removed (see Nullable below) |
 
 Properties that exist in the base but aren't mentioned in the override are
 preserved. Properties that exist in the override replace base values.

@@ -357,13 +357,13 @@ you want to change:
 
 ## Common Validation Patterns
 
-| Pattern               | Matches                      |
-|-----------------------|------------------------------|
-| `^[0-9]+$`            | Digits only                  |
-| `^[A-Z]{2}[0-9]{6}$`  | 2 letters + 6 digits         |
-| `^[A-Za-z ]+$`        | Letters and spaces           |
-| `^\d{4}-\d{2}-\d{2}$` | ISO date (YYYY-MM-DD)        |
-| `^[0-9]{8}$`          | Exactly 8 digits             |
+| Pattern               | Matches               |
+| --------------------- | --------------------- |
+| `^[0-9]+$`            | Digits only           |
+| `^[A-Z]{2}[0-9]{6}$`  | 2 letters + 6 digits  |
+| `^[A-Za-z ]+$`        | Letters and spaces    |
+| `^\d{4}-\d{2}-\d{2}$` | ISO date (YYYY-MM-DD) |
+| `^[0-9]{8}$`          | Exactly 8 digits      |
 
 ## Merging Behaviour
 
@@ -409,13 +409,13 @@ To override the entire field (all components), omit `component`:
 
 ## Use Cases
 
-| Use Case                          | Properties to Use                    |
-|-----------------------------------|--------------------------------------|
-| Add help text                     | `note`                               |
-| Restrict to allowed values        | `values`                             |
-| Set up templates                  | `template`                           |
-| Add validation                    | `required`, `minlength`, `maxlength`, `pattern` |
-| Handle dates                      | `datatype`                           |
+| Use Case                   | Properties to Use                               |
+| -------------------------- | ----------------------------------------------- |
+| Add help text              | `note`                                          |
+| Restrict to allowed values | `values`                                        |
+| Set up templates           | `template`                                      |
+| Add validation             | `required`, `minlength`, `maxlength`, `pattern` |
+| Handle dates               | `datatype`                                      |
 
 ## Linking to External Documentation
 
@@ -432,6 +432,6 @@ all values:
 
 ## Related Documentation
 
-- [Reference: Schema Format](../reference/schema.md)
+- [Reference: Schema Properties](../reference/schema-properties.md)
 - [Explanation: Schema Merging](../explanation/schema-merging.md)
 - [Tutorial: Building Your First Extension](../tutorials/first-extension.md)

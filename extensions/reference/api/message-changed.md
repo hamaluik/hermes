@@ -53,7 +53,7 @@ To receive message content with each notification:
 ## Parameters
 
 | Field    | Type          | Required | Description                              |
-|----------|---------------|----------|------------------------------------------|
+| -------- | ------------- | -------- | ---------------------------------------- |
 | message  | string        | No       | Message content (if includeContent=true) |
 | format   | MessageFormat | No       | Format of message (if included)          |
 | hasFile  | boolean       | Yes      | Whether message has an associated file   |
@@ -61,10 +61,10 @@ To receive message content with each notification:
 
 ### Subscription Options
 
-| Option         | Type          | Default | Description                                     |
-|----------------|---------------|---------|-------------------------------------------------|
-| includeContent | boolean       | false   | Include message content                         |
-| format         | MessageFormat | "hl7"   | Format when includeContent is true              |
+| Option         | Type          | Default | Description                        |
+| -------------- | ------------- | ------- | ---------------------------------- |
+| includeContent | boolean       | false   | Include message content            |
+| format         | MessageFormat | "hl7"   | Format when includeContent is true |
 
 ## Response
 

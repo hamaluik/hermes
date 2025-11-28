@@ -22,8 +22,9 @@ An "Activity Tracker" extension that:
 
 ## Prerequisites
 
-Start with the complete code from [Working with Messages](working-with-messages.md).
-You'll add event handling to that foundation.
+Start with the complete code from [Working with
+Messages](working-with-messages.md). You'll add event handling to that
+foundation.
 
 ## Why Events?
 
@@ -248,7 +249,7 @@ def handle_initialize(request_id, params):
 The `events` array lists which notifications you want to receive:
 
 | Event             | When Sent                                    |
-|-------------------|----------------------------------------------|
+| ----------------- | -------------------------------------------- |
 | `message/opened`  | File opened via File > Open or drag-and-drop |
 | `message/saved`   | Message saved to disk (including auto-save)  |
 | `message/changed` | Editor content modified (debounced 500ms)    |
@@ -478,12 +479,12 @@ def handle_message_changed(params):
 
 Available formats:
 
-| Format | Best For                                          |
-|--------|---------------------------------------------------|
-| `hl7`  | Raw HL7 text, line-by-line processing             |
-| `json` | Parsing structure, field access in JavaScript     |
-| `yaml` | Human-readable debugging                          |
-| `toml` | Configuration-style access                        |
+| Format | Best For                                      |
+| ------ | --------------------------------------------- |
+| `hl7`  | Raw HL7 text, line-by-line processing         |
+| `json` | Parsing structure, field access in JavaScript |
+| `yaml` | Human-readable debugging                      |
+| `toml` | Configuration-style access                    |
 
 **When to use `includeContent`:**
 - Extension always processes every change → include content (saves round-trip)
@@ -645,18 +646,18 @@ def handle_message(msg):
 Your extension now reacts to editor activity in real-time:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Hermes                                                      │
-│                                                             │
-│  User opens file ─────────► message/opened ─────►┐          │
-│                                                  │          │
-│  User types ──(500ms)────► message/changed ─────►├──► Extension
-│                                                  │          │
-│  User saves ──────────────► message/saved ──────►┘          │
-│                                                             │
-│  User clicks [📈] ────────► command/execute ────►   (shows  │
-│                                                     dialog) │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Hermes                                                          │
+│                                                                 │
+│  User opens file ─────────► message/opened ─────►┐              │
+│                                                  │              │
+│  User types ──(500ms)────► message/changed ─────►├──► Extension │
+│                                                  │              │
+│  User saves ──────────────► message/saved ──────►┘              │
+│                                                                 │
+│  User clicks [📈] ────────► command/execute ────►   (shows      │
+│                                                     dialog)     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Complete Code

@@ -1,8 +1,9 @@
 # Tutorial: Providing Schema Overrides
 
-In this advanced tutorial, you'll learn how to customise Hermes' field definitions
-by providing schema overrides. You'll build an extension that adds organisation-
-specific validation rules, allowed values, and help text for HL7 fields.
+In this advanced tutorial, you'll learn how to customise Hermes' field
+definitions by providing schema overrides. You'll build an extension that adds
+organisation- specific validation rules, allowed values, and help text for HL7
+fields.
 
 ## What You'll Build
 
@@ -208,15 +209,15 @@ HOSPITAL_SCHEMA = {
 
 **Field properties explained:**
 
-| Property     | Effect                                              |
-|--------------|-----------------------------------------------------|
-| `note`       | Help text shown when hovering over the field        |
-| `required`   | Field must have a value; validation error if empty  |
-| `minlength`  | Minimum character count                             |
-| `maxlength`  | Maximum character count                             |
-| `pattern`    | Regular expression the value must match             |
-| `placeholder`| Grey text shown in empty input fields               |
-| `template`   | Default value when creating new messages            |
+| Property      | Effect                                             |
+| ------------- | -------------------------------------------------- |
+| `note`        | Help text shown when hovering over the field       |
+| `required`    | Field must have a value; validation error if empty |
+| `minlength`   | Minimum character count                            |
+| `maxlength`   | Maximum character count                            |
+| `pattern`     | Regular expression the value must match            |
+| `placeholder` | Grey text shown in empty input fields              |
+| `template`    | Default value when creating new messages           |
 
 ## Step 5: Add Allowed Values (Dropdowns)
 
@@ -784,20 +785,20 @@ if __name__ == "__main__":
 
 ## Schema Properties Reference
 
-| Property      | Type     | Description                                    |
-|---------------|----------|------------------------------------------------|
-| `field`       | number   | 1-based field number within segment            |
-| `component`   | number   | 1-based component number (optional)            |
-| `name`        | string   | Display name override                          |
-| `note`        | string   | Help text shown on hover                       |
-| `required`    | boolean  | Whether field must have a value                |
-| `minlength`   | number   | Minimum character count                        |
-| `maxlength`   | number   | Maximum character count                        |
-| `pattern`     | string   | Regular expression for validation              |
-| `placeholder` | string   | Grey text shown in empty fields                |
-| `template`    | string   | Default value for new messages                 |
-| `datatype`    | string   | "date" or "datetime" for date handling         |
-| `values`      | object   | Code→description mapping for dropdowns         |
+| Property      | Type    | Description                            |
+| ------------- | ------- | -------------------------------------- |
+| `field`       | number  | 1-based field number within segment    |
+| `component`   | number  | 1-based component number (optional)    |
+| `name`        | string  | Display name override                  |
+| `note`        | string  | Help text shown on hover               |
+| `required`    | boolean | Whether field must have a value        |
+| `minlength`   | number  | Minimum character count                |
+| `maxlength`   | number  | Maximum character count                |
+| `pattern`     | string  | Regular expression for validation      |
+| `placeholder` | string  | Grey text shown in empty fields        |
+| `template`    | string  | Default value for new messages         |
+| `datatype`    | string  | "date" or "datetime" for date handling |
+| `values`      | object  | Code→description mapping for dropdowns |
 
 ## Merging Behaviour
 
@@ -1162,20 +1163,20 @@ You now know how to:
 
 ## Common Patterns
 
-| Use Case                           | Properties to Use                          |
-|------------------------------------|--------------------------------------------|
-| Add help text                      | `note`                                     |
-| Restrict to a list of values       | `values`                                   |
-| Set defaults for new messages      | `template`                                 |
-| Make a field mandatory             | `required`                                 |
-| Validate format                    | `pattern`, `minlength`, `maxlength`        |
-| Enable date handling               | `datatype`                                 |
-| Show hints in empty fields         | `placeholder`                              |
+| Use Case                      | Properties to Use                   |
+| ----------------------------- | ----------------------------------- |
+| Add help text                 | `note`                              |
+| Restrict to a list of values  | `values`                            |
+| Set defaults for new messages | `template`                          |
+| Make a field mandatory        | `required`                          |
+| Validate format               | `pattern`, `minlength`, `maxlength` |
+| Enable date handling          | `datatype`                          |
+| Show hints in empty fields    | `placeholder`                       |
 
 ## Next Steps
 
-Congratulations! You've completed all the Hermes extension tutorials. You now have
-the skills to build sophisticated extensions.
+Congratulations! You've completed all the Hermes extension tutorials. You now
+have the skills to build sophisticated extensions.
 
 Explore these resources next:
 

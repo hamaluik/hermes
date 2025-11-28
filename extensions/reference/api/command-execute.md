@@ -16,9 +16,9 @@ None (fire-and-forget)
 
 ## Parameters
 
-| Field   | Type   | Required | Description              |
-|---------|--------|----------|--------------------------|
-| command | string | Yes      | Command ID to execute    |
+| Field   | Type   | Required | Description           |
+| ------- | ------ | -------- | --------------------- |
+| command | string | Yes      | Command ID to execute |
 
 ## Response
 

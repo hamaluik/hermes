@@ -32,7 +32,7 @@ Extensions must subscribe to this event via the `events` array in their
 ## Parameters
 
 | Field    | Type    | Required | Description               |
-|----------|---------|----------|---------------------------|
+| -------- | ------- | -------- | ------------------------- |
 | filePath | string  | Yes      | Path where file was saved |
 | saveAs   | boolean | Yes      | True if Save As operation |
 

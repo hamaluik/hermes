@@ -16,9 +16,9 @@ None (notification)
 
 ## Parameters
 
-| Field    | Type   | Required | Description                        |
-|----------|--------|----------|------------------------------------|
-| windowId | string | Yes      | ID of the window that was closed   |
+| Field    | Type   | Required | Description                      |
+| -------- | ------ | -------- | -------------------------------- |
+| windowId | string | Yes      | ID of the window that was closed |
 
 ## Response
 

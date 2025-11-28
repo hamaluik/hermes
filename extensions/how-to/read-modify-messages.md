@@ -105,13 +105,13 @@ else:
 
 ### Path Syntax Examples
 
-| Path           | Description                                  |
-|----------------|----------------------------------------------|
-| `PID.5`        | Entire patient name field                    |
-| `PID.5.1`      | Family name component                        |
-| `PID.5.1.1`    | Family name subcomponent                     |
-| `OBX[2].5`     | Observation value in second OBX segment      |
-| `PID.13[2]`    | Second repetition of phone number            |
+| Path        | Description                             |
+| ----------- | --------------------------------------- |
+| `PID.5`     | Entire patient name field               |
+| `PID.5.1`   | Family name component                   |
+| `PID.5.1.1` | Family name subcomponent                |
+| `OBX[2].5`  | Observation value in second OBX segment |
+| `PID.13[2]` | Second repetition of phone number       |
 
 ## Clear Field Values
 
@@ -288,7 +288,7 @@ if not response["result"]["success"]:
 ## Format Comparison
 
 | Format | Best For                                          |
-|--------|---------------------------------------------------|
+| ------ | ------------------------------------------------- |
 | `hl7`  | Direct manipulation, sending via MLLP, inspection |
 | `json` | Programmatic access, complex transformations      |
 | `yaml` | Human-readable inspection, configuration          |

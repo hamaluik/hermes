@@ -20,7 +20,8 @@ programme—it hasn't yet communicated with Hermes or declared its capabilities.
 **What's happening:**
 - Operating system creates a new process
 - stdin/stdout/stderr are connected to pipes
-- Environment variables are set (HERMES_VERSION, HERMES_API_VERSION, HERMES_DATA_DIR)
+- Environment variables are set (HERMES_VERSION, HERMES_API_VERSION,
+  HERMES_DATA_DIR)
 - Extension process begins executing
 
 **Extension responsibilities:**
@@ -73,10 +74,10 @@ command notifications and make requests to Hermes.
 
 **Bidirectional communication:**
 
-| Direction           | Message Types                                        |
-|---------------------|------------------------------------------------------|
-| Hermes → Extension  | `command/execute` notifications                      |
-| Extension → Hermes  | `editor/getMessage`, `editor/patchMessage`, `editor/setMessage`, `ui/openWindow`, `ui/closeWindow`, `ui/showMessage`, etc. |
+| Direction          | Message Types                                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Hermes → Extension | `command/execute` notifications                                                                                            |
+| Extension → Hermes | `editor/getMessage`, `editor/patchMessage`, `editor/setMessage`, `ui/openWindow`, `ui/closeWindow`, `ui/showMessage`, etc. |
 
 **Fire-and-forget commands:** When a user clicks a toolbar button, Hermes
 sends a `command/execute` notification (no `id` field). The extension handles

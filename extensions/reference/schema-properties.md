@@ -65,7 +65,7 @@ Field property reference for schema overrides.
 Common patterns:
 
 | Pattern               | Matches              |
-|-----------------------|----------------------|
+| --------------------- | -------------------- |
 | `^[0-9]+$`            | Digits only          |
 | `^[A-Z]{2}[0-9]{6}$`  | 2 letters + 6 digits |
 | `^[A-Za-z ]+$`        | Letters and spaces   |
@@ -123,7 +123,7 @@ Common patterns:
 All optional properties support three states:
 
 | JSON Value | Meaning                          |
-|------------|----------------------------------|
+| ---------- | -------------------------------- |
 | Absent     | Inherit from base schema         |
 | `null`     | Explicitly unset inherited value |
 | Value      | Override with this value         |
@@ -169,13 +169,13 @@ Two-pass matching algorithm:
 
 ### Property Merging
 
-| Scenario                    | Result                           |
-|-----------------------------|----------------------------------|
-| Property in both            | Extension value overrides base   |
-| Property only in extension  | Added to field                   |
-| Property only in base       | Preserved unchanged              |
-| Property set to `null`      | Inherited value removed          |
-| Property absent in override | Inherited value preserved        |
+| Scenario                    | Result                         |
+| --------------------------- | ------------------------------ |
+| Property in both            | Extension value overrides base |
+| Property only in extension  | Added to field                 |
+| Property only in base       | Preserved unchanged            |
+| Property set to `null`      | Inherited value removed        |
+| Property absent in override | Inherited value preserved      |
 
 ## Validation Properties
 

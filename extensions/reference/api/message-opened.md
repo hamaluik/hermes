@@ -31,10 +31,10 @@ Extensions must subscribe to this event via the `events` array in their
 
 ## Parameters
 
-| Field    | Type    | Required | Description                              |
-|----------|---------|----------|------------------------------------------|
-| filePath | string  | No       | Path to opened file (omitted if new)     |
-| isNew    | boolean | Yes      | True if new/untitled message             |
+| Field    | Type    | Required | Description                          |
+| -------- | ------- | -------- | ------------------------------------ |
+| filePath | string  | No       | Path to opened file (omitted if new) |
+| isNew    | boolean | Yes      | True if new/untitled message         |
 
 ## Response
 

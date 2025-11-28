@@ -368,14 +368,14 @@ def load_patient_from_file():
 
 ## Dialog Types Summary
 
-| Dialog Type          | Use Case                              | User Can Cancel |
-|----------------------|---------------------------------------|-----------------|
-| `ui/showMessage`     | Show information, warnings, errors    | No              |
-| `ui/showConfirm`     | Ask yes/no or ok/cancel question      | Yes             |
-| `ui/openFile`        | Select a single file to open          | Yes             |
-| `ui/openFiles`       | Select multiple files to open         | Yes             |
-| `ui/saveFile`        | Choose where to save a file           | Yes             |
-| `ui/selectDirectory` | Choose a directory                    | Yes             |
+| Dialog Type          | Use Case                           | User Can Cancel |
+| -------------------- | ---------------------------------- | --------------- |
+| `ui/showMessage`     | Show information, warnings, errors | No              |
+| `ui/showConfirm`     | Ask yes/no or ok/cancel question   | Yes             |
+| `ui/openFile`        | Select a single file to open       | Yes             |
+| `ui/openFiles`       | Select multiple files to open      | Yes             |
+| `ui/saveFile`        | Choose where to save a file        | Yes             |
+| `ui/selectDirectory` | Choose a directory                 | Yes             |
 
 ## Related Documentation
 

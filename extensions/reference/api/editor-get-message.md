@@ -12,9 +12,9 @@ Request (expects response)
 
 ## Parameters
 
-| Field  | Type   | Required | Description     |
-|--------|--------|----------|-----------------|
-| format | string | Yes      | Output format   |
+| Field  | Type   | Required | Description   |
+| ------ | ------ | -------- | ------------- |
+| format | string | Yes      | Output format |
 
 ### Format Values
 
@@ -26,7 +26,7 @@ Request (expects response)
 ## Response
 
 | Field    | Type    | Required | Description                         |
-|----------|---------|----------|-------------------------------------|
+| -------- | ------- | -------- | ----------------------------------- |
 | message  | string  | Yes      | Message content in requested format |
 | hasFile  | boolean | Yes      | Whether a file is currently open    |
 | filePath | string  | No       | File path if open                   |

@@ -407,18 +407,18 @@ def show_user_error(error):
 
 ## Error Code Quick Reference
 
-| Code   | Category    | Typical Resolution                    |
-|--------|-------------|---------------------------------------|
-| -32003 | User        | Open a message first                  |
-| -32005 | User        | Fix the path syntax                   |
-| -32006 | User        | Use a path that exists                |
-| -32011 | User        | Use a valid value                     |
-| -32000 | System      | Retry or check configuration          |
-| -32008 | System      | Close other windows, retry            |
-| -32001 | Programming | Wait for initialise before commands   |
-| -32002 | Programming | Don't call initialise twice           |
-| -32601 | Programming | Check method name spelling            |
-| -32602 | Programming | Check parameter types                 |
+| Code   | Category    | Typical Resolution                  |
+| ------ | ----------- | ----------------------------------- |
+| -32003 | User        | Open a message first                |
+| -32005 | User        | Fix the path syntax                 |
+| -32006 | User        | Use a path that exists              |
+| -32011 | User        | Use a valid value                   |
+| -32000 | System      | Retry or check configuration        |
+| -32008 | System      | Close other windows, retry          |
+| -32001 | Programming | Wait for initialise before commands |
+| -32002 | Programming | Don't call initialise twice         |
+| -32601 | Programming | Check method name spelling          |
+| -32602 | Programming | Check parameter types               |
 
 ## Related Documentation
 

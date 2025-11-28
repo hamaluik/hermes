@@ -12,25 +12,24 @@ Request (expects response)
 
 ## Parameters
 
-| Field       | Type         | Required | Description          |
-|-------------|--------------|----------|----------------------|
-| title       | string       | No       | Dialogue title       |
-| defaultPath | string       | No       | Starting directory   |
-| filters     | FileFilter[] | No       | File type filters    |
+| Field       | Type         | Required | Description        |
+| ----------- | ------------ | -------- | ------------------ |
+| title       | string       | No       | Dialogue title     |
+| defaultPath | string       | No       | Starting directory |
+| filters     | FileFilter[] | No       | File type filters  |
 
 ### FileFilter
 
-| Field      | Type     | Required | Description                          |
-|------------|----------|----------|--------------------------------------|
-| name       | string   | Yes      | Display name (e.g., "HL7 Files")     |
+| Field      | Type     | Required | Description                                      |
+| ---------- | -------- | -------- | ------------------------------------------------ |
+| name       | string   | Yes      | Display name (e.g., "HL7 Files")                 |
 | extensions | string[] | Yes      | Extensions without dots (e.g., `["hl7", "txt"]`) |
 
 ## Response
 
 | Field | Type   | Required | Description                         |
-|-------|--------|----------|-------------------------------------|
+| ----- | ------ | -------- | ----------------------------------- |
 | path  | string | Yes      | Selected path, or null if cancelled |
-
 ## Error Codes
 
 - `-32012` Dialogue error (failed to show dialogue)
