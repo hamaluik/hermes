@@ -686,10 +686,7 @@ pub fn generate_template_message(
     template_name: &str,
     state: State<'_, AppData>,
 ) -> Result<String, String> {
-    let schema = state
-        .schema
-        .get_messages()
-        .map_err(|e| format!("Failed to load messages schema: {e:#}"))?;
+    let schema = state.schema.get_messages();
 
     let segments = schema
         .message

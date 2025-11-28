@@ -36,7 +36,7 @@
 
 use color_eyre::{eyre::Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 /// Field data type for special handling.
 ///
@@ -100,24 +100,16 @@ struct Fields {
 }
 
 impl Field {
-    /// Load field definitions from a TOML segment schema file.
-    ///
-    /// This method is intentionally synchronous (not async) to avoid requiring a Mutex
-    /// around the entire SchemaCache, which would defeat the purpose of using RwLock
-    /// for concurrent access. File I/O is relatively fast, so blocking is acceptable here.
+    /// Parse field definitions from TOML content.
     ///
     /// # Arguments
-    /// * `path` - Path to the segment schema TOML file
+    /// * `contents` - TOML string content
     ///
     /// # Returns
     /// * `Ok(Vec<Field>)` - Parsed field definitions
-    /// * `Err` - Failed to read or parse the TOML file
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Vec<Self>> {
-        let path = path.as_ref();
-        let contents = std::fs::read_to_string(path)
-            .wrap_err_with(|| format!("Failed to read file {:?}", path.display()))?;
-        let fields: Fields = toml::from_str(&contents)
-            .wrap_err_with(|| format!("Failed to parse file {:?}", path.display()))?;
+    /// * `Err` - Failed to parse the TOML content
+    pub fn parse(contents: &str) -> Result<Vec<Self>> {
+        let fields: Fields = toml::from_str(contents).wrap_err("failed to parse segment schema")?;
         Ok(fields.fields)
     }
 }

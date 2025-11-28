@@ -23,7 +23,7 @@
 
 use color_eyre::{eyre::Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 /// Map of segment names to their schema file paths (relative to data directory).
 pub type SegmentPaths = HashMap<String, String>;
@@ -57,20 +57,17 @@ pub struct MessagesSchema {
 }
 
 impl MessagesSchema {
-    /// Load a messages schema from a TOML file.
+    /// Parse a messages schema from TOML content.
     ///
     /// # Arguments
-    /// * `path` - Path to the messages.toml file
+    /// * `contents` - TOML string content
     ///
     /// # Returns
     /// * `Ok(MessagesSchema)` - Parsed schema
-    /// * `Err` - Failed to read or parse the TOML file
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-        let contents = std::fs::read_to_string(path)
-            .wrap_err_with(|| format!("Failed to read file {:?}", path.display()))?;
-        let schema: MessagesSchema = toml::from_str(&contents)
-            .wrap_err_with(|| format!("Failed to parse file {:?}", path.display()))?;
+    /// * `Err` - Failed to parse the TOML content
+    pub fn parse(contents: &str) -> Result<Self> {
+        let schema: MessagesSchema =
+            toml::from_str(contents).wrap_err("failed to parse messages schema")?;
         Ok(schema)
     }
 }

@@ -523,10 +523,7 @@ fn validate_message_structure(
         msg_type.to_lowercase(),
         trigger_event.to_lowercase()
     );
-    let messages_schema = match state.schema.get_messages() {
-        Ok(s) => s,
-        Err(_) => return,
-    };
+    let messages_schema = state.schema.get_messages();
 
     let message_def = match messages_schema.message.get(&message_key) {
         Some(def) => def,

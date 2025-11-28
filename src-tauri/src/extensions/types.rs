@@ -1030,6 +1030,7 @@ mod tests {
             capabilities: Capabilities {
                 commands: vec!["test/command".to_string()],
                 schema_provider: false,
+                events: vec![],
             },
             toolbar_buttons: vec![],
             schema: None,

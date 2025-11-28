@@ -1,6 +1,6 @@
 [package]
 name = "hermes"
-version = "0.1.0"
+version = "1.0.0-alpha.1"
 description = "An HL7 messaging tool"
 authors = ["Kenton Hamaluik <kenton@hamaluik.ca>"]
 edition = "2021"
@@ -30,7 +30,7 @@ serde_yml = "0.0.12"
 hl7-parser = { version = "0.3.0", features = ["jiff", "serde"] }
 log = { version = "0.4.27", features = ["kv"] }
 tauri-plugin-log = "2"
-hl7-definitions = { git = "https://github.com/hamaluik/hl7-definitions.git", version = "0.0.2" }
+hl7-definitions = { git = "https://github.com/hamaluik/hl7-definitions.git", version = "0.0.3" }
 jiff = { version = "0.2.10", features = ["serde"] }
 toml = { version = "0.8.20", features = ["preserve_order"] }
 color-eyre = "0.6.3"

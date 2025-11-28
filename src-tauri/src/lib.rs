@@ -201,8 +201,7 @@ pub fn run() {
                 extensions::ExtensionHost::new(app.handle().clone(), data_dir, hermes_version);
 
             let app_data = AppData {
-                schema: SchemaCache::new("messages.toml")
-                    .wrap_err_with(|| "Failed to load messages schema from messages.toml")?,
+                schema: SchemaCache::new().wrap_err("failed to initialise schema cache")?,
                 listen_join: Mutex::new(None),
                 extension_host: Mutex::new(extension_host),
                 editor_message: Arc::new(Mutex::new(String::new())),

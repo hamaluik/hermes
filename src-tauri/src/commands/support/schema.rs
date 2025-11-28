@@ -14,12 +14,11 @@
 //! 3. **Enable autocomplete**: Field names and valid values can be suggested based
 //!    on schema metadata
 //!
-//! # Caching Behavior
+//! # Embedded Schemas
 //!
-//! Both commands access the SchemaCache in AppData, which:
-//! * Loads schemas from TOML files on first access
-//! * Caches parsed schemas in memory
-//! * Automatically reloads when files are modified (hot-reload during development)
+//! Schemas are embedded at compile time from TOML files in `data/`. The SchemaCache
+//! parses these once at startup and caches them in memory. Extension overrides can
+//! modify the effective schema at runtime.
 
 use crate::{
     schema::{message::MessagesSchema, segment::Field},
@@ -70,11 +69,6 @@ pub fn get_segment_schema(segment: &str, state: State<'_, AppData>) -> Result<Ve
 /// * Validate message structure before sending
 /// * Provide autocomplete suggestions for new segments
 ///
-/// # Hot-Reload Support
-///
-/// If messages.toml is modified while the application is running, this command
-/// will automatically return the updated schema on the next call (no restart needed).
-///
 /// # Arguments
 /// * `state` - Application state containing the schema cache
 ///
@@ -83,9 +77,5 @@ pub fn get_segment_schema(segment: &str, state: State<'_, AppData>) -> Result<Ve
 /// * `Err(String)` - Failed to load or parse the messages.toml file
 #[tauri::command]
 pub fn get_messages_schema(state: State<'_, AppData>) -> Result<MessagesSchema, String> {
-    state
-        .schema
-        .get_messages()
-        .wrap_err_with(|| "Failed to load messages schema")
-        .map_err(|e| format!("{e:#}"))
+    Ok(state.schema.get_messages())
 }
