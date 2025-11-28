@@ -19,8 +19,8 @@ use crate::extensions::types::{
     CloseWindowParams, CloseWindowResult, ConfirmButtons, MessageKind, OpenFileParams,
     OpenFileResult, OpenFilesParams, OpenFilesResult, OpenWindowParams, OpenWindowResult,
     SaveFileParams, SaveFileResult, SelectDirectoryParams, SelectDirectoryResult,
-    ShowConfirmParams, ShowConfirmResult, ShowMessageParams, ShowMessageResult,
-    WindowClosedParams, WindowClosedReason,
+    ShowConfirmParams, ShowConfirmResult, ShowMessageParams, ShowMessageResult, WindowClosedParams,
+    WindowClosedReason,
 };
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -8,8 +8,8 @@ use crate::extensions::protocol::{
     RequestId, Response, RpcError,
 };
 use crate::extensions::types::{
-    ExtensionConfig, ExtensionLog, ExtensionMetadata, ExtensionState, InitializeParams,
-    InitializeResult, LogLevel, ShutdownParams, ShutdownReason,
+    EventName, EventSubscription, ExtensionConfig, ExtensionLog, ExtensionMetadata, ExtensionState,
+    InitializeParams, InitializeResult, LogLevel, ShutdownParams, ShutdownReason,
 };
 use jiff::Timestamp;
 use std::collections::{HashMap, VecDeque};
@@ -293,6 +293,18 @@ impl ExtensionProcess {
     /// Get the extension metadata (available after initialization).
     pub async fn metadata(&self) -> Option<ExtensionMetadata> {
         self.metadata.lock().await.clone()
+    }
+
+    /// Get the event subscription for a specific event, if subscribed.
+    pub async fn get_event_subscription(&self, event: EventName) -> Option<EventSubscription> {
+        let metadata = self.metadata.lock().await;
+        metadata
+            .as_ref()?
+            .capabilities
+            .events
+            .iter()
+            .find(|sub| sub.name == event)
+            .cloned()
     }
 
     /// Add a log entry.

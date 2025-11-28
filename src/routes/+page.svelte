@@ -114,8 +114,10 @@
     getExtensionToolbarButtons,
     getExtensions,
     sendExtensionCommand,
+    syncEditorMessage,
     type ToolbarButtonInfo,
     type ExtensionStatus,
+    type MessageEvent,
   } from "$lib/extensions/extensions";
   import DOMPurify from "dompurify";
 
@@ -226,8 +228,8 @@
    * Sync message to backend for extension access.
    * Fire-and-forget - errors are logged but don't block.
    */
-  function syncMessage(msg: string) {
-    invoke("sync_editor_message", { message: msg }).catch((e) =>
+  function syncMessage(msg: string, event?: MessageEvent) {
+    syncEditorMessage(msg, currentFilePath ?? null, event).catch((e) =>
       console.error("failed to sync editor message:", e)
     );
   }
@@ -906,7 +908,7 @@
       if (newMessage) {
         message = newMessage;
         savedMessage = message;
-        syncMessage(message);
+        syncMessage(message, { type: "opened", isNew: true });
       }
     });
   }
@@ -955,7 +957,7 @@
     savedMessage = message;
     currentFilePath = filePath;
     data.settings.addRecentFile(filePath);
-    syncMessage(message);
+    syncMessage(message, { type: "opened", isNew: false });
   }
 
   let handleSave = $derived.by(() => {
@@ -969,6 +971,7 @@
       })
         .then(() => {
           savedMessage = message;
+          syncMessage(message, { type: "saved", saveAs: false });
         })
         .catch((error) => {
           console.error("Error saving file:", error);
@@ -1111,6 +1114,7 @@
       .then(() => {
         savedMessage = message;
         data.settings.addRecentFile(filePath);
+        syncMessage(message, { type: "saved", saveAs: true });
       })
       .catch((error) => {
         console.error("Error saving file:", error);

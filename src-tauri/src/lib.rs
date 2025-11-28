@@ -59,6 +59,9 @@ pub struct AppData {
     /// Wrapped in Arc so it can be shared with extension request handlers.
     pub editor_message: Arc<Mutex<String>>,
 
+    /// Current editor file path, synced from frontend.
+    pub editor_file_path: Mutex<Option<String>>,
+
     /// Reference to the Save menu item for dynamic enable/disable.
     pub save_menu_item: MenuItem<Wry>,
 
@@ -203,6 +206,7 @@ pub fn run() {
                 listen_join: Mutex::new(None),
                 extension_host: Mutex::new(extension_host),
                 editor_message: Arc::new(Mutex::new(String::new())),
+                editor_file_path: Mutex::new(None),
                 save_menu_item: menu_items.save_menu_item,
                 auto_save_menu_item: menu_items.auto_save_menu_item,
                 undo_menu_item: menu_items.undo_menu_item,

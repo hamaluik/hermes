@@ -256,6 +256,10 @@ pub struct Capabilities {
     /// Whether the extension provides schema overrides.
     #[serde(default, rename = "schemaProvider")]
     pub schema_provider: bool,
+
+    /// Events the extension wants to subscribe to.
+    #[serde(default)]
+    pub events: Vec<EventSubscription>,
 }
 
 /// Toolbar button definition from an extension.
@@ -541,6 +545,105 @@ pub enum ShutdownReason {
 pub struct CommandExecuteParams {
     /// Command identifier to execute.
     pub command: String,
+}
+
+// ============================================================================
+// Message event types
+// ============================================================================
+
+/// Event names that extensions can subscribe to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::enum_variant_names)]
+pub enum EventName {
+    #[serde(rename = "message/changed")]
+    MessageChanged,
+    #[serde(rename = "message/opened")]
+    MessageOpened,
+    #[serde(rename = "message/saved")]
+    MessageSaved,
+}
+
+/// Options for `message/changed` event subscription.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct MessageChangedOptions {
+    /// Include message content in notifications.
+    #[serde(default, rename = "includeContent")]
+    pub include_content: bool,
+
+    /// Format for message content (defaults to HL7).
+    #[serde(default)]
+    pub format: Option<MessageFormat>,
+}
+
+/// Event subscription from extension capabilities.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventSubscription {
+    /// Event name to subscribe to.
+    pub name: EventName,
+
+    /// Event-specific options (only for `message/changed`).
+    #[serde(default)]
+    pub options: Option<MessageChangedOptions>,
+}
+
+/// Parameters for `message/changed` notification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageChangedParams {
+    /// Message content (if subscriber requested `includeContent`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+
+    /// Format of the message content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<MessageFormat>,
+
+    /// Whether the message has an associated file.
+    #[serde(rename = "hasFile")]
+    pub has_file: bool,
+
+    /// File path if the message is saved.
+    #[serde(rename = "filePath", skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+}
+
+/// Parameters for `message/opened` notification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageOpenedParams {
+    /// File path (omitted if new/untitled message).
+    #[serde(rename = "filePath", skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+
+    /// True if this is a new/untitled message.
+    #[serde(rename = "isNew")]
+    pub is_new: bool,
+}
+
+/// Parameters for `message/saved` notification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageSavedParams {
+    /// Path where the file was saved.
+    #[serde(rename = "filePath")]
+    pub file_path: String,
+
+    /// True if this was a Save As operation.
+    #[serde(rename = "saveAs")]
+    pub save_as: bool,
+}
+
+/// Event type passed from frontend to `sync_editor_message` command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MessageEvent {
+    /// Message was opened from file or created new.
+    Opened {
+        #[serde(rename = "is_new")]
+        is_new: bool,
+    },
+    /// Message was saved to file.
+    Saved {
+        #[serde(rename = "save_as")]
+        save_as: bool,
+    },
 }
 
 // ============================================================================

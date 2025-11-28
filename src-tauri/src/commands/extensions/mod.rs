@@ -15,7 +15,7 @@ pub mod editor;
 pub mod ui;
 
 use crate::extensions::host::{ExtensionStatus, ToolbarButtonInfo};
-use crate::extensions::types::{ExtensionConfig, ExtensionLog};
+use crate::extensions::types::{ExtensionConfig, ExtensionLog, MessageEvent};
 use crate::AppData;
 use tauri::State;
 
@@ -94,12 +94,48 @@ pub async fn send_extension_command(
 
 /// Sync the current editor message content from frontend to backend.
 ///
-/// Called by the frontend whenever the message changes, this keeps a copy
-/// of the current editor state in AppData for synchronous access by extensions.
+/// Called by the frontend whenever the message changes. Updates the stored editor
+/// state and triggers extension notifications based on the event type:
+/// - No event: schedules a debounced `message/changed` notification
+/// - `opened`: sends immediate `message/opened` notification
+/// - `saved`: sends immediate `message/saved` notification
 #[tauri::command]
-pub async fn sync_editor_message(message: String, state: State<'_, AppData>) -> Result<(), String> {
-    let mut editor_msg = state.editor_message.lock().await;
-    *editor_msg = message;
+pub async fn sync_editor_message(
+    message: String,
+    file_path: Option<String>,
+    event: Option<MessageEvent>,
+    state: State<'_, AppData>,
+) -> Result<(), String> {
+    // update stored message
+    {
+        let mut editor_msg = state.editor_message.lock().await;
+        *editor_msg = message;
+    }
+
+    // update stored file path
+    {
+        let mut path = state.editor_file_path.lock().await;
+        *path = file_path.clone();
+    }
+
+    // notify extensions based on event type
+    let mut host = state.extension_host.lock().await;
+    match event {
+        Some(MessageEvent::Opened { is_new }) => {
+            host.notify_message_opened(file_path.as_deref(), is_new)
+                .await;
+        }
+        Some(MessageEvent::Saved { save_as }) => {
+            if let Some(path) = &file_path {
+                host.notify_message_saved(path, save_as).await;
+            }
+        }
+        None => {
+            // normal message change - schedule debounced notification
+            host.schedule_message_changed_notification();
+        }
+    }
+
     Ok(())
 }
 

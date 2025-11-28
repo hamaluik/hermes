@@ -102,6 +102,15 @@ export interface ToolbarButtonInfo {
 export type LogLevel = "info" | "warn" | "error";
 
 /**
+ * Message event type for sync_editor_message command.
+ *
+ * Used to inform extensions about message lifecycle events.
+ */
+export type MessageEvent =
+  | { type: "opened"; isNew: boolean }
+  | { type: "saved"; saveAs: boolean };
+
+/**
  * Log entry from an extension.
  */
 export interface ExtensionLog {
@@ -177,6 +186,34 @@ export async function getExtensionLogs(
   extensionId: string,
 ): Promise<ExtensionLog[]> {
   return invoke("get_extension_logs", { extensionId });
+}
+
+/**
+ * Sync the current editor message content to the backend.
+ *
+ * Called whenever the message changes to keep the backend in sync for extension
+ * access. Optionally includes event information for opened/saved notifications.
+ *
+ * @param message - Current message content
+ * @param filePath - Current file path (null for unsaved messages)
+ * @param event - Optional event type (opened or saved)
+ */
+export async function syncEditorMessage(
+  message: string,
+  filePath: string | null,
+  event?: MessageEvent,
+): Promise<void> {
+  // convert frontend event format to backend format
+  const eventParam = event
+    ? event.type === "opened"
+      ? { opened: { is_new: event.isNew } }
+      : { saved: { save_as: event.saveAs } }
+    : null;
+  return invoke("sync_editor_message", {
+    message,
+    filePath,
+    event: eventParam,
+  });
 }
 
 // ============================================================================

@@ -5,6 +5,7 @@
 //! - Routing commands to the appropriate extension
 //! - Aggregating toolbar buttons from all extensions
 //! - Handling requests from extensions (editor/*, ui/*)
+//! - Sending event notifications to subscribed extensions
 
 use crate::commands::extensions::editor::{
     handle_get_message, handle_patch_message, handle_set_message,
@@ -19,14 +20,16 @@ use crate::extensions::process::{
 };
 use crate::extensions::protocol::{ErrorResponse, Request, Response, RpcError};
 use crate::extensions::types::{
-    CloseWindowParams, CommandExecuteParams, ExtensionConfig, ExtensionState, GetMessageParams,
-    OpenFileParams, OpenFilesParams, OpenWindowParams, PatchMessageParams, SaveFileParams,
-    SchemaOverride, SelectDirectoryParams, SetMessageParams, ShowConfirmParams, ShowMessageParams,
-    ShutdownReason, ToolbarButton,
+    CloseWindowParams, CommandExecuteParams, EventName, ExtensionConfig, ExtensionState,
+    GetMessageParams, MessageChangedOptions, MessageChangedParams, MessageFormat,
+    MessageOpenedParams, MessageSavedParams, OpenFileParams, OpenFilesParams, OpenWindowParams,
+    PatchMessageParams, SaveFileParams, SchemaOverride, SelectDirectoryParams, SetMessageParams,
+    ShowConfirmParams, ShowMessageParams, ShutdownReason, ToolbarButton,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
@@ -90,6 +93,9 @@ pub struct ExtensionHost {
     ///
     /// One task per extension, consuming from the extension's incoming_rx channel.
     request_handler_tasks: HashMap<String, JoinHandle<()>>,
+
+    /// Handle for the debounced message/changed notification timer.
+    message_changed_timer: Option<JoinHandle<()>>,
 }
 
 impl ExtensionHost {
@@ -103,6 +109,7 @@ impl ExtensionHost {
             toolbar_buttons: Vec::new(),
             merged_schema: None,
             request_handler_tasks: HashMap::new(),
+            message_changed_timer: None,
         }
     }
 
@@ -461,6 +468,119 @@ impl ExtensionHost {
         }
     }
 
+    // ========================================================================
+    // Message event notifications
+    // ========================================================================
+
+    /// Schedule a debounced `message/changed` notification.
+    ///
+    /// Cancels any pending timer and starts a new 500ms timer. When the timer
+    /// fires, `send_message_changed_notifications` is called to notify all
+    /// subscribed extensions.
+    pub fn schedule_message_changed_notification(&mut self) {
+        // cancel existing timer
+        if let Some(handle) = self.message_changed_timer.take() {
+            handle.abort();
+        }
+
+        let app_handle = self.app_handle.clone();
+
+        self.message_changed_timer = Some(tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            // re-acquire the lock and send notifications
+            let state = app_handle.state::<crate::AppData>();
+            let mut host = state.extension_host.lock().await;
+            host.send_message_changed_notifications().await;
+        }));
+    }
+
+    /// Send `message/changed` notifications to all subscribed extensions.
+    ///
+    /// Called by the debounce timer after 500ms of no changes.
+    async fn send_message_changed_notifications(&mut self) {
+        // get current editor state
+        let state = self.app_handle.state::<crate::AppData>();
+        let message = state.editor_message.lock().await.clone();
+        let file_path = state.editor_file_path.lock().await.clone();
+
+        for (ext_id, ext) in self.extensions.iter_mut() {
+            if !ext.state().await.is_running() {
+                continue;
+            }
+
+            if let Some(subscription) = ext.get_event_subscription(EventName::MessageChanged).await
+            {
+                let params = build_message_changed_params(
+                    &message,
+                    file_path.as_deref(),
+                    subscription.options.as_ref(),
+                );
+
+                if let Ok(params_value) = serde_json::to_value(&params) {
+                    if let Err(e) = ext.send_notification("message/changed", params_value).await {
+                        log::debug!("failed to send message/changed to {ext_id}: {e}");
+                    }
+                }
+            }
+        }
+
+        // clear the timer handle since we've fired
+        self.message_changed_timer = None;
+    }
+
+    /// Send `message/opened` notification to all subscribed extensions.
+    pub async fn notify_message_opened(&mut self, file_path: Option<&str>, is_new: bool) {
+        for (ext_id, ext) in self.extensions.iter_mut() {
+            if !ext.state().await.is_running() {
+                continue;
+            }
+
+            if ext
+                .get_event_subscription(EventName::MessageOpened)
+                .await
+                .is_some()
+            {
+                let params = MessageOpenedParams {
+                    file_path: file_path.map(String::from),
+                    is_new,
+                };
+
+                if let Ok(params_value) = serde_json::to_value(&params) {
+                    if let Err(e) = ext.send_notification("message/opened", params_value).await {
+                        log::debug!("failed to send message/opened to {ext_id}: {e}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Send `message/saved` notification to all subscribed extensions.
+    pub async fn notify_message_saved(&mut self, file_path: &str, save_as: bool) {
+        for (ext_id, ext) in self.extensions.iter_mut() {
+            if !ext.state().await.is_running() {
+                continue;
+            }
+
+            if ext
+                .get_event_subscription(EventName::MessageSaved)
+                .await
+                .is_some()
+            {
+                let params = MessageSavedParams {
+                    file_path: file_path.to_string(),
+                    save_as,
+                };
+
+                if let Ok(params_value) = serde_json::to_value(&params) {
+                    if let Err(e) = ext.send_notification("message/saved", params_value).await {
+                        log::debug!("failed to send message/saved to {ext_id}: {e}");
+                    }
+                }
+            }
+        }
+    }
+
     /// Spawn a background task that handles incoming requests from an extension.
     ///
     /// Consumes from the extension's `incoming_rx` channel and routes requests
@@ -531,6 +651,15 @@ impl ExtensionHost {
             }
             log::debug!("request handler task for {ext_id} ended");
         })
+    }
+}
+
+impl Drop for ExtensionHost {
+    fn drop(&mut self) {
+        // cancel pending debounce timer
+        if let Some(handle) = self.message_changed_timer.take() {
+            handle.abort();
+        }
     }
 }
 
@@ -714,6 +843,41 @@ async fn handle_extension_request_standalone(
             )))
         }
         _ => Err(RpcError::method_not_found(&request.method)),
+    }
+}
+
+/// Build the params for a `message/changed` notification based on subscription options.
+fn build_message_changed_params(
+    message: &str,
+    file_path: Option<&str>,
+    options: Option<&MessageChangedOptions>,
+) -> MessageChangedParams {
+    let (content, format) =
+        if options.is_some_and(|o| o.include_content) {
+            let format = options.and_then(|o| o.format).unwrap_or(MessageFormat::Hl7);
+
+            // convert message to requested format if needed
+            let content =
+                match format {
+                    MessageFormat::Hl7 => message.to_string(),
+                    MessageFormat::Json => crate::commands::export_to_json(message)
+                        .unwrap_or_else(|_| message.to_string()),
+                    MessageFormat::Yaml => crate::commands::export_to_yaml(message)
+                        .unwrap_or_else(|_| message.to_string()),
+                    MessageFormat::Toml => crate::commands::export_to_toml(message)
+                        .unwrap_or_else(|_| message.to_string()),
+                };
+
+            (Some(content), Some(format))
+        } else {
+            (None, None)
+        };
+
+    MessageChangedParams {
+        message: content,
+        format,
+        has_file: file_path.is_some(),
+        file_path: file_path.map(String::from),
     }
 }
 
