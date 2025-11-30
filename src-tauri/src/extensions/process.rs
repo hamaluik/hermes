@@ -1,7 +1,7 @@
 //! Extension process management.
 //!
 //! Manages a single extension subprocess, including spawning, lifecycle,
-//! message routing, and graceful shutdown.
+//! message routing, stderr capture, and graceful shutdown.
 
 use crate::extensions::protocol::{
     read_message, write_message, ErrorResponse, Message, Notification, ProtocolError, Request,
@@ -16,7 +16,7 @@ use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
-use tokio::io::{AsyncBufRead, AsyncWrite, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::task::JoinHandle;
@@ -164,6 +164,9 @@ pub struct ExtensionProcess {
     /// Handle to the writer task.
     writer_task: Option<JoinHandle<()>>,
 
+    /// Handle to the stderr reader task.
+    stderr_task: Option<JoinHandle<()>>,
+
     /// Handle to the child process.
     child: Option<Child>,
 
@@ -227,7 +230,7 @@ impl ExtensionProcess {
             .args(&args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit()) // let extension stderr pass through for debugging
+            .stderr(Stdio::piped())
             .env("HERMES_VERSION", hermes_version)
             .env("HERMES_API_VERSION", api_version)
             .env("HERMES_DATA_DIR", data_dir);
@@ -241,6 +244,7 @@ impl ExtensionProcess {
 
         let stdin = child.stdin.take().expect("can take stdin");
         let stdout = child.stdout.take().expect("can take stdout");
+        let stderr = child.stderr.take().expect("can take stderr");
 
         // set up communication channels
         let (outgoing_tx, outgoing_rx) = mpsc::channel::<Message>(32);
@@ -262,6 +266,9 @@ impl ExtensionProcess {
         let next_request_id = Arc::new(Mutex::new(1i64));
         let logs = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_LOG_ENTRIES)));
 
+        // spawn stderr reader task
+        let stderr_task = spawn_stderr_reader_task(BufReader::new(stderr), logs.clone());
+
         let process = Self {
             id: id.clone(),
             config,
@@ -272,6 +279,7 @@ impl ExtensionProcess {
             next_request_id,
             reader_task: Some(reader_task),
             writer_task: Some(writer_task),
+            stderr_task: Some(stderr_task),
             child: Some(child),
             incoming_rx: Some(incoming_rx),
             logs,
@@ -569,6 +577,9 @@ impl ExtensionProcess {
         if let Some(task) = self.writer_task.take() {
             task.abort();
         }
+        if let Some(task) = self.stderr_task.take() {
+            task.abort();
+        }
 
         // clear pending requests
         let mut pending = self.pending_requests.lock().await;
@@ -671,6 +682,75 @@ fn spawn_writer_task<W: AsyncWrite + Unpin + Send + 'static>(
     })
 }
 
+/// Spawn the stderr reader task that captures extension stderr output as log entries.
+fn spawn_stderr_reader_task<R: AsyncBufRead + Unpin + Send + 'static>(
+    reader: R,
+    logs: Arc<Mutex<VecDeque<ExtensionLog>>>,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut lines = reader.lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let (level, message) = parse_log_line(&line);
+
+            let entry = ExtensionLog {
+                timestamp: Timestamp::now(),
+                level,
+                message,
+            };
+
+            let mut logs = logs.lock().await;
+            logs.push_back(entry);
+            if logs.len() > MAX_LOG_ENTRIES {
+                logs.pop_front();
+            }
+        }
+    })
+}
+
+/// Parse a log line to extract level and message.
+///
+/// Recognises common log level prefixes like `[ERROR]`, `ERROR:`, etc.
+/// Returns the parsed level and the message with the prefix stripped.
+/// Defaults to `Info` for lines without a recognised prefix.
+fn parse_log_line(line: &str) -> (LogLevel, String) {
+    let line = line.trim();
+
+    // try bracketed format: [ERROR], [WARN], [WARNING], [INFO]
+    if let Some(rest) = line.strip_prefix("[ERROR]").or_else(|| line.strip_prefix("[error]")) {
+        return (LogLevel::Error, rest.trim().to_string());
+    }
+    if let Some(rest) = line
+        .strip_prefix("[WARN]")
+        .or_else(|| line.strip_prefix("[warn]"))
+        .or_else(|| line.strip_prefix("[WARNING]"))
+        .or_else(|| line.strip_prefix("[warning]"))
+    {
+        return (LogLevel::Warn, rest.trim().to_string());
+    }
+    if let Some(rest) = line.strip_prefix("[INFO]").or_else(|| line.strip_prefix("[info]")) {
+        return (LogLevel::Info, rest.trim().to_string());
+    }
+
+    // try colon format: ERROR:, WARN:, WARNING:, INFO:
+    if let Some(rest) = line.strip_prefix("ERROR:").or_else(|| line.strip_prefix("error:")) {
+        return (LogLevel::Error, rest.trim().to_string());
+    }
+    if let Some(rest) = line
+        .strip_prefix("WARN:")
+        .or_else(|| line.strip_prefix("warn:"))
+        .or_else(|| line.strip_prefix("WARNING:")
+        .or_else(|| line.strip_prefix("warning:")))
+    {
+        return (LogLevel::Warn, rest.trim().to_string());
+    }
+    if let Some(rest) = line.strip_prefix("INFO:").or_else(|| line.strip_prefix("info:")) {
+        return (LogLevel::Info, rest.trim().to_string());
+    }
+
+    // default to Info for unprefixed lines
+    (LogLevel::Info, line.to_string())
+}
+
 /// Generate a unique ID for an extension based on its path.
 fn generate_extension_id(path: &str) -> String {
     use std::hash::{Hash, Hasher};
@@ -715,5 +795,62 @@ mod tests {
         assert!(ExtensionState::Stopped.is_terminated());
         assert!(ExtensionState::Failed("error".to_string()).is_terminated());
         assert!(!ExtensionState::Running.is_terminated());
+    }
+
+    #[test]
+    fn test_parse_log_line_bracketed_format() {
+        let (level, msg) = parse_log_line("[ERROR] something went wrong");
+        assert_eq!(level, LogLevel::Error);
+        assert_eq!(msg, "something went wrong");
+
+        let (level, msg) = parse_log_line("[error] lowercase error");
+        assert_eq!(level, LogLevel::Error);
+        assert_eq!(msg, "lowercase error");
+
+        let (level, msg) = parse_log_line("[WARN] warning message");
+        assert_eq!(level, LogLevel::Warn);
+        assert_eq!(msg, "warning message");
+
+        let (level, msg) = parse_log_line("[WARNING] full warning");
+        assert_eq!(level, LogLevel::Warn);
+        assert_eq!(msg, "full warning");
+
+        let (level, msg) = parse_log_line("[INFO] info message");
+        assert_eq!(level, LogLevel::Info);
+        assert_eq!(msg, "info message");
+    }
+
+    #[test]
+    fn test_parse_log_line_colon_format() {
+        let (level, msg) = parse_log_line("ERROR: something failed");
+        assert_eq!(level, LogLevel::Error);
+        assert_eq!(msg, "something failed");
+
+        let (level, msg) = parse_log_line("error: lowercase");
+        assert_eq!(level, LogLevel::Error);
+        assert_eq!(msg, "lowercase");
+
+        let (level, msg) = parse_log_line("WARN: warning");
+        assert_eq!(level, LogLevel::Warn);
+        assert_eq!(msg, "warning");
+
+        let (level, msg) = parse_log_line("WARNING: full warning");
+        assert_eq!(level, LogLevel::Warn);
+        assert_eq!(msg, "full warning");
+
+        let (level, msg) = parse_log_line("INFO: information");
+        assert_eq!(level, LogLevel::Info);
+        assert_eq!(msg, "information");
+    }
+
+    #[test]
+    fn test_parse_log_line_unprefixed() {
+        let (level, msg) = parse_log_line("just a plain message");
+        assert_eq!(level, LogLevel::Info);
+        assert_eq!(msg, "just a plain message");
+
+        let (level, msg) = parse_log_line("  whitespace trimmed  ");
+        assert_eq!(level, LogLevel::Info);
+        assert_eq!(msg, "whitespace trimmed");
     }
 }

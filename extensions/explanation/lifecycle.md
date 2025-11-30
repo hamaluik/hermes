@@ -26,7 +26,8 @@ programme—it hasn't yet communicated with Hermes or declared its capabilities.
 
 **Extension responsibilities:**
 - Set up stdin/stdout handling for JSON-RPC messages
-- Redirect all logging to stderr (not stdout)
+- Redirect all logging to stderr (not stdout); Hermes captures stderr and
+  displays it in the Extension Logs modal
 - Wait for the `initialize` request
 - **Do not** send any messages before receiving `initialize`
 
@@ -380,12 +381,14 @@ Since commands don't have responses, extensions use side effects:
 
 **1. stderr logging:**
 ```python
-sys.stderr.write("Starting patient lookup...\n")
+print("[INFO] Starting patient lookup...", file=sys.stderr)
 # ... perform lookup ...
-sys.stderr.write("Found 3 matching patients\n")
+print("[INFO] Found 3 matching patients", file=sys.stderr)
 ```
 
-Users can view logs in the Extension Logs modal to see what happened.
+All stderr output is captured by Hermes and displayed in the Extension Logs
+modal. Common log level prefixes (`[ERROR]`, `[WARN]`, `[INFO]`, etc.) are
+parsed automatically; unprefixed lines default to Info level.
 
 **2. Message edits:**
 ```python

@@ -420,6 +420,24 @@ def show_user_error(error):
 | -32601 | Programming | Check method name spelling          |
 | -32602 | Programming | Check parameter types               |
 
+## Viewing Logs
+
+All stderr output from your extension is captured by Hermes and displayed in the
+Extension Logs modal (Settings > Extensions > View Logs). If your log messages
+include common prefixes, Hermes categorises them automatically:
+
+```python
+# these are parsed and displayed with appropriate log levels
+print("[ERROR] Connection failed", file=sys.stderr)  # shown as Error
+print("ERROR: Invalid response", file=sys.stderr)    # shown as Error
+print("[WARN] Retrying...", file=sys.stderr)         # shown as Warn
+print("INFO: Processing", file=sys.stderr)           # shown as Info
+print("plain message", file=sys.stderr)              # shown as Info (default)
+```
+
+This makes debugging straightforward: use your language's normal stderr output and
+check the Extension Logs modal to see what your extension printed.
+
 ## Related Documentation
 
 - [Reference: Error Codes](../reference/errors.md)

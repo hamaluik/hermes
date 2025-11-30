@@ -123,12 +123,13 @@ Extensions should log to stderr (not stdout, which is reserved for JSON-RPC):
 ```python
 def log(message):
     """Log to stderr (visible in Hermes logs)."""
-    sys.stderr.write(f"[my-extension] {message}\n")
+    sys.stderr.write(f"[INFO] [my-extension] {message}\n")
     sys.stderr.flush()
 ```
 
-You'll see these logs in Hermes' extension logs (Settings > Extensions > View
-Logs).
+Hermes captures all stderr output and displays it in the Extension Logs modal
+(Settings > Extensions > View Logs). If your messages include prefixes like
+`[ERROR]`, `[WARN]`, or `[INFO]`, Hermes will colour-code them appropriately.
 
 ## Step 6: Handle the Initialize Request
 
@@ -510,7 +511,7 @@ def write_message(msg):
 
 def log(message):
     """Log to stderr (visible in Hermes logs)."""
-    sys.stderr.write(f"[my-extension] {message}\n")
+    sys.stderr.write(f"[INFO] [my-extension] {message}\n")
     sys.stderr.flush()
 
 
