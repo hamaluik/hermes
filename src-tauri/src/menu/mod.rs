@@ -149,6 +149,8 @@ pub fn build_menu(app: &App) -> color_eyre::Result<MenuItems> {
         .item(&import_submenu)
         .separator()
         .item(&auto_save_menu_item)
+        .separator()
+        .item(&PredefinedMenuItem::quit(app, Some("&Quit"))?)
         .build()?;
 
     // Build Edit menu
