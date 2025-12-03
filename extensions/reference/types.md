@@ -505,58 +505,76 @@ Segment separator: `\r` (carriage return, ASCII 13)
 
 ```json
 {
-  "MSH": {
-    "1": "|",
-    "2": "^~\\&",
-    "3": "APP",
-    "9": { "1": "ADT", "2": "A01" }
-  },
-  "PID": {
-    "3": { "1": "12345", "4": "MRN" },
-    "5": { "1": "DOE", "2": "JOHN", "3": "Q" }
-  }
+  "segments": [
+    {
+      "segment": "MSH",
+      "fields": {
+        "1": "|",
+        "2": "^~\\&",
+        "3": "APP",
+        "9": { "1": "ADT", "2": "A01" }
+      }
+    },
+    {
+      "segment": "PID",
+      "fields": {
+        "3": { "1": "12345", "4": "MRN" },
+        "5": { "1": "DOE", "2": "JOHN", "3": "Q" }
+      }
+    }
+  ]
 }
 ```
 
-Field indices as strings, 1-based. Empty fields omitted.
+Root object with `segments` array. Each segment has `segment` name and `fields`
+object. Field indices are 1-based strings. Empty fields omitted.
 
 ### YAML
 
 ```yaml
-MSH:
-  "1": "|"
-  "2": "^~\\&"
-  "3": APP
-  "9":
-    "1": ADT
-    "2": A01
-PID:
-  "3":
-    "1": "12345"
-    "4": MRN
-  "5":
-    "1": DOE
-    "2": JOHN
-    "3": Q
+segments:
+  - segment: MSH
+    fields:
+      "1": "|"
+      "2": "^~\\&"
+      "3": APP
+      "9":
+        "1": ADT
+        "2": A01
+  - segment: PID
+    fields:
+      "3":
+        "1": "12345"
+        "4": MRN
+      "5":
+        "1": DOE
+        "2": JOHN
+        "3": Q
 ```
 
 ### TOML
 
 ```toml
-[MSH]
+[[segments]]
+segment = "MSH"
+
+[segments.fields]
 "1" = "|"
 "2" = "^~\\&"
 "3" = "APP"
 
-[MSH."9"]
+[segments.fields."9"]
 "1" = "ADT"
 "2" = "A01"
 
-[PID."3"]
+[[segments]]
+segment = "PID"
+
+[segments.fields."3"]
 "1" = "12345"
 "4" = "MRN"
 
-[PID."5"]
+[segments.fields."5"]
 "1" = "DOE"
 "2" = "JOHN"
 "3" = "Q"
@@ -564,15 +582,17 @@ PID:
 
 ### Repeated Segments
 
-Repeated segments become arrays in structured formats:
+Each segment occurrence is a separate entry in the segments array:
 
 ```json
 {
-  "MSH": { ... },
-  "PID": { ... },
-  "OBX": [
-    { "1": "1", "3": "CODE1", "5": "Value1" },
-    { "1": "2", "3": "CODE2", "5": "Value2" }
+  "segments": [
+    { "segment": "MSH", "fields": { ... } },
+    { "segment": "PID", "fields": { ... } },
+    { "segment": "OBX", "fields": { "1": "1", "3": "CODE1", "5": "Value1" } },
+    { "segment": "OBX", "fields": { "1": "2", "3": "CODE2", "5": "Value2" } }
   ]
 }
 ```
+
+Segment order is explicitly preserved by the array structure.

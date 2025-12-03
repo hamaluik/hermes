@@ -1,6 +1,6 @@
 //! Message import commands for converting various formats to HL7 messages.
 //!
-//! Imports messages from JSON, YAML, and TOML formats, reversing the tree
+//! Imports messages from JSON, YAML, and TOML formats, reversing the array
 //! structure produced by the export module back into pipe-delimited HL7 format.
 //!
 //! # Why This Module Exists
@@ -14,7 +14,9 @@
 //!
 //! The input should match the structure produced by the export commands:
 //!
-//! - **Segments** are object keys. Arrays represent repeated segments.
+//! - **Root object** contains a `segments` array.
+//! - **Segments** are objects with `segment` name and `fields` object.
+//!   Each segment occurrence is a separate array entry.
 //! - **Fields** use 1-based string indices as keys.
 //! - **Components** use 1-based string indices for multi-component fields.
 //! - **Subcomponents** follow the same pattern as components.
@@ -32,21 +34,29 @@
 //! Given JSON input:
 //! ```json
 //! {
-//!   "MSH": {
-//!     "1": "|",
-//!     "2": "^~\\&",
-//!     "3": "APP",
-//!     "4": "FAC",
-//!     "7": "20231215",
-//!     "9": { "1": "ADT", "2": "A01" },
-//!     "10": "123",
-//!     "11": "P",
-//!     "12": "2.5.1"
-//!   },
-//!   "PID": {
-//!     "3": "12345",
-//!     "5": { "1": "DOE", "2": "JOHN" }
-//!   }
+//!   "segments": [
+//!     {
+//!       "segment": "MSH",
+//!       "fields": {
+//!         "1": "|",
+//!         "2": "^~\\&",
+//!         "3": "APP",
+//!         "4": "FAC",
+//!         "7": "20231215",
+//!         "9": { "1": "ADT", "2": "A01" },
+//!         "10": "123",
+//!         "11": "P",
+//!         "12": "2.5.1"
+//!       }
+//!     },
+//!     {
+//!       "segment": "PID",
+//!       "fields": {
+//!         "3": "12345",
+//!         "5": { "1": "DOE", "2": "JOHN" }
+//!       }
+//!     }
+//!   ]
 //! }
 //! ```
 //!
@@ -61,56 +71,48 @@ use hl7_parser::{
     message::Separators,
 };
 use indexmap::IndexMap;
+use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-/// Converts a tree structure back to an HL7 message using MessageBuilder.
-fn tree_to_message(tree: &IndexMap<String, Value>) -> Result<String, String> {
-    let separators = extract_separators(tree);
+/// A single segment in the import format.
+#[derive(Deserialize)]
+struct SegmentImport {
+    segment: String,
+    #[serde(default)]
+    fields: IndexMap<String, Value>,
+}
+
+/// Root structure for imported messages.
+#[derive(Deserialize)]
+struct MessageImport {
+    segments: Vec<SegmentImport>,
+}
+
+/// Converts an import structure back to an HL7 message using MessageBuilder.
+fn tree_to_message(import: &MessageImport) -> Result<String, String> {
+    let separators = extract_separators(import);
     let mut builder = MessageBuilder::new(separators);
 
-    for (segment_name, value) in tree {
-        match value {
-            Value::Array(arr) => {
-                // repeated segments
-                for segment_value in arr {
-                    let segment = build_segment(segment_name, segment_value)?;
-                    builder.push_segment(segment);
-                }
-            }
-            Value::Object(_) => {
-                let segment = build_segment(segment_name, value)?;
-                builder.push_segment(segment);
-            }
-            _ => {
-                return Err(format!(
-                    "Invalid segment value for '{segment_name}': expected object or array"
-                ));
-            }
-        }
+    for seg in &import.segments {
+        let segment = build_segment(&seg.segment, &seg.fields)?;
+        builder.push_segment(segment);
     }
 
     Ok(builder.to_string())
 }
 
-/// Extracts separator configuration from MSH segment if present.
-fn extract_separators(tree: &IndexMap<String, Value>) -> Separators {
-    let Some(msh) = tree.get("MSH") else {
+/// Extracts separator configuration from the first MSH segment if present.
+fn extract_separators(import: &MessageImport) -> Separators {
+    // find first MSH segment
+    let msh = import.segments.iter().find(|s| s.segment == "MSH");
+
+    let Some(msh) = msh else {
         return Separators::default();
     };
 
-    // handle both single MSH and array of MSH (though array is unusual)
-    let msh_obj = match msh {
-        Value::Object(obj) => obj,
-        Value::Array(arr) => match arr.first() {
-            Some(Value::Object(obj)) => obj,
-            _ => return Separators::default(),
-        },
-        _ => return Separators::default(),
-    };
-
     // MSH.2 contains encoding characters (^~\&)
-    match msh_obj.get("2") {
+    match msh.fields.get("2") {
         Some(Value::String(encoding_chars)) => separators_from_encoding_chars(encoding_chars),
         _ => Separators::default(),
     }
@@ -129,18 +131,12 @@ fn separators_from_encoding_chars(encoding_chars: &str) -> Separators {
     }
 }
 
-/// Builds a SegmentBuilder from segment name and fields object.
-fn build_segment(segment_name: &str, fields_value: &Value) -> Result<SegmentBuilder, String> {
-    let fields_obj = match fields_value {
-        Value::Object(obj) => obj,
-        _ => {
-            return Err(format!(
-                "Invalid fields value for segment '{segment_name}': expected object"
-            ));
-        }
-    };
-
-    let max_field_idx = fields_obj
+/// Builds a SegmentBuilder from segment name and fields map.
+fn build_segment(
+    segment_name: &str,
+    fields: &IndexMap<String, Value>,
+) -> Result<SegmentBuilder, String> {
+    let max_field_idx = fields
         .keys()
         .filter_map(|k| k.parse::<usize>().ok())
         .max()
@@ -153,7 +149,7 @@ fn build_segment(segment_name: &str, fields_value: &Value) -> Result<SegmentBuil
     let start_idx = if segment_name == "MSH" { 2 } else { 1 };
 
     for idx in start_idx..=max_field_idx {
-        if let Some(field_value) = fields_obj.get(&idx.to_string()) {
+        if let Some(field_value) = fields.get(&idx.to_string()) {
             let field = value_to_field(field_value)?;
             segment.set_field(idx, field);
         }
@@ -240,25 +236,25 @@ fn value_to_component(value: &Value) -> Result<ComponentBuilder, String> {
 /// Imports an HL7 message from JSON format.
 #[tauri::command]
 pub fn import_from_json(content: &str) -> Result<String, String> {
-    let tree: IndexMap<String, Value> =
+    let import: MessageImport =
         serde_json::from_str(content).map_err(|e| format!("Failed to parse JSON: {e}"))?;
-    tree_to_message(&tree)
+    tree_to_message(&import)
 }
 
 /// Imports an HL7 message from YAML format.
 #[tauri::command]
 pub fn import_from_yaml(content: &str) -> Result<String, String> {
-    let tree: IndexMap<String, Value> =
+    let import: MessageImport =
         serde_yml::from_str(content).map_err(|e| format!("Failed to parse YAML: {e}"))?;
-    tree_to_message(&tree)
+    tree_to_message(&import)
 }
 
 /// Imports an HL7 message from TOML format.
 #[tauri::command]
 pub fn import_from_toml(content: &str) -> Result<String, String> {
-    let tree: IndexMap<String, Value> =
+    let import: MessageImport =
         toml::from_str(content).map_err(|e| format!("Failed to parse TOML: {e}"))?;
-    tree_to_message(&tree)
+    tree_to_message(&import)
 }
 
 #[cfg(test)]
@@ -366,12 +362,17 @@ mod tests {
     fn import_handles_numeric_values() {
         // JSON might parse numbers as numbers, not strings
         let json = r#"{
-            "MSH": {
-                "1": "^~\\&",
-                "2": "APP",
-                "9": 123,
-                "11": 2.5
-            }
+            "segments": [
+                {
+                    "segment": "MSH",
+                    "fields": {
+                        "1": "^~\\&",
+                        "2": "APP",
+                        "9": 123,
+                        "11": 2.5
+                    }
+                }
+            ]
         }"#;
         let result = import_from_json(json).expect("can import JSON with numbers");
         assert!(result.contains("|123|"));
@@ -382,12 +383,43 @@ mod tests {
     fn import_handles_missing_msh() {
         // edge case: no MSH segment (uses default delimiters)
         let json = r#"{
-            "PID": {
-                "3": "12345",
-                "5": { "1": "DOE", "2": "JOHN" }
-            }
+            "segments": [
+                {
+                    "segment": "PID",
+                    "fields": {
+                        "3": "12345",
+                        "5": { "1": "DOE", "2": "JOHN" }
+                    }
+                }
+            ]
         }"#;
         let result = import_from_json(json).expect("can import JSON without MSH");
         assert_eq!(result, "PID|||12345||DOE^JOHN");
+    }
+
+    #[test]
+    fn export_produces_segments_array_structure() {
+        // verify the JSON export structure has segments array with segment/fields objects
+        let original = "MSH|^~\\&|APP|||20231215||ADT^A01\rPID|||12345||DOE^JOHN\rOBX|1||CODE||Value";
+        let json = export_to_json(original).expect("can export to JSON");
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("can parse JSON");
+
+        // root has segments array
+        assert!(parsed.get("segments").is_some(), "should have segments key");
+        let segments = parsed["segments"].as_array().expect("segments should be array");
+        assert_eq!(segments.len(), 3, "should have 3 segments");
+
+        // each segment has segment name and fields object
+        for seg in segments {
+            assert!(seg.get("segment").is_some(), "segment should have segment key");
+            assert!(seg["segment"].is_string(), "segment name should be string");
+            assert!(seg.get("fields").is_some(), "segment should have fields key");
+            assert!(seg["fields"].is_object(), "fields should be object");
+        }
+
+        // verify segment names in order
+        assert_eq!(segments[0]["segment"], "MSH");
+        assert_eq!(segments[1]["segment"], "PID");
+        assert_eq!(segments[2]["segment"], "OBX");
     }
 }

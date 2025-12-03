@@ -44,15 +44,25 @@ if "error" in response:
 # the message field is a JSON string, parse it
 message_json = json.loads(response["result"]["message"])
 
-# access fields using the hierarchical structure
-patient_id = message_json.get("PID", {}).get("3", {}).get("1", "")
-last_name = message_json.get("PID", {}).get("5", {}).get("1", "")
+
+def find_segment(message, segment_name):
+    """Find the first segment with the given name."""
+    for seg in message.get("segments", []):
+        if seg.get("segment") == segment_name:
+            return seg.get("fields", {})
+    return None
+
+
+# access fields using the segments array structure
+pid = find_segment(message_json, "PID")
+patient_id = pid.get("3", {}).get("1", "") if pid else ""
+last_name = pid.get("5", {}).get("1", "") if pid else ""
 
 log(f"Patient: {patient_id} - {last_name}")
 ```
 
-JSON format uses 1-based string indices. For example, `PID.5.1` becomes
-`message["PID"]["5"]["1"]`.
+JSON format uses a `segments` array with 1-based string field indices. Each
+segment object has a `segment` name and `fields` object.
 
 ## Read as YAML or TOML
 
@@ -146,8 +156,10 @@ if not response["result"]["success"]:
 import json
 
 message = {
-    "MSH": {"1": "|", "2": "^~\\&", "3": "APP"},
-    "PID": {"5": {"1": "DOE", "2": "JOHN"}}
+    "segments": [
+        {"segment": "MSH", "fields": {"1": "|", "2": "^~\\&", "3": "APP"}},
+        {"segment": "PID", "fields": {"5": {"1": "DOE", "2": "JOHN"}}}
+    ]
 }
 
 response = send_request("editor/setMessage", {
@@ -163,6 +175,15 @@ The safest pattern for complex transformations:
 ```python
 import json
 
+
+def find_segment(message, segment_name):
+    """Find the first segment with the given name."""
+    for seg in message.get("segments", []):
+        if seg.get("segment") == segment_name:
+            return seg.get("fields", {})
+    return None
+
+
 # 1. read current message
 response = send_request("editor/getMessage", {"format": "json"})
 if "error" in response:
@@ -171,10 +192,11 @@ if "error" in response:
 message = json.loads(response["result"]["message"])
 
 # 2. modify the data structure
-if "PID" in message:
+pid = find_segment(message, "PID")
+if pid:
     # convert last name to uppercase
-    if "5" in message["PID"] and "1" in message["PID"]["5"]:
-        message["PID"]["5"]["1"] = message["PID"]["5"]["1"].upper()
+    if "5" in pid and "1" in pid["5"]:
+        pid["5"]["1"] = pid["5"]["1"].upper()
 
 # 3. write it back
 response = send_request("editor/setMessage", {

@@ -10,25 +10,31 @@
  * - Round-tripping for version control (export → edit → import)
  *
  * Expected input structure:
- * - Segments → object keys (arrays represent repeated segments)
+ * - Root object with "segments" array
+ * - Each segment: { segment: string, fields: {...} }
  * - Fields → 1-based string indices (MSH.1 = "|", MSH.2 = "^~\\&")
  * - Components → 1-based indices; simple strings for single-component fields
  * - Field repetitions → arrays
  *
  * Note: MSH field "1" (field separator) is skipped during import since it's
- * implicit in the pipe-delimited output. Delimiters are extracted from MSH
- * field "2" (encoding characters).
+ * implicit in the pipe-delimited output. Delimiters are extracted from the
+ * first MSH segment's field "2" (encoding characters).
  *
  * @example
  * // JSON input:
  * // {
- * //   "MSH": {
- * //     "1": "|",
- * //     "2": "^~\\&",
- * //     "3": "APP",
- * //     "7": "20231215",
- * //     "9": { "1": "ADT", "2": "A01" }
- * //   }
+ * //   "segments": [
+ * //     {
+ * //       "segment": "MSH",
+ * //       "fields": {
+ * //         "1": "|",
+ * //         "2": "^~\\&",
+ * //         "3": "APP",
+ * //         "7": "20231215",
+ * //         "9": { "1": "ADT", "2": "A01" }
+ * //       }
+ * //     }
+ * //   ]
  * // }
  * // Output: MSH|^~\&|APP|||20231215||ADT^A01
  */

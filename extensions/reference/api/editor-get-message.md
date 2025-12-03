@@ -45,12 +45,14 @@ Note: In JSON response, appears as `"MSH|...\rPID|..."` with escaped `\r`.
 
 #### JSON
 
-Hierarchical with 1-based string indices:
+Ordered array of segments with 1-based string field indices:
 
 ```json
 {
-  "MSH": { "1": "|", "3": "APP" },
-  "PID": { "5": { "1": "DOE", "2": "JOHN" } }
+  "segments": [
+    { "segment": "MSH", "fields": { "1": "|", "3": "APP" } },
+    { "segment": "PID", "fields": { "5": { "1": "DOE", "2": "JOHN" } } }
+  ]
 }
 ```
 
@@ -82,7 +84,7 @@ Same structure as JSON, different serialisation format.
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "message": "{\"MSH\":{\"1\":\"|\",\"2\":\"^~\\\\&\"},\"PID\":{\"5\":{\"1\":\"DOE\"}}}",
+    "message": "{\"segments\":[{\"segment\":\"MSH\",\"fields\":{\"1\":\"|\",\"2\":\"^~\\\\&\"}},{\"segment\":\"PID\",\"fields\":{\"5\":{\"1\":\"DOE\"}}}]}",
     "hasFile": true,
     "filePath": "/Users/user/messages/patient.hl7"
   }

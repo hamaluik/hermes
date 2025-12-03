@@ -1,9 +1,9 @@
 //! Message export commands for converting HL7 messages to various formats.
 //!
-//! Exports messages to JSON, YAML, and TOML formats as a natural tree structure
-//! optimised for human readability and downstream processing. The output omits
-//! internal parser metadata (byte ranges, source references) that would clutter
-//! the exported data.
+//! Exports messages to JSON, YAML, and TOML formats as an ordered array of
+//! segments, preserving segment order explicitly. The output omits internal
+//! parser metadata (byte ranges, source references) that would clutter the
+//! exported data.
 //!
 //! # Why Export to These Formats?
 //!
@@ -13,10 +13,10 @@
 //!
 //! # Output Structure
 //!
-//! The export produces a hierarchical representation where:
+//! The export produces an array of segment objects wrapped in a root object:
 //!
-//! - **Segments** become object keys. When a segment appears multiple times
-//!   (e.g., multiple OBX segments), the value becomes an array of field objects.
+//! - **Segments** are array elements with `segment` name and `fields` object.
+//!   Each segment occurrence is a separate entry (no grouping of repeated segments).
 //! - **Fields** use 1-based string indices as keys. Empty fields are omitted.
 //! - **Components** use 1-based string indices. Simple fields (single component,
 //!   no subcomponents) are represented as plain strings.
@@ -48,67 +48,76 @@
 //! The JSON export produces:
 //! ```json
 //! {
-//!   "MSH": {
-//!     "1": "|",
-//!     "2": "^~\\&",
-//!     "3": "APP",
-//!     "4": "FAC",
-//!     "7": "20231215",
-//!     "9": { "1": "ADT", "2": "A01" },
-//!     "10": "123",
-//!     "11": "P",
-//!     "12": "2.5.1"
-//!   },
-//!   "PID": {
-//!     "3": "12345",
-//!     "5": { "1": "DOE", "2": "JOHN" }
-//!   },
-//!   "OBX": [
-//!     { "1": "1", "2": "ST", "3": "CODE", "5": "Value1" },
-//!     { "1": "2", "2": "NM", "3": "CODE2", "5": "42" }
+//!   "segments": [
+//!     {
+//!       "segment": "MSH",
+//!       "fields": {
+//!         "1": "|",
+//!         "2": "^~\\&",
+//!         "3": "APP",
+//!         "4": "FAC",
+//!         "7": "20231215",
+//!         "9": { "1": "ADT", "2": "A01" },
+//!         "10": "123",
+//!         "11": "P",
+//!         "12": "2.5.1"
+//!       }
+//!     },
+//!     {
+//!       "segment": "PID",
+//!       "fields": {
+//!         "3": "12345",
+//!         "5": { "1": "DOE", "2": "JOHN" }
+//!       }
+//!     },
+//!     {
+//!       "segment": "OBX",
+//!       "fields": { "1": "1", "2": "ST", "3": "CODE", "5": "Value1" }
+//!     },
+//!     {
+//!       "segment": "OBX",
+//!       "fields": { "1": "2", "2": "NM", "3": "CODE2", "5": "42" }
+//!     }
 //!   ]
 //! }
 //! ```
 
 use hl7_parser::message::{Component, Field, Message, Repeat, Segment};
 use indexmap::IndexMap;
+use serde::Serialize;
 use serde_json::Value;
 
-/// Converts a parsed HL7 message to a natural tree structure.
-///
-/// The structure uses:
-/// - Segment names as keys (repeated segments become arrays)
-/// - Field indices as string keys (1-based, only non-empty fields)
-/// - Component indices as string keys (only non-empty components)
-/// - Field repetitions as arrays
-fn message_to_tree(message: &Message) -> IndexMap<String, Value> {
-    let mut result: IndexMap<String, Value> = IndexMap::new();
-
-    for segment in message.segments() {
-        let segment_name = segment.name.to_string();
-        let fields_obj = fields_to_value(segment);
-
-        // check if this segment name already exists
-        match result.get_mut(&segment_name) {
-            Some(Value::Array(arr)) => {
-                arr.push(fields_obj);
-            }
-            Some(existing) => {
-                // first duplicate - convert existing to array
-                let prev = existing.clone();
-                *existing = Value::Array(vec![prev, fields_obj]);
-            }
-            None => {
-                result.insert(segment_name, fields_obj);
-            }
-        }
-    }
-
-    result
+/// A single segment in the export format.
+#[derive(Serialize)]
+struct SegmentExport {
+    segment: String,
+    fields: IndexMap<String, Value>,
 }
 
-/// Converts segment fields to a JSON object with field indices as keys.
-fn fields_to_value(segment: &Segment) -> Value {
+/// Root structure for exported messages.
+#[derive(Serialize)]
+struct MessageExport {
+    segments: Vec<SegmentExport>,
+}
+
+/// Converts a parsed HL7 message to the export structure.
+///
+/// Each segment becomes a separate entry in the segments array,
+/// preserving order explicitly.
+fn message_to_export(message: &Message) -> MessageExport {
+    let segments = message
+        .segments()
+        .map(|segment| SegmentExport {
+            segment: segment.name.to_string(),
+            fields: fields_to_map(segment),
+        })
+        .collect();
+
+    MessageExport { segments }
+}
+
+/// Converts segment fields to an IndexMap with field indices as keys.
+fn fields_to_map(segment: &Segment) -> IndexMap<String, Value> {
     let mut fields: IndexMap<String, Value> = IndexMap::new();
 
     for (idx, field) in segment.fields.iter().enumerate() {
@@ -122,7 +131,7 @@ fn fields_to_value(segment: &Segment) -> Value {
         }
     }
 
-    Value::Object(fields.into_iter().collect())
+    fields
 }
 
 /// Converts a field to a JSON value, handling repetitions.
@@ -207,8 +216,8 @@ fn is_empty_value(value: &Value) -> bool {
 pub fn export_to_json(message: &str) -> Result<String, String> {
     let parsed = hl7_parser::parse_message_with_lenient_newlines(message)
         .map_err(|e| format!("Failed to parse message: {e}"))?;
-    let tree = message_to_tree(&parsed);
-    serde_json::to_string_pretty(&tree).map_err(|e| format!("Failed to serialise to JSON: {e}"))
+    let export = message_to_export(&parsed);
+    serde_json::to_string_pretty(&export).map_err(|e| format!("Failed to serialise to JSON: {e}"))
 }
 
 /// Exports an HL7 message to YAML format.
@@ -216,8 +225,8 @@ pub fn export_to_json(message: &str) -> Result<String, String> {
 pub fn export_to_yaml(message: &str) -> Result<String, String> {
     let parsed = hl7_parser::parse_message_with_lenient_newlines(message)
         .map_err(|e| format!("Failed to parse message: {e}"))?;
-    let tree = message_to_tree(&parsed);
-    serde_yml::to_string(&tree).map_err(|e| format!("Failed to serialise to YAML: {e}"))
+    let export = message_to_export(&parsed);
+    serde_yml::to_string(&export).map_err(|e| format!("Failed to serialise to YAML: {e}"))
 }
 
 /// Exports an HL7 message to TOML format.
@@ -225,6 +234,6 @@ pub fn export_to_yaml(message: &str) -> Result<String, String> {
 pub fn export_to_toml(message: &str) -> Result<String, String> {
     let parsed = hl7_parser::parse_message_with_lenient_newlines(message)
         .map_err(|e| format!("Failed to parse message: {e}"))?;
-    let tree = message_to_tree(&parsed);
-    toml::to_string_pretty(&tree).map_err(|e| format!("Failed to serialise to TOML: {e}"))
+    let export = message_to_export(&parsed);
+    toml::to_string_pretty(&export).map_err(|e| format!("Failed to serialise to TOML: {e}"))
 }

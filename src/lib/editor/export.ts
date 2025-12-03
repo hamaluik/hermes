@@ -11,7 +11,8 @@
  * - Programmatic editing: modify specific fields without parsing HL7 syntax
  *
  * Output structure:
- * - Segments → object keys (repeated segments become arrays)
+ * - Root object with "segments" array
+ * - Each segment: { segment: string, fields: {...} }
  * - Fields → 1-based string indices, empty fields omitted
  * - Components → 1-based indices; simple fields become plain strings
  * - Field repetitions → arrays
@@ -23,13 +24,18 @@
  * // For message: MSH|^~\&|APP|||20231215||ADT^A01
  * // JSON output:
  * // {
- * //   "MSH": {
- * //     "1": "|",
- * //     "2": "^~\\&",
- * //     "3": "APP",
- * //     "7": "20231215",
- * //     "9": { "1": "ADT", "2": "A01" }
- * //   }
+ * //   "segments": [
+ * //     {
+ * //       "segment": "MSH",
+ * //       "fields": {
+ * //         "1": "|",
+ * //         "2": "^~\\&",
+ * //         "3": "APP",
+ * //         "7": "20231215",
+ * //         "9": { "1": "ADT", "2": "A01" }
+ * //       }
+ * //     }
+ * //   ]
  * // }
  */
 

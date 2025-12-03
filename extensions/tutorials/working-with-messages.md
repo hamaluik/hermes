@@ -89,32 +89,46 @@ def set_message_hl7(content):
 
 ## Step 2: Understanding the JSON Format
 
-When you request `format: "json"`, Hermes returns the message as a hierarchical
-structure:
+When you request `format: "json"`, Hermes returns the message as an ordered array
+of segments:
 
 ```json
 {
-  "MSH": {
-    "1": "|",
-    "2": "^~\\&",
-    "3": "SENDER",
-    "9": {"1": "ADT", "2": "A01"}
-  },
-  "PID": {
-    "3": {"1": "12345678", "4": "MRN"},
-    "5": {"1": "DOE", "2": "JOHN", "3": "Q"}
-  },
-  "OBX": [
-    {"1": "1", "3": {"1": "CODE1"}, "5": "Value1"},
-    {"1": "2", "3": {"1": "CODE2"}, "5": "Value2"}
+  "segments": [
+    {
+      "segment": "MSH",
+      "fields": {
+        "1": "|",
+        "2": "^~\\&",
+        "3": "SENDER",
+        "9": {"1": "ADT", "2": "A01"}
+      }
+    },
+    {
+      "segment": "PID",
+      "fields": {
+        "3": {"1": "12345678", "4": "MRN"},
+        "5": {"1": "DOE", "2": "JOHN", "3": "Q"}
+      }
+    },
+    {
+      "segment": "OBX",
+      "fields": {"1": "1", "3": {"1": "CODE1"}, "5": "Value1"}
+    },
+    {
+      "segment": "OBX",
+      "fields": {"1": "2", "3": {"1": "CODE2"}, "5": "Value2"}
+    }
   ]
 }
 ```
 
 Key points:
+- Root object contains a `segments` array preserving order
+- Each segment has `segment` (name) and `fields` (object)
 - Field indices are **1-based strings** (e.g., `"5"` for PID.5)
 - Components are nested objects (e.g., `{"1": "DOE", "2": "JOHN"}`)
-- Repeated segments become arrays (e.g., multiple OBX segments)
+- Each segment occurrence is a separate array entry
 - Empty fields are omitted
 
 ## Step 3: Add Icons
@@ -260,6 +274,14 @@ def normalise_phone(phone):
     return phone
 
 
+def find_segment(message, segment_name):
+    """Find the first segment with the given name."""
+    for seg in message.get("segments", []):
+        if seg.get("segment") == segment_name:
+            return seg.get("fields", {})
+    return None
+
+
 def execute_normalise_phone():
     """Normalise all phone numbers in the message."""
     log("Normalising phone numbers...")
@@ -270,9 +292,10 @@ def execute_normalise_phone():
 
     patches = []
 
-    # PID.13 - Home phone
-    if "PID" in message:
-        pid = message["PID"]
+    # find PID segment
+    pid = find_segment(message, "PID")
+    if pid:
+        # PID.13 - Home phone
         if "13" in pid:
             phone_field = pid["13"]
             if isinstance(phone_field, dict) and "1" in phone_field:
@@ -328,20 +351,18 @@ def execute_summary():
     summary_parts = []
 
     # message type from MSH.9
-    if "MSH" in message:
-        msh = message["MSH"]
-        if "9" in msh:
-            msg_type = msh["9"]
-            if isinstance(msg_type, dict):
-                type_str = f"{msg_type.get('1', '?')}^{msg_type.get('2', '?')}"
-            else:
-                type_str = str(msg_type)
-            summary_parts.append(f"Type: {type_str}")
+    msh = find_segment(message, "MSH")
+    if msh and "9" in msh:
+        msg_type = msh["9"]
+        if isinstance(msg_type, dict):
+            type_str = f"{msg_type.get('1', '?')}^{msg_type.get('2', '?')}"
+        else:
+            type_str = str(msg_type)
+        summary_parts.append(f"Type: {type_str}")
 
     # patient info from PID
-    if "PID" in message:
-        pid = message["PID"]
-
+    pid = find_segment(message, "PID")
+    if pid:
         # patient name
         if "5" in pid:
             name = pid["5"]
@@ -370,10 +391,7 @@ def execute_summary():
                 summary_parts.append(f"DOB: {formatted_dob}")
 
     # segment count
-    segment_count = sum(
-        1 if not isinstance(v, list) else len(v)
-        for k, v in message.items()
-    )
+    segment_count = len(message.get("segments", []))
     summary_parts.append(f"Segments: {segment_count}")
 
     # show the summary dialog
@@ -666,6 +684,14 @@ def execute_uppercase():
         log("Failed to update message")
 
 
+def find_segment(message, segment_name):
+    """Find the first segment with the given name."""
+    for seg in message.get("segments", []):
+        if seg.get("segment") == segment_name:
+            return seg.get("fields", {})
+    return None
+
+
 def execute_normalise_phone():
     """Normalise all phone numbers in the message."""
     log("Normalising phone numbers...")
@@ -676,9 +702,8 @@ def execute_normalise_phone():
 
     patches = []
 
-    if "PID" in message:
-        pid = message["PID"]
-
+    pid = find_segment(message, "PID")
+    if pid:
         # PID.13 - Home phone
         if "13" in pid:
             phone_field = pid["13"]
@@ -730,20 +755,18 @@ def execute_summary():
     summary_parts = []
 
     # message type from MSH.9
-    if "MSH" in message:
-        msh = message["MSH"]
-        if "9" in msh:
-            msg_type = msh["9"]
-            if isinstance(msg_type, dict):
-                type_str = f"{msg_type.get('1', '?')}^{msg_type.get('2', '?')}"
-            else:
-                type_str = str(msg_type)
-            summary_parts.append(f"Type: {type_str}")
+    msh = find_segment(message, "MSH")
+    if msh and "9" in msh:
+        msg_type = msh["9"]
+        if isinstance(msg_type, dict):
+            type_str = f"{msg_type.get('1', '?')}^{msg_type.get('2', '?')}"
+        else:
+            type_str = str(msg_type)
+        summary_parts.append(f"Type: {type_str}")
 
     # patient info from PID
-    if "PID" in message:
-        pid = message["PID"]
-
+    pid = find_segment(message, "PID")
+    if pid:
         if "5" in pid:
             name = pid["5"]
             if isinstance(name, dict):
@@ -768,10 +791,7 @@ def execute_summary():
                 formatted_dob = f"{dob[:4]}-{dob[4:6]}-{dob[6:8]}"
                 summary_parts.append(f"DOB: {formatted_dob}")
 
-    segment_count = sum(
-        1 if not isinstance(v, list) else len(v)
-        for k, v in message.items()
-    )
+    segment_count = len(message.get("segments", []))
     summary_parts.append(f"Segments: {segment_count}")
 
     summary_text = "\n".join(summary_parts) if summary_parts else "No data found"
