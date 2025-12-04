@@ -24,13 +24,17 @@
   ## Add Menu Pattern
 
   The optional addMenu snippet provides UI for adding new segments to the message.
-  When provided, a "+" button appears after all tabs. Clicking it reveals a dropdown
+  When provided, a "+" button appears after all tabs. Clicking it reveals a popover
   (provided by the parent via snippet) showing available segment types.
 
+  The popover uses the HTML Popover API to escape overflow clipping from parent
+  containers. WebKit doesn't support CSS anchor positioning, so we position the
+  popover manually via JavaScript using getBoundingClientRect().
+
   The closeMenu callback is passed to the snippet so segment selection can dismiss
-  the menu automatically. This keeps the implementation of the menu content in the
-  parent (which knows what segments are available) while the tabs component handles
-  the show/hide logic.
+  the popover automatically. This keeps the implementation of the menu content in
+  the parent (which knows what segments are available) while the tabs component
+  handles the show/hide logic.
 
   ## Active Tab Tracking
 
@@ -61,7 +65,44 @@
   const activeId = writable<string | null>(null);
   let activeTabIsMissing: boolean = $state(false);
 
-  let showAddMenu = $state(false);
+  let addButtonElement: HTMLElement | undefined = $state();
+
+  // position popover near anchor element (WebKit doesn't do this automatically)
+  const positionPopover = (popoverElement: HTMLElement) => {
+    if (!addButtonElement) return;
+
+    const anchorRect = addButtonElement.getBoundingClientRect();
+    const popoverRect = popoverElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // default: position below the anchor with small gap
+    let top = anchorRect.bottom + 4;
+    let left = anchorRect.left;
+
+    // flip above if would overflow bottom of viewport
+    if (top + popoverRect.height > viewportHeight - 8) {
+      top = anchorRect.top - popoverRect.height - 4;
+    }
+
+    // keep within horizontal viewport bounds
+    if (left + popoverRect.width > viewportWidth - 8) {
+      left = viewportWidth - popoverRect.width - 8;
+    }
+    if (left < 8) left = 8;
+
+    popoverElement.style.position = "fixed";
+    popoverElement.style.top = `${top}px`;
+    popoverElement.style.left = `${left}px`;
+    popoverElement.style.margin = "0";
+  };
+
+  const handlePopoverToggle = (event: Event) => {
+    const popoverElement = event.target as HTMLElement;
+    if (popoverElement.matches(":popover-open")) {
+      positionPopover(popoverElement);
+    }
+  };
 
   /**
    * Context API Setup
@@ -125,21 +166,24 @@
     {#if addMenu}
       <li class="tab">
         <button
+          type="button"
+          bind:this={addButtonElement}
           aria-label="Add Segment"
           title="Add Segment"
-          onclick={() => {
-            showAddMenu = !showAddMenu;
-          }}>+</button
+          popovertarget="add-segment-menu"
+        >+</button>
+        <div
+          id="add-segment-menu"
+          popover
+          class="add-menu"
+          ontoggle={handlePopoverToggle}
         >
-        {#if showAddMenu}
-          <div class="add-menu">
-            {@render addMenu?.({
-              closeMenu: () => {
-                showAddMenu = false;
-              },
-            })}
-          </div>
-        {/if}
+          {@render addMenu?.({
+            closeMenu: () => {
+              document.getElementById("add-segment-menu")?.hidePopover();
+            },
+          })}
+        </div>
       </li>
     {/if}
   </ul>
@@ -211,15 +255,15 @@
     }
 
     .add-menu {
-      position: absolute;
-      top: 75%;
-      left: 50%;
-      min-width: 10ch;
       background-color: var(--col-surface);
       border: 1px solid var(--col-highlightHigh);
       border-radius: 4px;
       padding: 0.5rem;
-      z-index: 3;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      min-width: 10ch;
+      max-height: 50vh;
+      overflow-y: auto;
+      inset: unset; /* override popover API's default centring */
     }
   }
 
