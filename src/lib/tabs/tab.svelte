@@ -4,16 +4,27 @@
   Individual tab within a Tabs container. Registers itself with the parent via
   Svelte's context API and conditionally renders its content based on active state.
 
-  ## Self-Registration Pattern
+  ## Props
 
-  On mount, the tab:
-  1. Retrieves the "tabs" context (writable store from parent)
-  2. Adds its own metadata (id, label) to the store
-  3. If no tab is currently active, activates itself (first tab wins)
+  - id: Unique identifier for this tab
+  - label: Display text shown in the tab button
+  - index: Position of this tab (0-indexed), used to maintain correct ordering
 
-  This allows tabs to be declared in markup without manually managing a tab list
-  in the parent component. The parent just renders whatever tabs exist in its
-  children, and they handle their own registration.
+  ## Reactive Registration Pattern
+
+  The tab uses a reactive $effect to register/update itself in the parent's store
+  whenever its id, label, or index props change. This handles cases where Svelte
+  reuses a component instance with different props (e.g., when segments change).
+
+  The effect:
+  1. Detects when id changes and cleans up the old registration
+  2. Updates existing registration if label or position changed
+  3. Creates new registration at the correct index if this id isn't registered
+  4. Auto-activates the first tab if none is active
+
+  The index prop is critical for maintaining correct tab order when the underlying
+  data changes. Without it, tabs would appear in registration order rather than
+  the order they appear in the DOM.
 
   ## Cleanup on Unmount
 
@@ -37,32 +48,83 @@
   let {
     id,
     label,
+    index,
     children,
   }: {
     id: string;
     label: string;
+    index: number;
     children: Snippet;
   } = $props();
 
   const activeId: Writable<string | null> = getContext("activeId");
+  const items: Writable<{ id: string; label: string }[]> = getContext("tabs");
+
+  // track previous id to detect changes and clean up old registration
+  let previousId: string | null = null;
 
   /**
-   * Tab Registration and Lifecycle
+   * Reactive Tab Registration
    *
-   * Registers this tab with the parent Tabs component on mount, and cleans up
-   * on unmount. Auto-activates if this is the first tab.
+   * Keeps the parent's tab store in sync whenever id, label, or index props
+   * change. This handles component reuse scenarios where Svelte updates props
+   * on an existing instance rather than creating a new one.
+   *
+   * The index prop ensures tabs are inserted at the correct position to match
+   * the order of segments in the message, even when segments are reordered.
    */
-  onMount(() => {
-    const items: Writable<{ id: string; label: string }[]> = getContext("tabs");
-    items.set([...get(items), { id, label }]);
-
-    if (get(activeId) === null) {
-      activeId.set(id);
+  $effect(() => {
+    if (previousId !== null && previousId !== id) {
+      // id changed - remove old registration
+      items.set(get(items).filter((item) => item.id !== previousId));
     }
 
+    const currentItems = get(items);
+    const existingIndex = currentItems.findIndex((item) => item.id === id);
+
+    if (existingIndex >= 0) {
+      // already registered - update label if changed, and fix position if needed
+      const existing = currentItems[existingIndex];
+      if (existing.label !== label || existingIndex !== index) {
+        const filtered = currentItems.filter((item) => item.id !== id);
+        const updated = [
+          ...filtered.slice(0, index),
+          { id, label },
+          ...filtered.slice(index),
+        ];
+        items.set(updated);
+      }
+    } else {
+      // new registration - insert at correct position
+      const updated = [
+        ...currentItems.slice(0, index),
+        { id, label },
+        ...currentItems.slice(index),
+      ];
+      items.set(updated);
+      if (get(activeId) === null) {
+        activeId.set(id);
+      }
+    }
+
+    previousId = id;
+  });
+
+  /**
+   * Cleanup on Unmount
+   *
+   * Removes this tab from the parent's store and activates another tab if
+   * this one was active.
+   */
+  onMount(() => {
     return () => {
       items.set(get(items).filter((item) => item.id !== id));
-      activeId.set(get(items).length > 0 ? get(items)[0].id : null);
+      const remaining = get(items);
+      if (remaining.length > 0) {
+        activeId.set(remaining[0].id);
+      } else {
+        activeId.set(null);
+      }
     };
   });
 </script>

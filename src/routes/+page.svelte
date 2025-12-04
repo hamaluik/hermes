@@ -346,6 +346,11 @@
    * We parse on every change (rather than only on load) because users can edit the
    * raw message text directly, adding or removing segments. The tab UI needs to stay
    * in sync with whatever segments are actually present in the message.
+   *
+   * Tab IDs use the format `${segment}-${index}` (e.g., "OBX-5") to uniquely identify
+   * each segment instance, since the same segment type can appear multiple times.
+   * The index is the position in messageSegments, which the Tab component uses to
+   * maintain correct ordering even when segments are reordered.
    */
   $effect(() => {
     if (!message) {
@@ -1425,11 +1430,12 @@
           {/each}
         </ul>
       {/snippet}
-      {#each messageSegments as key, index}
+      {#each messageSegments as key, index (index)}
         {#if schemas[key]}
           <Tab
-            id={key}
+            id={`${key}-${index}`}
             label={tabLabel(index)}
+            {index}
           >
             <SegmentTab
               segment={key}
@@ -1503,6 +1509,9 @@
     the raw text, the relevant segment form is displayed. It creates a connection between
     the two representations of the message (raw text vs. structured form).
 
+    The cursor location includes `segment_n` (which occurrence of the segment type),
+    so we can find the correct index in messageSegments and construct the tab ID.
+
     The feature is opt-in because some users prefer manual tab control while editing.
   -->
   <CursorDescription
@@ -1519,8 +1528,18 @@
         return;
       }
       if (loc?.segment && setActiveTab) {
-        const setactive: (id: string) => void = setActiveTab;
-        setactive(loc.segment);
+        // find the index in messageSegments for this segment occurrence
+        let count = 0;
+        const index = messageSegments.findIndex((s) => {
+          if (s === loc.segment) {
+            if (count === (loc.segment_n ?? 0)) return true;
+            count++;
+          }
+          return false;
+        });
+        if (index >= 0) {
+          setActiveTab(`${loc.segment}-${index}`);
+        }
       }
     }}
   />

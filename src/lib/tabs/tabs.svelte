@@ -8,12 +8,13 @@
   ## Context API Usage
 
   We provide two contexts to child components:
-  - "tabs": Writable store of tab metadata (id, label)
+  - "tabs": Writable store of tab metadata (id, label), ordered by index
   - "activeId": Writable store of currently active tab ID
 
-  Child Tab components subscribe to activeId to know when they're active, and push
-  their metadata into the tabs store. This creates a two-way communication channel
-  without requiring explicit prop drilling through intermediate components.
+  Child Tab components subscribe to activeId to know when they're active, and register
+  their metadata into the tabs store at their specified index. This creates a two-way
+  communication channel without requiring explicit prop drilling through intermediate
+  components.
 
   Why use context instead of props? Because tab content can be arbitrarily nested
   (e.g., inside conditional blocks, each blocks, etc.), and manually threading
