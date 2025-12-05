@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::Context;
 use hl7_parser::builder::{FieldBuilder, MessageBuilder, SegmentBuilder};
+use hl7_parser::datetime::{parse_date, parse_timestamp};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -801,6 +802,118 @@ pub fn generate_template_message(
     }
 
     Ok(builder.render_with_newlines().to_string())
+}
+
+/// Result of parsing an HL7 timestamp into ISO components.
+///
+/// Used by the frontend date/time picker to pre-populate inputs from existing
+/// HL7 field values. The ISO formats are directly compatible with HTML5
+/// `<input type="date">` and `<input type="time">` elements.
+#[derive(Serialize)]
+pub struct ParsedTimestamp {
+    /// ISO date string (YYYY-MM-DD) for `<input type="date">`
+    pub date: Option<String>,
+    /// ISO time string (HH:MM:SS) for `<input type="time">`
+    pub time: Option<String>,
+    /// UTC offset string (+HH:MM or -HH:MM) for offset dropdown
+    pub offset: Option<String>,
+    /// Whether the original HL7 value was parseable
+    pub valid: bool,
+}
+
+/// Parse an HL7 timestamp into ISO components for picker pre-population.
+///
+/// Enables the date/time picker to show existing field values rather than
+/// always defaulting to the current time. The frontend passes the current
+/// HL7 field value and receives structured components for its native inputs.
+///
+/// # Modes
+///
+/// * `"date"` - Parses YYYYMMDD format, returns only date component
+/// * `"datetime"` - Parses full timestamp with optional time and offset
+///
+/// # Template Handling
+///
+/// Template placeholders like `{now}` return `valid: true` with no components,
+/// since they're valid field values but shouldn't pre-populate the picker.
+///
+/// # Examples
+///
+/// ```text
+/// "20250115"              -> { date: "2025-01-15", time: None, offset: None }
+/// "20250115143000-0500"   -> { date: "2025-01-15", time: "14:30:00", offset: "-05:00" }
+/// "{now}"                 -> { date: None, time: None, offset: None, valid: true }
+/// "invalid"               -> { date: None, time: None, offset: None, valid: false }
+/// ```
+#[tauri::command]
+pub fn parse_hl7_timestamp(value: &str, mode: &str) -> ParsedTimestamp {
+    // handle empty/template values
+    if value.is_empty() || (value.starts_with('{') && value.ends_with('}')) {
+        return ParsedTimestamp {
+            date: None,
+            time: None,
+            offset: None,
+            valid: true,
+        };
+    }
+
+    match mode {
+        "date" => {
+            match parse_date(value, false) {
+                Ok(d) => ParsedTimestamp {
+                    date: Some(format!("{:04}-{:02}-{:02}", d.year, d.month.unwrap_or(1), d.day.unwrap_or(1))),
+                    time: None,
+                    offset: None,
+                    valid: true,
+                },
+                Err(_) => ParsedTimestamp {
+                    date: None,
+                    time: None,
+                    offset: None,
+                    valid: false,
+                },
+            }
+        }
+        "datetime" => {
+            match parse_timestamp(value, false) {
+                Ok(ts) => {
+                    let date = Some(format!("{:04}-{:02}-{:02}",
+                        ts.year,
+                        ts.month.unwrap_or(1),
+                        ts.day.unwrap_or(1)
+                    ));
+                    let time = ts.hour.map(|h| {
+                        format!("{:02}:{:02}:{:02}",
+                            h,
+                            ts.minute.unwrap_or(0),
+                            ts.second.unwrap_or(0)
+                        )
+                    });
+                    // offset.hours is signed (negative for western timezones)
+                    let offset = ts.offset.map(|o| {
+                        let total_minutes = o.hours as i32 * 60 + o.minutes as i32;
+                        let sign = if total_minutes >= 0 { "+" } else { "-" };
+                        let abs_hours = (total_minutes.abs() / 60) as u8;
+                        let abs_mins = (total_minutes.abs() % 60) as u8;
+                        format!("{}{:02}:{:02}", sign, abs_hours, abs_mins)
+                    });
+                    ParsedTimestamp { date, time, offset, valid: true }
+                },
+                Err(_) => ParsedTimestamp {
+                    date: None,
+                    time: None,
+                    offset: None,
+                    valid: false,
+                },
+            }
+        }
+        _ => ParsedTimestamp {
+            date: None,
+            time: None,
+            offset: None,
+            valid: false,
+        },
+    }
 }
 
 #[cfg(test)]

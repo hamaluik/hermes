@@ -164,19 +164,25 @@ template = "E"
 field = 8
 name = "Start Date"
 datatype = "datetime"
-required = true
-placeholder = "YYYYMMDDHHMMSS"
-pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+placeholder = "YYYYMMDDHHMMSS-ZZZZ"
+pattern="(\\{auto\\})|(\\{now\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 maxlength = 23
+required = true
 note = "Date the contact relationship became effective."
 template = "{auto}"
+[fields.values]
+"{auto}" = "Set to now when sending the message"
+"{now}" = "Set to now when sending the message"
 
 [[fields]]
 field = 9
 name = "End Date"
 datatype = "datetime"
+placeholder = "YYYYMMDDHHMMSS-ZZZZ"
+pattern="(\\{auto\\})|(\\{now\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 maxlength = 23
-placeholder = "YYYYMMDDHHMMSS"
-pattern="(\\{auto\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
 note = "Date the contact relationship ended."
 template = ""
+[fields.values]
+"{auto}" = "Set to now when sending the message"
+"{now}" = "Set to now when sending the message"

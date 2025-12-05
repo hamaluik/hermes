@@ -281,7 +281,8 @@ The keys (`M`, `F`, etc.) are stored in the HL7 message. The values (`Male`,
 
 ## Step 7: Add Date Fields
 
-Date fields get special handling when you specify the `datatype`:
+Date fields get special handling when you specify the `datatype` as "datetime"
+or "date":
 
 ```python
                 # PID.7 - Date of Birth
@@ -303,10 +304,10 @@ Date fields get special handling when you specify the `datatype`:
                 },
 ```
 
-The `datatype` property enables date-specific validation and potentially a
-date picker in the UI:
-- `"date"` - Date only (YYYYMMDD)
-- `"datetime"` - Date and time (YYYYMMDDHHmmss)
+The `datatype` property enables data-type-specific validation and appropriate UI
+elements in the editing form:
+- `"date"` - Date only (YYYYMMDD), date picker UI
+- `"datetime"` - Date and time (YYYYMMDDHHmmss+-ZZZZ), date-time picker UI
 
 ## Step 8: Add Visit Information (PV1)
 

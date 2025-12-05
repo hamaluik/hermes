@@ -7,6 +7,7 @@
 //! * **Light validation** - Fast checks for passive background validation (required fields, parse errors)
 //! * **Full validation** - Comprehensive checks for on-demand validation (all rules)
 
+use hl7_parser::datetime::{parse_date, parse_timestamp};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -449,7 +450,15 @@ fn validate_field_constraints(
     }
 }
 
-/// Validate date/datetime format.
+/// Validate date/datetime format using hl7-parser's parsing functions.
+///
+/// Uses the `hl7-parser` crate's `parse_date` and `parse_timestamp` functions
+/// for robust validation. This catches invalid values that simple digit-counting
+/// would miss, such as invalid months (13), invalid days (32), or malformed
+/// timezone offsets.
+///
+/// Template placeholders like `{now}` or `{auto}` are skipped since they're
+/// replaced at send time.
 fn validate_datetime(
     value: &str,
     datatype: DataType,
@@ -463,29 +472,23 @@ fn validate_datetime(
         return;
     }
 
-    let is_valid = match datatype {
-        DataType::Date => {
-            // YYYYMMDD format
-            value.len() >= 8 && value[..8].chars().all(|c| c.is_ascii_digit())
-        }
-        DataType::DateTime => {
-            // YYYYMMDDHHMMSS[.SSS][+/-ZZZZ] format
-            value.len() >= 8 && value[..8].chars().all(|c| c.is_ascii_digit())
-        }
+    let parse_result = match datatype {
+        DataType::Date => parse_date(value, false).map(|_| ()),
+        DataType::DateTime => parse_timestamp(value, false).map(|_| ()),
     };
 
-    if !is_valid {
+    if let Err(e) = parse_result {
         let expected_format = match datatype {
             DataType::Date => "YYYYMMDD",
-            DataType::DateTime => "YYYYMMDDHHMMSS",
+            DataType::DateTime => "YYYYMMDDHHMMSS[.SSSS][+/-ZZZZ]",
         };
         issues.push(ValidationIssue {
             path: path.to_string(),
             range,
             severity: Severity::Warning,
             message: format!(
-                "{} ({}) has invalid date format. Expected: {}",
-                path, field_name, expected_format
+                "{} ({}) has invalid date format: {}. Expected: {}",
+                path, field_name, e, expected_format
             ),
             rule: ValidationRule::InvalidDate,
             actual_value: Some(value.to_string()),

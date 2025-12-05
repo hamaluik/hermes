@@ -309,6 +309,37 @@ export async function formatDatetimeToHl7(
 }
 
 /**
+ * Result of parsing an HL7 timestamp into ISO components.
+ */
+export interface ParsedTimestamp {
+  /** ISO date string (YYYY-MM-DD) or null if invalid */
+  date: string | null;
+  /** ISO time string (HH:MM:SS) or null if not present/invalid */
+  time: string | null;
+  /** UTC offset string (+HH:MM or -HH:MM) or null if not present */
+  offset: string | null;
+  /** Whether the original value was valid */
+  valid: boolean;
+}
+
+/**
+ * Parses an HL7 timestamp into ISO components for pre-populating date/time pickers.
+ *
+ * Takes an HL7 timestamp (e.g., "20250115143000-0500") and returns structured
+ * components that can populate native HTML date/time inputs.
+ *
+ * @param value - HL7 timestamp string
+ * @param mode - "date" for date-only parsing, "datetime" for full timestamp
+ * @returns Parsed components for populating native inputs
+ */
+export async function parseHl7Timestamp(
+  value: string,
+  mode: "date" | "datetime",
+): Promise<ParsedTimestamp> {
+  return await invoke("parse_hl7_timestamp", { value, mode });
+}
+
+/**
  * Generates an HL7 message from a template.
  *
  * Creates a minimal HL7 message for the specified message type by looking up

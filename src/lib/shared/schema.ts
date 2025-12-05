@@ -159,7 +159,7 @@ export async function getSegmentSchema(
   segment: string,
 ): Promise<SegmentSchema> {
   try {
-    return invoke("get_segment_schema", { segment });
+    return await invoke<SegmentSchema>("get_segment_schema", { segment });
   } catch (error) {
     console.error(`Error getting segment {segment} schema:`, error);
     throw error;

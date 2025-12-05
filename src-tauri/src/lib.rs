@@ -146,6 +146,7 @@ pub fn run() {
             commands::get_current_cell_range,
             commands::get_current_hl7_timestamp,
             commands::format_datetime_to_hl7,
+            commands::parse_hl7_timestamp,
             commands::generate_template_message,
             commands::send_message,
             commands::start_listening,

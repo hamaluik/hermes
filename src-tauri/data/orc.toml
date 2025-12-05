@@ -80,8 +80,14 @@ component = 4
 group = "Quantity/Timing"
 name = "Start Date/Time"
 datatype = "datetime"
+placeholder = "YYYYMMDDHHMMSS-ZZZZ"
+pattern="(\\{auto\\})|(\\{now\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+maxlength = 23
 note = "Requested start date/time for the order."
 template = "{auto}"
+[fields.values]
+"{auto}" = "Set to now when sending the message"
+"{now}" = "Set to now when sending the message"
 
 [[fields]]
 field = 7
@@ -176,8 +182,14 @@ template = "555-RANGER1"
 field = 15
 name = "Order Effective Date/Time"
 datatype = "datetime"
+placeholder = "YYYYMMDDHHMMSS-ZZZZ"
+pattern="(\\{auto\\})|(\\{now\\})|((\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\.\\d{1,3})?([+-]\\d{4})?)"
+maxlength = 23
 note = "Date/time the order should take effect."
 template = "{auto}"
+[fields.values]
+"{auto}" = "Set to now when sending the message"
+"{now}" = "Set to now when sending the message"
 
 [[fields]]
 field = 16

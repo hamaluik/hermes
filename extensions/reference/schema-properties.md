@@ -83,10 +83,11 @@ Common patterns:
 
 - **Type:** `"date" | "datetime" | null`
 - **Required:** No
-- **Description:** Special handling for date/time fields
+- **Description:** Special handling for fields depending on their type.
+  Currently only date and datetime types are supported.
 - **Values:**
   - `"date"` - YYYYMMDD format
-  - `"datetime"` - YYYYMMDDHHmmss format
+  - `"datetime"` - YYYYMMDDHHmmss+/-ZZZZ format
 
 ### placeholder
 
