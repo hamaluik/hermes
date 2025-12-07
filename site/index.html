@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        body.theme-area51 {
+            background-color: #0a0a0a; /* Very dark background */
+            color: #00ff00; /* Neon green text */
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .theme-area51 .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #00ff00; /* Neon green border for the container */
+            padding: 15px 25px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3); /* Subtle green glow */
+        }
+        .theme-area51 h1, .theme-area51 h2, .theme-area51 h3, .theme-area51 h4, .theme-area51 h5, .theme-area51 h6 {
+            color: #39FF14; /* Brighter neon green for headings */
+            border-bottom: 1px dashed #00ff00;
+            padding-bottom: 5px;
+        }
+        .theme-area51 a {
+            color: #00ffff; /* Neon cyan for links */
+            text-decoration: underline;
+        }
+        .theme-area51 a:hover {
+            color: #ffffff;
+            background-color: #00ff00;
+        }
+        .theme-area51 code {
+            background-color: #1a1a1a; /* Slightly lighter dark bg for code */
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #00ff00; /* Ensure inline code also uses neon green */
+        }
+        .theme-area51 pre {
+            background-color: #1a1a1a;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+        .theme-area51 pre code {
+            background-color: transparent;
+            padding: 0;
+            border: none;
+            font-size: 0.9em;
+        }
+        .theme-area51 blockquote {
+            border-left: 3px solid #00ffff; /* Cyan border for blockquotes */
+            margin-left: 0;
+            padding-left: 15px;
+            color: #cccccc; /* Slightly dimmed color for quotes */
+            font-style: italic;
+        }
+        .theme-area51 table {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #00ff00;
+            margin: 1em 0;
+        }
+        .theme-area51 th, .theme-area51 td {
+            border: 1px dashed #00ff00;
+            padding: 8px;
+            text-align: left;
+        }
+        .theme-area51 th {
+            background-color: #1a1a1a;
+            color: #39FF14;
+        }
+        .theme-area51 hr {
+            border: 0;
+            border-top: 1px dashed #00ff00;
+            margin: 1.5em 0;
+        }
+        .theme-area51 img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #00ff00; /* Optional green border for images */
+        }
+        .theme-area51 footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px dashed #00ff00;
+            font-size: 0.8em;
+            text-align: center;
+            color: #cccccc;
+        }
+    </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/default.min.css"><script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script><script>mermaid.initialize({ startOnLoad: true, securityLevel: "loose" });</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script><script>MathJax = { tex: { inlineMath: [["$", "$"]], displayMath: [["$", "$"]] } };</script></head>
+<body class="theme-area51">
+    <div class="container">
+        <h1 id="hermes"><a href="#hermes" class="header-anchor"></a>Hermes</h1><p>Hermes is a desktop app for composing, sending, and receiving HL7v2 messages.</p>
+<h2 id="hl7v2-"><a href="#hl7v2-" class="header-anchor"></a>HL7v2?</h2><p><a href="https://en.wikipedia.org/wiki/Health_Level_7#HL7_Version_2">HL7 v2.x</a> is a
+messaging standard used throughout healthcare. When a patient gets admitted, a
+lab result comes back, or a prescription gets filled, there&#39;s usually an HL7
+message behind it. These messages are pipe-delimited text that looks something
+like this:</p>
+<pre><code class="hljs plaintext">MSH|^~\&amp;|PALANTIR|ORTHANC|ELVISH|GONDOR|20241207120000||ADT^A01|MSG001|P|2.5.1|||AL|NE||ASCII
+EVN|A01|20241207120000
+PID||ENCHANTED99|SAMPLE42||Grey^Gandalf^The^^DR||19540102|M||C|7 Sample Lane^^Hobbiton^SH^11111^Middle Earth^H||555-RING-ONE|555-SHIRE-42||||POTION777|987-65-4321|||||||||||A
+PV1|1|I|TOWER^7A^^RIVENDELL^^^ELVEN^7|||MINES^DEEP^^RIVENDELL^^^MORIA^B2|ELR001^Halfelven^Elrond^P|GAL002^Celeborn^Galadriel^Q|SAR003^White^Saruman^W||||||||RAD004^Brown^Radagast^N||QUEST42
+NK1|1|Baggins^Bilbo^T^^MR|S|1 Bag End^^Hobbiton^SH^11111^Middle Earth^H|555-HOBBIT1|555-BAGEND2|E|20241207120000|
+DG1|1||R99.9^Ring-induced invisibility syndrome|
+NTE|1|P|Not all who wander are lost</code></pre><p>Each line is a segment (MSH, PID, PV1, etc.), and fields within segments are
+separated by pipes. The caret, tilde, backslash, and ampersand characters act as
+sub-delimiters for components and repetitions. It&#39;s a format that&#39;s been around
+since the 80s and it shows, but it gets the job done.</p>
+<p><img src="./screenshot.png" alt="screenshot of Hermes editing an HL7 message"></p>
+<h2 id="features"><a href="#features" class="header-anchor"></a>Features</h2><h3 id="editing"><a href="#editing" class="header-anchor"></a>Editing</h3><p>You can edit messages two ways. There&#39;s a raw text editor with syntax
+highlighting, or you can switch to segment tabs where each field gets its own
+input. Both views stay in sync.</p>
+<p>As you move through the message, field descriptions show up to remind you what
+each position means—handy when you can&#39;t remember whether PID.7 is birth date
+or sex.</p>
+<h3 id="validation"><a href="#validation" class="header-anchor"></a>Validation</h3><p>Hermes checks messages as you type. It catches parse errors, missing required
+fields, invalid dates, fields that are too long, that sort of thing. Not
+exhaustive, but it&#39;ll save you from obvious mistakes.</p>
+<h3 id="diff"><a href="#diff" class="header-anchor"></a>Diff</h3><p>You can compare two messages to see what changed. It highlights differences at
+the segment, field, and component level.</p>
+<h3 id="sending-and-receiving"><a href="#sending-and-receiving" class="header-anchor"></a>Sending and Receiving</h3><p>You can send messages over MLLP and see the ACK that comes back. There&#39;s also a
+listen mode that acts as a simple MLLP server—it accepts connections and
+auto-acknowledges whatever it receives.</p>
+<h3 id="extensions"><a href="#extensions" class="header-anchor"></a>Extensions</h3><p>If you need custom functionality, you can write extensions. They&#39;re standalone
+programs that talk to Hermes over stdio using JSON-RPC. Add toolbar buttons,
+build message wizards, define custom validation rules, whatever you need. Write
+them in any language.</p>
+<p>See the <a href="https://github.com/hamaluik/hermes/tree/main/extensions">extension documentation</a>
+for details.</p>
+<h3 id="other-bits"><a href="#other-bits" class="header-anchor"></a>Other Bits</h3><p>There are templates for common message types, export/import to JSON/YAML/TOML,
+and the usual keyboard shortcuts.</p>
+<h2 id="installation"><a href="#installation" class="header-anchor"></a>Installation</h2><p>Download the latest release for your platform from
+<a href="https://github.com/hamaluik/hermes/releases">GitHub releases</a>:</p>
+<ul>
+<li>macOS: <code>.dmg</code></li>
+<li>Windows: <code>.msi</code></li>
+<li>Linux: <code>.AppImage</code></li>
+</ul>
+<h2 id="about"><a href="#about" class="header-anchor"></a>About</h2><p>Hermes is a personal project written by Kenton Hamaluik (with some assistance
+from Claude), released under the Apache 2.0 licence. Source code and issue
+tracking live on <a href="https://github.com/hamaluik/hermes">GitHub</a>.</p>
+
+
+        <footer>
+             Themed with `stylemd`. Get stylemd here: <a href="https://github.com/ddukbg/stylemd">https://github.com/ddukbg/stylemd</a>
+        </footer>
+    </div>
+</body>
+</html> 

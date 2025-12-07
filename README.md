@@ -30,18 +30,14 @@
 
 ## Overview
 
-Hermes is a cross-platform desktop application built with Tauri and Svelte that
-provides a comprehensive interface for working with HL7 v2.x messages. It's
-designed specifically for HL7 system development and testing, offering both
-visual form-based editing and raw message manipulation capabilities.
+Hermes is a cross-platform desktop application built with Tauri and Svelte for
+working with HL7 v2.x messages. It's designed for HL7 system development and
+testing.
 
-The application bridges the gap between manual HL7 message creation and
-automated testing, providing:
-
-- **Visual message editing** through segment tabs with field validation
-- **Raw text editing** with syntax highlighting
-- **MLLP protocol support** for sending and receiving messages
-- **Real-time field documentation** to help developers understand HL7 structure
+It enables you to edit both the raw HL7 message and individually extracted
+fields, and to send and receive messages over MLLP. Hermes includes an extension
+system that works like the Language Server Protocol, letting you add custom
+functionality without recompiling the entire application.
 
 ## Screenshot
 
@@ -49,34 +45,13 @@ automated testing, providing:
 
 ## Features
 
-### Message Editing
+Hermes offers dual-mode message editing through form-based segment tabs and a
+raw text editor with syntax highlighting for HL7 structure. Field descriptions
+and validation feedback appear in real-time as you work.
 
-- Dual-mode editing: form-based segment tabs and raw text editor
-- Syntax highlighting for HL7 message structure
-- Real-time field descriptions and validation
-- Tab navigation between fields
-- Copy message to clipboard
-
-### Network Communication
-
-- Send HL7 messages via MLLP (Minimal Lower Layer Protocol)
-- Listen for incoming HL7 messages
-- Configurable host, port, and timeout settings
-- Response handling and logging
-
-### File Management
-
-- Native File menu with standard keyboard shortcuts (Cmd/Ctrl+N, O, S)
-- Open and save `.hl7` message files
-- Track current file for quick saves
-- Create new messages with default MSH segment
-
-### Developer Features
-
-- Schema caching from `messages.toml` for fast lookup
-- Event-driven communication between frontend and backend
-- Persistent application settings via Tauri store plugin
-- Comprehensive logging via Tauri log plugin
+Network communication happens over MLLP (Minimal Lower Layer Protocol). Hermes
+can act as both a client (sending messages) and a server (listening for incoming
+messages), with full response handling and logging.
 
 ## Prerequisites
 
@@ -191,7 +166,8 @@ Tauri configuration is in `src-tauri/tauri.conf.json`:
 
 ## Architecture
 
-Hermes follows a command-response pattern with event-driven communication between the frontend (Svelte) and backend (Rust/Tauri).
+Hermes follows a command-response pattern with event-driven communication
+between the frontend (Svelte) and backend (Rust/Tauri).
 
 ### High-Level Architecture
 
@@ -234,19 +210,10 @@ Hermes follows a command-response pattern with event-driven communication betwee
 
 ### Communication Flow
 
-1. **Frontend → Backend**: User actions invoke Tauri commands via `@tauri-apps/api/core`
-2. **Backend Processing**: Rust functions process requests, access schema cache, perform I/O
-3. **Backend → Frontend**: Results emitted via Tauri events
-4. **Frontend Reactivity**: Svelte stores update UI automatically
-
-### Key Design Decisions
-
-- **Dual Editor Modes**: Provides both structured (forms) and unstructured (text) editing
-- **Schema Caching**: Pre-loads HL7 definitions from `messages.toml` at startup for instant lookups
-- **Event-Driven I/O**: Network operations (send/receive) use events for progress updates
-- **Persistent Settings**: Tauri store plugin saves user preferences across sessions
-
-For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+User actions in the frontend invoke Tauri commands via `@tauri-apps/api/core`.
+Rust functions on the backend process these requests, accessing the schema cache
+and performing I/O as needed. Results are emitted back to the frontend via Tauri
+events, and Svelte stores automatically update the UI in response.
 
 ## Project Structure
 
@@ -297,74 +264,33 @@ hermes/
 └── HELP.md                       # User documentation
 ```
 
-## Key Technologies
+## Dependencies
 
 ### Frontend Stack
 
-- **Svelte 5**: Reactive UI framework with runes
-- **SvelteKit**: Application framework and routing
-- **TypeScript**: Type-safe JavaScript
-- **Vite**: Build tool and dev server
+- Svelte 5
+- SvelteKit
+- Vite
 
 ### Backend Stack
 
-- **Tauri 2**: Desktop application framework
-- **Rust**: Systems programming language
-- **tokio**: Async runtime for networking
-- **hl7-parser**: HL7 message parsing
-- **hl7-definitions**: HL7 field definitions
-- **hl7-mllp-codec**: MLLP protocol implementation
+- Tauri
+- tokio
+- hl7-parser
+- hl7-definitions
+- hl7-mllp-codec
 
 ### Tauri Plugins
 
-- `tauri-plugin-clipboard-manager`: Clipboard operations
-- `tauri-plugin-fs`: File system access
-- `tauri-plugin-dialog`: File dialogs
-- `tauri-plugin-store`: Persistent settings
-- `tauri-plugin-log`: Application logging
-- `tauri-plugin-persisted-scope`: Persists file access permissions across restarts
-- `tauri-plugin-opener`: URL/file opening
-
-## User Documentation
-
-For end-user documentation on how to use Hermes, see [HELP.md](./HELP.md).
-
-Topics covered:
-
-- HL7 message structure primer
-- Interface walkthrough
-- Message editing (tabs and raw editor)
-- File operations
-- Settings configuration
-- Keyboard shortcuts
-- Tips and tricks
+Hermes uses several Tauri plugins for native functionality: `clipboard-manager`
+for clipboard operations, `fs` and `dialog` for file system access and file
+dialogs, `store` for persistent settings, `log` for application logging,
+`persisted-scope` to preserve file access permissions across restarts, and
+`opener` for opening URLs and files in external applications.
 
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development guidelines.
-
-Quick overview:
-
-- **Code Style**: Follow existing patterns, use Prettier/Rustfmt
-- **Type Safety**: Leverage TypeScript and Rust's type systems
-- **Testing**: Manual testing required, automated tests welcome
-- **Commits**: Clear, descriptive commit messages
-- **Documentation**: Update relevant docs when adding features
-
-### Adding New Features
-
-1. **New Tauri Command**:
-   - Add command function in appropriate feature directory under
-     `src-tauri/src/commands/`
-   - Export from feature's mod.rs and commands/mod.rs
-   - Register command in `src-tauri/src/lib.rs`
-   - Create TypeScript bridge co-located with feature in `src/lib/<feature>/`
-   - Use from Svelte components
-
-2. **New UI Component**:
-   - Create `.svelte` file in appropriate feature directory under `src/lib/`
-   - Import using `$lib/` for cross-directory or relative paths within feature
-   - Follow existing component patterns for consistency
 
 ## Troubleshooting
 
@@ -416,17 +342,9 @@ cargo build
 - Ensure remote server is listening
 - Review timeout settings
 
-### Getting Help
-
-- Review [HELP.md](./HELP.md) for user-facing features
-- Check [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details
-- Search existing issues in the repository
-- Check Tauri documentation: https://tauri.app/
-- Check Svelte documentation: https://svelte.dev/
-
 ## License
 
-See LICENSE file for details
+Apache-2.0. See [LICENSE](./LICENSE) for details
 
 ---
 

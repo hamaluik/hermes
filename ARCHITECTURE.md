@@ -1,6 +1,8 @@
 # Hermes Architecture Documentation
 
-This document provides detailed technical documentation of the Hermes application architecture, including design decisions, data flows, and implementation details.
+This document provides detailed technical documentation of the Hermes
+application architecture, including design decisions, data flows, and
+implementation details.
 
 ## Table of Contents
 
@@ -12,12 +14,12 @@ This document provides detailed technical documentation of the Hermes applicatio
 - [HL7 Schema System](#hl7-schema-system)
 - [Network Communication](#network-communication)
 - [Database Integration](#database-integration)
-- [State Management](#state-management)
 - [Extension Points](#extension-points)
 
 ## System Architecture
 
-Hermes is built as a desktop application using the Tauri framework, which combines a Rust backend with a web-based frontend. This architecture provides:
+Hermes is built as a desktop application using the Tauri framework, which
+combines a Rust backend with a web-based frontend. This architecture provides:
 
 - **Native performance** for HL7 parsing and network operations (Rust)
 - **Rich UI capabilities** for message editing and forms (Svelte)
@@ -38,21 +40,21 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Feature Modules (src/lib/)                                   │   │
-│  │  Each feature folder contains components and Tauri bridges:   │   │
-│  │  • communication/ - Drawer, send/listen tabs, presets         │   │
-│  │  • editor/ - Message editor, cursor tracking, history         │   │
-│  │  • diff/ - Message comparison                                 │   │
-│  │  • find_replace/ - Search functionality                       │   │
-│  │  • validation/ - Validation panel and logic                   │   │
-│  │  • forms/ - Form inputs (input_field, toggle_switch)          │   │
-│  │  • modals/ - Standalone modals (jump_to_field, timestamp)     │   │
-│  │  • settings/ - Settings modal, theme toggle                   │   │
-│  │  • tabs/ - Segment tab navigation                             │   │
-│  │  • toolbar/ - Toolbar buttons and controls                    │   │
-│  │  • components/ - Generic UI primitives (modal, modal_header)  │   │
-│  │  • icons/ - SVG icon components                               │   │
-│  │  • shared/ - Cross-feature utilities (schema.ts, data.ts)     │   │
+│  │  Feature Modules (src/lib/)                                  │   │
+│  │  Each feature folder contains components and Tauri bridges:  │   │
+│  │  • communication/ - Drawer, send/listen tabs, presets        │   │
+│  │  • editor/ - Message editor, cursor tracking, history        │   │
+│  │  • diff/ - Message comparison                                │   │
+│  │  • find_replace/ - Search functionality                      │   │
+│  │  • validation/ - Validation panel and logic                  │   │
+│  │  • forms/ - Form inputs (input_field, toggle_switch)         │   │
+│  │  • modals/ - Standalone modals (jump_to_field, timestamp)    │   │
+│  │  • settings/ - Settings modal, theme toggle                  │   │
+│  │  • tabs/ - Segment tab navigation                            │   │
+│  │  • toolbar/ - Toolbar buttons and controls                   │   │
+│  │  • components/ - Generic UI primitives (modal, modal_header) │   │
+│  │  • icons/ - SVG icon components                              │   │
+│  │  • shared/ - Cross-feature utilities (schema.ts, data.ts)    │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -129,7 +131,8 @@ Hermes is built as a desktop application using the Tauri framework, which combin
 
 ## Frontend Architecture
 
-The frontend is built using Svelte 5 with SvelteKit, leveraging modern reactive programming patterns.
+The frontend is built using Svelte 5 with SvelteKit, leveraging modern reactive
+programming patterns.
 
 ### Component Hierarchy
 
@@ -160,7 +163,8 @@ The frontend is built using Svelte 5 with SvelteKit, leveraging modern reactive 
 
 ### State Management
 
-Hermes uses Svelte's built-in reactivity system (runes in Svelte 5) for state management:
+Hermes uses Svelte's built-in reactivity system (runes in Svelte 5) for state
+management:
 
 #### Local Component State
 - Each component manages its own state using `$state()` rune
@@ -181,7 +185,8 @@ Hermes uses Svelte's built-in reactivity system (runes in Svelte 5) for state ma
 
 ### TypeScript Bridges
 
-TypeScript bridges for Tauri commands are co-located with their components in feature directories under `src/lib/`. This keeps related code together:
+TypeScript bridges for Tauri commands are co-located with their components in
+feature directories under `src/lib/`. This keeps related code together:
 
 ```typescript
 // Example: src/lib/communication/send_receive.ts
@@ -197,11 +202,9 @@ export async function sendMessage(
 }
 ```
 
-Key benefits:
-- Type safety for command parameters and return values
-- Feature cohesion: UI and backend bridges in same directory
-- Easier testing and mocking
-- Documentation via TypeScript types
+Co-locating bridges with their components keeps related code together and makes
+testing easier. The TypeScript types serve as documentation while providing
+compile-time safety for command parameters and return values.
 
 ## Backend Architecture
 
@@ -339,7 +342,8 @@ pub async fn send_message(
 
 ### Long-Running Tasks
 
-For operations that run indefinitely (like MLLP listener), Tauri spawns tokio tasks:
+For operations that run indefinitely (like MLLP listener), Tauri spawns tokio
+tasks:
 
 ```rust
 #[tauri::command]
@@ -373,8 +377,9 @@ pub async fn stop_listening(
 
 ### Native Menu Events
 
-The application provides a native File menu with standard keyboard shortcuts. Menu item clicks
-trigger events that the frontend listens to, ensuring consistent behaviour between menu and toolbar.
+The application provides a native File menu with standard keyboard shortcuts.
+Menu item clicks trigger events that the frontend listens to, ensuring
+consistent behaviour between menu and toolbar.
 
 **Menu Structure:**
 - File → New (Cmd/Ctrl+N)
@@ -415,8 +420,9 @@ listen("menu-file-save-as", () => handleSaveAs());
 
 **Dynamic Menu State:**
 
-The Save menu item's enabled state is synced with the toolbar save button using a dedicated
-command. This ensures users can't invoke Save from the menu when there are no unsaved changes.
+The Save menu item's enabled state is synced with the toolbar save button using
+a dedicated command. This ensures users can't invoke Save from the menu when
+there are no unsaved changes.
 
 ```rust
 // Backend - menu.rs
@@ -504,13 +510,14 @@ pub struct FieldSchema {
 
 ## HL7 Schema System
 
-The schema system provides metadata about HL7 messages for validation, editing assistance, and documentation.
+The schema system provides metadata about HL7 messages for validation, editing
+assistance, and documentation.
 
 ### Schema Loading
 
-1. **Startup**: `lib.rs` loads `messages.toml` into `SchemaCache`
-2. **Caching**: Schema cached in memory for fast lookups
-3. **Lookup**: Commands query schema cache for message/segment info
+At startup, `lib.rs` loads `messages.toml` into a `SchemaCache` that remains in
+memory for the lifetime of the application. Commands query this cache when they
+need message or segment metadata.
 
 ### Schema File Format
 
@@ -550,7 +557,8 @@ Priority: HL7 system specs override standard specs.
 
 ### MLLP Protocol
 
-MLLP (Minimal Lower Layer Protocol) is the standard transport for HL7 v2.x messages over TCP.
+MLLP (Minimal Lower Layer Protocol) is the standard transport for HL7 v2.x
+messages over TCP.
 
 **Message Framing:**
 ```
@@ -645,10 +653,12 @@ pub struct AppData {
 }
 ```
 
-- **`schema`**: Cached HL7 definitions for fast lookups during message editing
-- **`listen_join`**: Mutable state behind `Mutex` to start/stop listener
-- **`save_menu_item`**: Reference to the native Save menu item, allowing the frontend to
-  dynamically enable/disable it based on whether there are unsaved changes
+The `schema` field holds HL7 definitions loaded at startup, avoiding repeated
+file reads during message editing. The `listen_join` field wraps the MLLP
+listener's task handle in a `Mutex`, allowing the start/stop commands to
+coordinate. Finally, `save_menu_item` keeps a reference to the native Save menu
+item so the frontend can enable or disable it based on whether there are unsaved
+changes.
 
 ### Frontend State
 
@@ -675,7 +685,8 @@ export async function setSetting(key: string, value: any): Promise<void> {
 
 ### Adding a New Tauri Command
 
-1. **Define command function** in the appropriate feature directory under `src-tauri/src/commands/`:
+1. **Define command function** in the appropriate feature directory under
+   `src-tauri/src/commands/`:
 
 ```rust
 // src-tauri/src/commands/my_feature/my_command.rs
@@ -747,12 +758,14 @@ export async function myNewCommand(param: string): Promise<ReturnType> {
 
 ## Summary
 
-Hermes is designed with clean separation between frontend (UI/UX) and backend (processing/I/O), connected via Tauri's command and event system. Key architectural principles:
+Hermes is designed with clean separation between frontend (UI/UX) and backend
+(processing/I/O), connected via Tauri's command and event system.
 
-- **Type Safety**: TypeScript frontend + Rust backend = compile-time safety
-- **Performance**: Rust for heavy lifting (parsing, networking)
-- **Reactivity**: Svelte for responsive UI
-- **Extensibility**: Modular command structure for easy feature additions
-- **Maintainability**: Clear separation of concerns and well-defined interfaces
+The combination of TypeScript and Rust provides compile-time safety across both
+layers, while Rust handles the heavy lifting—parsing HL7 and managing network
+connections—and Svelte keeps the UI responsive. The modular command structure
+makes it straightforward to add new features without touching unrelated code,
+and clear interfaces between layers keep the codebase maintainable as it grows.
 
-For specific implementation examples, refer to the source code with the file locations documented above.
+For specific implementation examples, refer to the source code with the file
+locations documented above.

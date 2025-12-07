@@ -1,6 +1,7 @@
 # Contributing to Hermes
 
-This document provides guidelines for developing and contributing to the Hermes project. Whether you're returning to the project after time away or joining for the first time, these guidelines will help you understand the development workflow and coding standards.
+This document provides guidelines for developing and contributing to the Hermes
+project.
 
 ## Table of Contents
 
@@ -18,7 +19,8 @@ This document provides guidelines for developing and contributing to the Hermes 
 
 ### Prerequisites
 
-Ensure you have all required tools installed (see [README.md](./README.md#prerequisites)):
+Ensure you have all required tools installed (see
+[README.md](./README.md#prerequisites)):
 - Node.js (v18+)
 - pnpm (v8+)
 - Rust (latest stable)
@@ -28,29 +30,14 @@ Ensure you have all required tools installed (see [README.md](./README.md#prereq
 
 ```bash
 # Clone and install
-git clone <repository-url>
+git clone git@github.com:hamaluik/hermes.git
 cd hermes
 pnpm install
 
 # Verify installation
-pnpm check          # TypeScript type checking
-cd src-tauri && cargo check  # Rust compilation
+pnpm check                   # TypeScript
+cd src-tauri && cargo check  # Rust
 ```
-
-### IDE Setup
-
-**Recommended IDEs:**
-- **VS Code** with extensions:
-  - Svelte for VS Code
-  - rust-analyzer
-  - Tauri
-  - Prettier - Code formatter
-  - ESLint
-
-**Configuration:**
-- TypeScript strict mode is enabled
-- Prettier for code formatting
-- Use `rustfmt` for Rust code
 
 ## Development Workflow
 
@@ -62,20 +49,10 @@ pnpm tauri dev
 ```
 
 This command:
-1. Starts Vite dev server (frontend) on port 5173
+1. Starts Vite dev server (frontend)
 2. Launches Tauri application (desktop wrapper)
 3. Enables hot-reload for frontend changes
 4. Automatically rebuilds Rust on backend changes
-
-### Frontend-Only Development
-
-For UI work that doesn't require backend:
-
-```bash
-pnpm dev
-```
-
-Note: Tauri commands won't work in this mode, but you can iterate faster on UI/UX.
 
 ### Type Checking
 
@@ -98,7 +75,6 @@ Outputs to `src-tauri/target/release/bundle/`
 
 ### TypeScript/JavaScript
 
-**Style:**
 - Use TypeScript for all new code
 - Prefer `const` over `let`, avoid `var`
 - Use arrow functions for callbacks
@@ -124,7 +100,8 @@ export async function sendMessage(
 }
 ```
 
-**Naming Conventions:**
+#### Naming Conventions
+
 - Variables/functions: `camelCase`
 - Types/interfaces: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
@@ -132,7 +109,6 @@ export async function sendMessage(
 
 ### Svelte
 
-**Component Structure:**
 ```svelte
 <script lang="ts">
   // 1. Imports
@@ -171,7 +147,6 @@ export async function sendMessage(
 </style>
 ```
 
-**Best Practices:**
 - Use Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - Keep components focused and single-purpose
 - Extract reusable logic into separate modules
@@ -179,7 +154,6 @@ export async function sendMessage(
 
 ### Rust
 
-**Style:**
 - Follow Rust standard style guidelines
 - Use `rustfmt` for automatic formatting
 - Run `cargo clippy` for linting
@@ -213,13 +187,15 @@ pub fn syntax_highlight(
 }
 ```
 
-**Naming Conventions:**
+#### Naming Conventions
+
 - Variables/functions: `snake_case`
 - Types/traits: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
 - Modules: `snake_case`
 
-**Error Handling:**
+#### Error Handling
+
 - Use `Result<T, E>` for fallible operations
 - Convert internal errors to `String` for Tauri commands
 - Use `color-eyre` for detailed error context in complex functions
@@ -229,7 +205,8 @@ pub fn syntax_highlight(
 
 ### File Organization
 
-**Frontend:**
+#### Frontend
+
 ```
 src/
 ├── routes/              # SvelteKit pages
@@ -250,7 +227,8 @@ src/
 └── settings.ts          # Settings persistence
 ```
 
-**Backend:**
+#### Backend
+
 ```
 src-tauri/src/
 ├── lib.rs               # Entry point
@@ -266,30 +244,28 @@ src-tauri/src/
 
 ### Module Organization
 
-**TypeScript modules should:**
-- Export related functions together
-- Use named exports (avoid default exports)
-- Keep modules focused on single responsibility
+TypeScript modules should export related functions together, use named exports
+(avoid default exports), and stay focused on a single responsibility.
 
-**Rust modules should:**
-- One module per major feature
-- Public API in `mod.rs`
-- Internal helpers in separate files
+Rust modules should have one module per major feature, with the public API in
+`mod.rs` and internal helpers in separate files.
 
 ### Naming Conventions for Features
 
-When adding a new feature:
-1. **Backend**: Create `src-tauri/src/commands/feature_name/` directory
-2. **Frontend**: Create `src/lib/feature_name/` directory containing both components and Tauri bridges
-3. **Tauri command**: Use `snake_case` (e.g., `get_field_description`)
-4. **TypeScript function**: Use `camelCase` (e.g., `getFieldDescription`)
-5. **Import convention**: Use `$lib/` for cross-directory, relative paths within feature
+When adding a new feature, create a `src-tauri/src/commands/feature_name/`
+directory on the backend and a corresponding `src/lib/feature_name/` directory
+on the frontend containing both components and Tauri bridges.
+
+Use `snake_case` for Tauri commands (e.g., `get_field_description`) and
+`camelCase` for the TypeScript wrapper functions (e.g., `getFieldDescription`).
+For imports, use `$lib/` paths for cross-directory references and relative paths
+within the same feature.
 
 ## Adding Features
 
 ### Adding a New Tauri Command
 
-**Step 1: Create Rust command**
+#### 1. Create Rust command
 
 ```rust
 // src-tauri/src/commands/my_feature/my_command.rs
@@ -303,7 +279,7 @@ pub async fn my_feature_command(
 }
 ```
 
-**Step 2: Export and register**
+#### 2. Export and register
 
 ```rust
 // src-tauri/src/commands/my_feature/mod.rs
@@ -321,7 +297,7 @@ pub use my_feature::my_feature_command;
 ])
 ```
 
-**Step 3: Create TypeScript bridge (co-located with feature)**
+#### 3. Create TypeScript bridge (co-located with feature)
 
 ```typescript
 // src/lib/my_feature/my_feature.ts
@@ -332,7 +308,7 @@ export async function myFeatureCommand(param: string): Promise<string> {
 }
 ```
 
-**Step 4: Use in component**
+#### 4. Use in component
 
 ```svelte
 <script lang="ts">
@@ -380,39 +356,24 @@ Currently, Hermes relies on manual testing. When adding features:
 - [ ] UI updates reactively
 - [ ] No console errors or warnings
 - [ ] Performance is acceptable
-- [ ] Works after application restart (persistence)
-
-### Automated Testing (Future)
-
-Contributions of automated tests are welcome:
-- **Frontend**: Vitest for TypeScript logic, Testing Library for components
-- **Backend**: Rust unit tests and integration tests
 
 ## Common Development Tasks
 
 ### Updating Dependencies
 
-**Frontend:**
 ```bash
-pnpm update
-```
-
-**Backend:**
-```bash
-cd src-tauri
-cargo update
+pnpm update                # frontend
+cd src-tauri && cargo update   # backend
 ```
 
 ### Adding a New Dependency
 
-**Frontend:**
 ```bash
+# frontend
 pnpm add package-name
 pnpm add -D dev-package-name
-```
 
-**Backend:**
-```bash
+# backend
 cd src-tauri
 cargo add crate-name
 cargo add --dev dev-crate-name
@@ -420,16 +381,13 @@ cargo add --dev dev-crate-name
 
 ### Debugging
 
-**Frontend:**
-- Use browser DevTools (accessible in dev mode)
-- Add `console.log()` statements
-- Use Svelte DevTools extension
+For frontend debugging, use the browser DevTools (accessible in dev mode), add
+`console.log()` statements, or use the Svelte DevTools extension.
 
-**Backend:**
-- Add `log::info!()`, `log::debug!()` statements
-- View logs in terminal where `pnpm tauri dev` is running
-- Use `dbg!()` macro for quick debugging
-- Use VS Code debugger with rust-analyzer
+For backend debugging, add `log::info!()` or `log::debug!()` statements and view
+them in the terminal where `pnpm tauri dev` is running. You can also use the
+`dbg!()` macro for quick debugging or attach VS Code's debugger with
+rust-analyzer.
 
 ### Viewing Logs
 
@@ -460,10 +418,11 @@ Logs appear in:
 
 Settings are stored in `settings.json` via Tauri store plugin.
 
-**Location:**
-- macOS: `~/Library/Application Support/com.hermes.app/`
-- Windows: `%APPDATA%\com.hermes.app\`
-- Linux: `~/.local/share/com.hermes.app/`
+| Platform | Location                                       |
+|----------|------------------------------------------------|
+| macOS    | `~/Library/Application Support/com.hermes.app/`|
+| Windows  | `%APPDATA%\com.hermes.app\`                    |
+| Linux    | `~/.local/share/com.hermes.app/`               |
 
 To reset settings, delete `settings.json` and restart app.
 
@@ -501,56 +460,54 @@ Fix reported errors before committing.
 
 ### Code Quality
 
-1. **Type Safety**: Leverage TypeScript and Rust's type systems
-2. **Error Handling**: Always handle errors gracefully
-3. **Logging**: Add appropriate log statements for debugging
-4. **Comments**: Document complex logic and business rules
-5. **Keep Functions Small**: Aim for single responsibility
+Take advantage of the type systems in both TypeScript and Rust—they're there to
+help catch bugs early. When errors happen (and they will), handle them
+gracefully rather than letting things crash unexpectedly.
+
+Sprinkle in log statements where they'd help with debugging later, and document
+any complex logic or business rules that aren't immediately obvious from reading
+the code. Try to keep functions focused on doing one thing well.
 
 ### Performance
 
-1. **Avoid Blocking**: Use async/await for I/O operations
-2. **Minimize Re-renders**: Use Svelte's reactivity efficiently
-3. **Cache When Possible**: Schema cache is a good example
-4. **Lazy Load**: Don't load resources until needed
+For any I/O operations, stick with async/await to avoid blocking. Be thoughtful
+about Svelte's reactivity—unnecessary re-renders add up. The schema cache in
+this project is a good example of caching done right, and you should apply
+similar thinking elsewhere: don't load resources until you actually need them.
 
 ### Security
 
-1. **Sanitize Inputs**: Validate all user inputs
-2. **Network**: Validate host/port before connecting
+Always validate user inputs before trusting them. On the network side, make sure
+to validate host and port values before attempting any connections.
 
 ### Maintainability
 
-1. **Consistent Naming**: Follow project conventions
-2. **DRY Principle**: Extract common logic into functions
-3. **Documentation**: Update docs when adding features
-4. **Code Reviews**: Review your own code before committing
+Stick with the naming conventions already established in the project. When you
+notice yourself repeating logic, pull it out into a shared function. Keep the
+documentation current as you add features, and take a moment to review your own
+code before committing—you'll often catch things you missed.
 
 ### Git Workflow
 
-1. **Commit Messages**: Use clear, descriptive messages
-   - Good: `feat: add MLLP listen server for receiving messages`
-   - Bad: `update stuff`
+Write commit messages that actually describe what changed and why. Something
+like feat: add MLLP listen server for receiving messages tells a story, while
+update stuff leaves everyone guessing.
 
-2. **Commit Frequency**: Commit logical units of work
+Commit in logical chunks—each commit should represent a coherent unit of work.
+Work out a branching strategy with your team based on what fits your workflow.
 
-3. **Branch Strategy**: (Define based on team preferences)
+Before you commit, run the checks:
 
-4. **Before Committing**:
-   ```bash
-   pnpm check              # TypeScript checks
-   cd src-tauri && cargo clippy  # Rust linting
-   ```
+```bash
+pnpm check                     # TypeScript checks
+cd src-tauri && cargo clippy   # Rust linting
+```
 
 ### Documentation
 
-When adding features:
-
-1. Update README.md if it affects setup or usage
-2. Update ARCHITECTURE.md for architectural changes
-3. Update HELP.md for user-facing features
-4. Add code comments for complex logic
-5. Update CLAUDE.md if it affects Claude Code workflows
+When adding features, update README.md if it affects setup or usage,
+ARCHITECTURE.md for architectural changes, and CLAUDE.md if it impacts Claude
+Code workflows. Add code comments for complex logic.
 
 ---
 
