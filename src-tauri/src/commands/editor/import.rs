@@ -219,7 +219,7 @@ fn value_to_component(value: &Value) -> Result<ComponentBuilder, String> {
                     Value::Number(n) => n.to_string(),
                     Value::Bool(b) => b.to_string(),
                     Value::Null => String::new(),
-                    other => {
+                    other @ (Value::Array(_) | Value::Object(_)) => {
                         return Err(format!(
                             "Unexpected value type in subcomponent position: {other:?}"
                         ));
@@ -400,20 +400,29 @@ mod tests {
     #[test]
     fn export_produces_segments_array_structure() {
         // verify the JSON export structure has segments array with segment/fields objects
-        let original = "MSH|^~\\&|APP|||20231215||ADT^A01\rPID|||12345||DOE^JOHN\rOBX|1||CODE||Value";
+        let original =
+            "MSH|^~\\&|APP|||20231215||ADT^A01\rPID|||12345||DOE^JOHN\rOBX|1||CODE||Value";
         let json = export_to_json(original).expect("can export to JSON");
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("can parse JSON");
 
         // root has segments array
         assert!(parsed.get("segments").is_some(), "should have segments key");
-        let segments = parsed["segments"].as_array().expect("segments should be array");
+        let segments = parsed["segments"]
+            .as_array()
+            .expect("segments should be array");
         assert_eq!(segments.len(), 3, "should have 3 segments");
 
         // each segment has segment name and fields object
         for seg in segments {
-            assert!(seg.get("segment").is_some(), "segment should have segment key");
+            assert!(
+                seg.get("segment").is_some(),
+                "segment should have segment key"
+            );
             assert!(seg["segment"].is_string(), "segment name should be string");
-            assert!(seg.get("fields").is_some(), "segment should have fields key");
+            assert!(
+                seg.get("fields").is_some(),
+                "segment should have fields key"
+            );
             assert!(seg["fields"].is_object(), "fields should be object");
         }
 

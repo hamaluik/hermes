@@ -71,7 +71,9 @@ impl std::error::Error for ProtocolError {
         match self {
             ProtocolError::Io(e) => Some(e),
             ProtocolError::Json(e) => Some(e),
-            _ => None,
+            ProtocolError::Eof
+            | ProtocolError::InvalidHeader(_)
+            | ProtocolError::MessageTooLarge(_) => None,
         }
     }
 }

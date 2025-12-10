@@ -293,13 +293,22 @@ fn parse_field_id(field_id: &str, segment: &str) -> Option<(usize, Option<usize>
         return None;
     }
 
-    let Ok(segment_name) = parts[0].parse::<String>(); // split always has at least 1 part
+    // use slice pattern matching to safely extract parts
+    let (segment_name, field_str, component_str) = match parts.as_slice() {
+        [seg, fld] => (*seg, *fld, None),
+        [seg, fld, comp, ..] => (*seg, *fld, Some(*comp)),
+        _ => {
+            log::warn!("Invalid field_id format: {field_id}");
+            return None;
+        }
+    };
+
     if segment_name != segment {
         log::warn!("Segment name does not match: {segment_name} != {segment}");
         return None;
     }
 
-    let Ok(field) = parts[1].parse::<usize>() else {
+    let Ok(field) = field_str.parse::<usize>() else {
         log::warn!("Invalid field number in field_id: {field_id}");
         return None;
     };
@@ -308,8 +317,8 @@ fn parse_field_id(field_id: &str, segment: &str) -> Option<(usize, Option<usize>
         return None;
     }
 
-    let component = if parts.len() > 2 {
-        let Ok(component) = parts[2].parse::<usize>() else {
+    let component = if let Some(comp_str) = component_str {
+        let Ok(component) = comp_str.parse::<usize>() else {
             log::warn!("Invalid component number in field_id: {field_id}");
             return None;
         };
@@ -568,14 +577,14 @@ fn parse_offset(offset_str: &str) -> Result<jiff::tz::Offset, String> {
     let rest = offset_str.trim_start_matches(['+', '-']);
 
     let parts: Vec<&str> = rest.split(':').collect();
-    if parts.len() != 2 {
+    let [hours_str, minutes_str] = parts.as_slice() else {
         return Err(format!("Invalid offset format: {offset_str}"));
-    }
+    };
 
-    let hours: i8 = parts[0]
+    let hours: i8 = hours_str
         .parse()
         .map_err(|_| format!("Invalid hours in offset: {offset_str}"))?;
-    let minutes: i8 = parts[1]
+    let minutes: i8 = minutes_str
         .parse()
         .map_err(|_| format!("Invalid minutes in offset: {offset_str}"))?;
 
@@ -697,11 +706,11 @@ pub fn generate_template_message(
     // Parse template name to extract message type and trigger event
     // e.g., "adt_a01" -> ("ADT", "A01")
     let parts: Vec<&str> = template_name.split('_').collect();
-    if parts.len() != 2 {
+    let [msg_type, trigger] = parts.as_slice() else {
         return Err(format!("Invalid template name format: {template_name}"));
-    }
-    let message_type = parts[0].to_uppercase();
-    let trigger_event = parts[1].to_uppercase();
+    };
+    let message_type = msg_type.to_uppercase();
+    let trigger_event = trigger.to_uppercase();
 
     // Build the message using hl7_parser's MessageBuilder
     let mut builder = MessageBuilder::default();
@@ -858,32 +867,37 @@ pub fn parse_hl7_timestamp(value: &str, mode: &str) -> ParsedTimestamp {
     }
 
     match mode {
-        "date" => {
-            match parse_date(value, false) {
-                Ok(d) => ParsedTimestamp {
-                    date: Some(format!("{:04}-{:02}-{:02}", d.year, d.month.unwrap_or(1), d.day.unwrap_or(1))),
-                    time: None,
-                    offset: None,
-                    valid: true,
-                },
-                Err(_) => ParsedTimestamp {
-                    date: None,
-                    time: None,
-                    offset: None,
-                    valid: false,
-                },
-            }
-        }
+        "date" => match parse_date(value, false) {
+            Ok(d) => ParsedTimestamp {
+                date: Some(format!(
+                    "{:04}-{:02}-{:02}",
+                    d.year,
+                    d.month.unwrap_or(1),
+                    d.day.unwrap_or(1)
+                )),
+                time: None,
+                offset: None,
+                valid: true,
+            },
+            Err(_) => ParsedTimestamp {
+                date: None,
+                time: None,
+                offset: None,
+                valid: false,
+            },
+        },
         "datetime" => {
             match parse_timestamp(value, false) {
                 Ok(ts) => {
-                    let date = Some(format!("{:04}-{:02}-{:02}",
+                    let date = Some(format!(
+                        "{:04}-{:02}-{:02}",
                         ts.year,
                         ts.month.unwrap_or(1),
                         ts.day.unwrap_or(1)
                     ));
                     let time = ts.hour.map(|h| {
-                        format!("{:02}:{:02}:{:02}",
+                        format!(
+                            "{:02}:{:02}:{:02}",
                             h,
                             ts.minute.unwrap_or(0),
                             ts.second.unwrap_or(0)
@@ -897,8 +911,13 @@ pub fn parse_hl7_timestamp(value: &str, mode: &str) -> ParsedTimestamp {
                         let abs_mins = (total_minutes.abs() % 60) as u8;
                         format!("{}{:02}:{:02}", sign, abs_hours, abs_mins)
                     });
-                    ParsedTimestamp { date, time, offset, valid: true }
-                },
+                    ParsedTimestamp {
+                        date,
+                        time,
+                        offset,
+                        valid: true,
+                    }
+                }
                 Err(_) => ParsedTimestamp {
                     date: None,
                     time: None,

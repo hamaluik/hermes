@@ -381,7 +381,9 @@ fn create_position_mapping(
 
     for (range, range_type) in ranges.into_iter() {
         for i in range {
-            position_types[i] = Some(range_type);
+            if let Some(slot) = position_types.get_mut(i) {
+                *slot = Some(range_type);
+            }
         }
     }
 
@@ -503,7 +505,11 @@ fn generate_html(
     let mut current_validation_state: Option<ValidationSeverity> = None;
 
     for (i, c) in raw_message.char_indices() {
-        let range_type = position_types[i].unwrap_or(RangeType::Separator);
+        let range_type = position_types
+            .get(i)
+            .copied()
+            .flatten()
+            .unwrap_or(RangeType::Separator);
         let match_state = get_match_state(i, search_matches, current_match_index);
         let validation_state = get_validation_state(i, validation_matches);
         let diff_state = get_diff_state(i, diff_matches);
@@ -669,8 +675,13 @@ fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
         }
         let escaped = escaped.as_mut().expect("initialized");
         let new_pos = pos + i;
-        escaped.extend_from_slice(&bytes[pos..new_pos]);
-        match bytes[new_pos] {
+        if let Some(slice) = bytes.get(pos..new_pos) {
+            escaped.extend_from_slice(slice);
+        }
+        let Some(&byte) = bytes.get(new_pos) else {
+            break;
+        };
+        match byte {
             b'<' => escaped.extend_from_slice(b"&lt;"),
             b'>' => escaped.extend_from_slice(b"&gt;"),
             b'\'' => escaped.extend_from_slice(b"&apos;"),

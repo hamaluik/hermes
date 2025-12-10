@@ -129,9 +129,14 @@ pub fn merge_segment_fields(base: &[Field], overrides: &[FieldOverride]) -> Vec<
     // first pass: exact matches for ALL base fields
     for (base_idx, base_field) in base.iter().enumerate() {
         for (override_idx, override_field) in overrides.iter().enumerate() {
-            if !used_overrides[override_idx] && fields_match_exact(base_field, override_field) {
-                matched_bases[base_idx] = Some(override_idx);
-                used_overrides[override_idx] = true;
+            let Some(used) = used_overrides.get_mut(override_idx) else {
+                continue;
+            };
+            if !*used && fields_match_exact(base_field, override_field) {
+                if let Some(matched) = matched_bases.get_mut(base_idx) {
+                    *matched = Some(override_idx);
+                }
+                *used = true;
                 break;
             }
         }
@@ -139,13 +144,17 @@ pub fn merge_segment_fields(base: &[Field], overrides: &[FieldOverride]) -> Vec<
 
     // second pass: flexible matches for unmatched field-level base fields
     for (base_idx, base_field) in base.iter().enumerate() {
-        if matched_bases[base_idx].is_none() && base_field.component.is_none() {
+        let is_unmatched = matched_bases.get(base_idx).is_some_and(|m| m.is_none());
+        if is_unmatched && base_field.component.is_none() {
             for (override_idx, override_field) in overrides.iter().enumerate() {
-                if !used_overrides[override_idx]
-                    && fields_match_flexible(base_field, override_field)
-                {
-                    matched_bases[base_idx] = Some(override_idx);
-                    used_overrides[override_idx] = true;
+                let Some(used) = used_overrides.get_mut(override_idx) else {
+                    continue;
+                };
+                if !*used && fields_match_flexible(base_field, override_field) {
+                    if let Some(matched) = matched_bases.get_mut(base_idx) {
+                        *matched = Some(override_idx);
+                    }
+                    *used = true;
                     break;
                 }
             }
@@ -155,8 +164,13 @@ pub fn merge_segment_fields(base: &[Field], overrides: &[FieldOverride]) -> Vec<
     // build result
     let mut result = Vec::new();
     for (base_idx, base_field) in base.iter().enumerate() {
-        if let Some(override_idx) = matched_bases[base_idx] {
-            result.push(merge_field(base_field, &overrides[override_idx]));
+        let matched_override = matched_bases.get(base_idx).and_then(|m| *m);
+        if let Some(override_idx) = matched_override {
+            if let Some(override_field) = overrides.get(override_idx) {
+                result.push(merge_field(base_field, override_field));
+            } else {
+                result.push(base_field.clone());
+            }
         } else {
             result.push(base_field.clone());
         }
@@ -164,7 +178,8 @@ pub fn merge_segment_fields(base: &[Field], overrides: &[FieldOverride]) -> Vec<
 
     // add new fields from unused overrides
     for (override_idx, override_field) in overrides.iter().enumerate() {
-        if !used_overrides[override_idx] {
+        let is_unused = used_overrides.get(override_idx).is_some_and(|u| !*u);
+        if is_unused {
             result.push(field_from_override(override_field));
         }
     }

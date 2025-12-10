@@ -173,14 +173,13 @@ fn repeat_to_value(repeat: &Repeat) -> Value {
 fn component_to_value(component: &Component) -> Value {
     let subcomponents: Vec<&str> = component.subcomponents.iter().map(|s| s.value).collect();
 
-    match subcomponents.len() {
-        0 => Value::Null,
-        1 => {
-            let val = subcomponents[0];
+    match subcomponents.as_slice() {
+        [] => Value::Null,
+        [val] => {
             if val.is_empty() {
                 Value::Null
             } else {
-                Value::String(val.to_string())
+                Value::String((*val).to_string())
             }
         }
         _ => {
@@ -207,7 +206,7 @@ fn is_empty_value(value: &Value) -> bool {
         Value::String(s) => s.is_empty(),
         Value::Array(arr) => arr.is_empty(),
         Value::Object(obj) => obj.is_empty(),
-        _ => false,
+        Value::Bool(_) | Value::Number(_) => false,
     }
 }
 

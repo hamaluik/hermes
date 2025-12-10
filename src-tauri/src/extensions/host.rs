@@ -646,7 +646,9 @@ impl ExtensionHost {
                         log::warn!("reader error for extension {ext_id}: {e}");
                         break;
                     }
-                    _ => {}
+                    InternalMessage::Send(_) | InternalMessage::Response(..) => {
+                        // these message types are handled elsewhere
+                    }
                 }
             }
             log::debug!("request handler task for {ext_id} ended");

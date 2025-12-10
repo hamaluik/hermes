@@ -102,7 +102,11 @@ impl std::error::Error for ExtensionError {
             ExtensionError::SpawnFailed(e) => Some(e),
             ExtensionError::Protocol(e) => Some(e),
             ExtensionError::Rpc(e) => Some(e),
-            _ => None,
+            ExtensionError::Timeout(_)
+            | ExtensionError::InvalidState(_)
+            | ExtensionError::Channel(_)
+            | ExtensionError::ProcessExited
+            | ExtensionError::CommandNotFound(_) => None,
         }
     }
 }
@@ -201,16 +205,14 @@ impl ExtensionProcess {
         // this allows the UI to accept full command strings like "uv run script.py"
         let (executable, args) = if config.args.is_empty() {
             match shell_words::split(&config.path) {
-                Ok(parts) if !parts.is_empty() => {
-                    let executable = parts[0].clone();
-                    let args = parts[1..].to_vec();
-                    (executable, args)
-                }
-                Ok(_) => {
-                    return Err(ExtensionError::SpawnFailed(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "empty command string",
-                    )));
+                Ok(parts) => {
+                    let [executable, rest @ ..] = parts.as_slice() else {
+                        return Err(ExtensionError::SpawnFailed(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "empty command string",
+                        )));
+                    };
+                    (executable.clone(), rest.to_vec())
                 }
                 Err(e) => {
                     return Err(ExtensionError::SpawnFailed(std::io::Error::new(
@@ -716,7 +718,10 @@ fn parse_log_line(line: &str) -> (LogLevel, String) {
     let line = line.trim();
 
     // try bracketed format: [ERROR], [WARN], [WARNING], [INFO]
-    if let Some(rest) = line.strip_prefix("[ERROR]").or_else(|| line.strip_prefix("[error]")) {
+    if let Some(rest) = line
+        .strip_prefix("[ERROR]")
+        .or_else(|| line.strip_prefix("[error]"))
+    {
         return (LogLevel::Error, rest.trim().to_string());
     }
     if let Some(rest) = line
@@ -727,23 +732,34 @@ fn parse_log_line(line: &str) -> (LogLevel, String) {
     {
         return (LogLevel::Warn, rest.trim().to_string());
     }
-    if let Some(rest) = line.strip_prefix("[INFO]").or_else(|| line.strip_prefix("[info]")) {
+    if let Some(rest) = line
+        .strip_prefix("[INFO]")
+        .or_else(|| line.strip_prefix("[info]"))
+    {
         return (LogLevel::Info, rest.trim().to_string());
     }
 
     // try colon format: ERROR:, WARN:, WARNING:, INFO:
-    if let Some(rest) = line.strip_prefix("ERROR:").or_else(|| line.strip_prefix("error:")) {
+    if let Some(rest) = line
+        .strip_prefix("ERROR:")
+        .or_else(|| line.strip_prefix("error:"))
+    {
         return (LogLevel::Error, rest.trim().to_string());
     }
     if let Some(rest) = line
         .strip_prefix("WARN:")
         .or_else(|| line.strip_prefix("warn:"))
-        .or_else(|| line.strip_prefix("WARNING:")
-        .or_else(|| line.strip_prefix("warning:")))
+        .or_else(|| {
+            line.strip_prefix("WARNING:")
+                .or_else(|| line.strip_prefix("warning:"))
+        })
     {
         return (LogLevel::Warn, rest.trim().to_string());
     }
-    if let Some(rest) = line.strip_prefix("INFO:").or_else(|| line.strip_prefix("info:")) {
+    if let Some(rest) = line
+        .strip_prefix("INFO:")
+        .or_else(|| line.strip_prefix("info:"))
+    {
         return (LogLevel::Info, rest.trim().to_string());
     }
 

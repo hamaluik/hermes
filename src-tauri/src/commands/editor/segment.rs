@@ -76,7 +76,7 @@ pub fn delete_segment(message: &str, segment_index: usize) -> Option<SegmentOper
         return None;
     }
 
-    let segment = &segments[segment_index];
+    let segment = segments.get(segment_index)?;
     let mut start = segment.range.start;
     let end = segment.range.end;
 
@@ -101,7 +101,7 @@ pub fn delete_segment(message: &str, segment_index: usize) -> Option<SegmentOper
         start
     } else if segment_index > 0 {
         // no segment after, go to start of previous
-        segments[segment_index - 1].range.start
+        segments.get(segment_index - 1)?.range.start
     } else {
         0
     };
@@ -169,8 +169,8 @@ pub fn move_segment(
         (target_index, segment_index)
     };
 
-    let first_segment = &segments[first_idx];
-    let second_segment = &segments[second_idx];
+    let first_segment = segments.get(first_idx)?;
+    let second_segment = segments.get(second_idx)?;
 
     // extract segment content (without preceding newlines)
     let first_content = &message[first_segment.range.start..first_segment.range.end];
@@ -223,11 +223,7 @@ pub fn duplicate_segment(message: &str, segment_index: usize) -> Option<SegmentO
     let parsed = hl7_parser::parse_message_with_lenient_newlines(message).ok()?;
     let segments: Vec<_> = parsed.segments().collect();
 
-    if segment_index >= segments.len() {
-        return None;
-    }
-
-    let segment = &segments[segment_index];
+    let segment = segments.get(segment_index)?;
     let segment_content = &message[segment.range.start..segment.range.end];
 
     // determine the line ending style used in the message

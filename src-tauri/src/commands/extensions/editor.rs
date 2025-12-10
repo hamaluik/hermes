@@ -346,7 +346,9 @@ fn set_component_value(
             while repeats.len() <= repeat_idx {
                 repeats.push(RepeatBuilder::default());
             }
-            repeats[repeat_idx].set_component_value(component, value);
+            if let Some(repeat) = repeats.get_mut(repeat_idx) {
+                repeat.set_component_value(component, value);
+            }
         }
     }
 }
@@ -374,7 +376,9 @@ fn set_subcomponent_value(
             while repeats.len() <= repeat_idx {
                 repeats.push(RepeatBuilder::default());
             }
-            let repeat = &mut repeats[repeat_idx];
+            let Some(repeat) = repeats.get_mut(repeat_idx) else {
+                return;
+            };
 
             // get or create the component, then set the subcomponent
             match repeat {
