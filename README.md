@@ -21,8 +21,6 @@
 - [Installation](#installation)
 - [Development](#development)
 - [Building](#building)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
 - [Key Technologies](#key-technologies)
 - [User Documentation](#user-documentation)
 - [Contributing](#contributing)
@@ -136,8 +134,7 @@ pnpm check:watch
 
 ### Code Organization
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
-and [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines.
+See [docs/](./docs/) for detailed architecture and development documentation.
 
 ## Building
 
@@ -163,106 +160,6 @@ Tauri configuration is in `src-tauri/tauri.conf.json`:
 - Window settings
 - Bundle identifiers
 - Plugin configurations
-
-## Architecture
-
-Hermes follows a command-response pattern with event-driven communication
-between the frontend (Svelte) and backend (Rust/Tauri).
-
-### High-Level Architecture
-
-```
-┌─────────────────────────────────────────┐
-│           Frontend (Svelte)             │
-│  ┌───────────────────────────────────┐  │
-│  │  Routes (SvelteKit)               │  │
-│  │  - Main page with message editor  │  │
-│  └───────────────────────────────────┘  │
-│  ┌───────────────────────────────────┐  │
-│  │  Components                       │  │
-│  │  - Segment tabs                   │  │
-│  │  - Message editor                 │  │
-│  │  - Modals                         │  │
-│  └───────────────────────────────────┘  │
-│  ┌───────────────────────────────────┐  │
-│  │  Backend Bridges (TypeScript)     │  │
-│  │  - Invoke Tauri commands          │  │
-│  │  - Listen to backend events       │  │
-│  └───────────────────────────────────┘  │
-└─────────────────────────────────────────┘
-                    ↕ (IPC)
-┌─────────────────────────────────────────┐
-│          Backend (Rust/Tauri)           │
-│  ┌───────────────────────────────────┐  │
-│  │  Commands (exposed to frontend)   │  │
-│  │  - Message operations             │  │
-│  │  - MLLP send/receive              │  │
-│  │  - Schema queries                 │  │
-│  │  - Syntax highlighting            │  │
-│  └───────────────────────────────────┘  │
-│  ┌───────────────────────────────────┐  │
-│  │  Schema & Spec                    │  │
-│  │  - HL7 definitions cache          │  │
-│  │  - Message structure lookup       │  │
-│  └───────────────────────────────────┘  │
-└─────────────────────────────────────────┘
-```
-
-### Communication Flow
-
-User actions in the frontend invoke Tauri commands via `@tauri-apps/api/core`.
-Rust functions on the backend process these requests, accessing the schema cache
-and performing I/O as needed. Results are emitted back to the frontend via Tauri
-events, and Svelte stores automatically update the UI in response.
-
-## Project Structure
-
-```
-hermes/
-├── src/                           # Frontend (Svelte/TypeScript)
-│   ├── routes/                    # SvelteKit routes
-│   ├── lib/                       # Feature-based organisation
-│   │   ├── communication/         # MLLP send/receive
-│   │   ├── editor/                # Core editor
-│   │   ├── diff/                  # Message comparison
-│   │   ├── find_replace/          # Search functionality
-│   │   ├── forms/                 # Form inputs
-│   │   ├── validation/            # Validation UI and logic
-│   │   ├── settings/              # Settings UI
-│   │   ├── modals/                # Standalone modals
-│   │   ├── shared/                # Cross-feature utilities
-│   │   ├── tabs/                  # Tab navigation
-│   │   ├── toolbar/               # Toolbar components
-│   │   ├── components/            # Generic UI primitives
-│   │   └── icons/                 # SVG icon components
-│   └── settings.ts                # Settings persistence
-│
-├── src-tauri/                     # Backend (Rust/Tauri)
-│   ├── src/
-│   │   ├── lib.rs                # App setup, plugin config
-│   │   ├── menu/                 # Native menu system
-│   │   ├── commands/             # Tauri commands by feature
-│   │   │   ├── communication/    # send.rs, listen.rs
-│   │   │   ├── editor/           # cursor.rs, data.rs, syntax_highlight.rs
-│   │   │   ├── validation/       # validate.rs, diff.rs
-│   │   │   └── support/          # field_description.rs, schema.rs
-│   │   ├── schema/               # HL7 schema caching
-│   │   └── spec/                 # HL7 specifications
-│   ├── data/                     # Segment schemas (*.toml)
-│   ├── Cargo.toml                # Rust dependencies
-│   └── tauri.conf.json           # Tauri configuration
-│
-├── static/                       # Static assets (help.html, global.css)
-├── package.json                  # Node.js dependencies
-├── vite.config.ts                # Vite configuration
-├── svelte.config.js              # Svelte configuration
-├── tsconfig.json                 # TypeScript configuration
-├── README.md                     # This file
-├── ARCHITECTURE.md               # Detailed architecture docs
-├── CONTRIBUTING.md               # Development guidelines
-├── CLAUDE.md                     # Claude Code instructions
-└── HELP.md                       # User documentation
-```
 
 ## Dependencies
 
@@ -290,7 +187,7 @@ dialogs, `store` for persistent settings, `log` for application logging,
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development guidelines.
+See [docs/development/](./docs/development/) for detailed development guidelines.
 
 ## Troubleshooting
 

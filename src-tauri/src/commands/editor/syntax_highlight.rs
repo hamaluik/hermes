@@ -710,7 +710,7 @@ fn html_escape<'a>(raw: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
         // so all slices that was put to the `escaped` is a valid UTF-8 encoded strings
         // TODO: Can be replaced with `unsafe { String::from_utf8_unchecked() }`
         // if unsafe code will be allowed
-        Cow::Owned(String::from_utf8(escaped).unwrap())
+        Cow::Owned(String::from_utf8(escaped).expect("can convert valid UTF-8"))
     } else {
         raw
     }

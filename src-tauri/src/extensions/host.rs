@@ -692,7 +692,7 @@ async fn handle_extension_request_standalone(
 
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "editor/setMessage" => {
@@ -715,7 +715,7 @@ async fn handle_extension_request_standalone(
 
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "editor/patchMessage" => {
@@ -737,7 +737,7 @@ async fn handle_extension_request_standalone(
 
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/openWindow" => {
@@ -750,7 +750,7 @@ async fn handle_extension_request_standalone(
             let result = handle_open_window(app_handle, ext_id, params, window_manager).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/closeWindow" => {
@@ -763,7 +763,7 @@ async fn handle_extension_request_standalone(
             let result = handle_close_window(app_handle, ext_id, params, window_manager).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/showMessage" => {
@@ -776,7 +776,7 @@ async fn handle_extension_request_standalone(
             let result = handle_show_message(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/showConfirm" => {
@@ -789,7 +789,7 @@ async fn handle_extension_request_standalone(
             let result = handle_show_confirm(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/openFile" => {
@@ -802,7 +802,7 @@ async fn handle_extension_request_standalone(
             let result = handle_open_file(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/openFiles" => {
@@ -815,7 +815,7 @@ async fn handle_extension_request_standalone(
             let result = handle_open_files(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/saveFile" => {
@@ -828,7 +828,7 @@ async fn handle_extension_request_standalone(
             let result = handle_save_file(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         "ui/selectDirectory" => {
@@ -841,7 +841,7 @@ async fn handle_extension_request_standalone(
             let result = handle_select_directory(app_handle, params).await?;
             Ok(Some(Response::new(
                 request.id,
-                serde_json::to_value(result).unwrap(),
+                serde_json::to_value(result).expect("can serialize result"),
             )))
         }
         _ => Err(RpcError::method_not_found(&request.method)),

@@ -140,7 +140,7 @@ fn field_to_value(field: &Field) -> Value {
 
     match repeats.len() {
         0 => Value::Null,
-        1 => repeats.into_iter().next().unwrap(),
+        1 => repeats.into_iter().next().expect("can get single repeat"),
         _ => Value::Array(repeats),
     }
 }
@@ -151,7 +151,7 @@ fn repeat_to_value(repeat: &Repeat) -> Value {
 
     // if single component with no subcomponents, return as string
     if components.len() == 1 {
-        return components.into_iter().next().unwrap();
+        return components.into_iter().next().expect("can get single component");
     }
 
     // build object with only non-empty components
