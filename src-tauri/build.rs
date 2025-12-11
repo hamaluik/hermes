@@ -61,7 +61,7 @@ fn main() {
     generated.push_str("/// Embedded messages.toml content.\n");
     generated.push_str(&format!(
         "pub const MESSAGES_TOML: &str = include_str!(\"{}\");\n\n",
-        messages_path.display()
+        messages_path.display().to_string().replace('\\', "/")
     ));
     generated.push_str("/// Embedded segment schema TOML content, keyed by segment name.\n");
     generated.push_str("pub const SEGMENT_SCHEMAS: &[(&str, &str)] = &[\n");
@@ -71,7 +71,7 @@ fn main() {
         generated.push_str(&format!(
             "    (\"{}\", include_str!(\"{}\")),\n",
             segment_name,
-            segment_path.display()
+            segment_path.display().to_string().replace('\\', "/")
         ));
     }
 

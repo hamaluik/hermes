@@ -135,20 +135,10 @@ pub async fn handle_open_window(
     // handle modal windows
     if params.modal.unwrap_or(false) {
         if let Some(main_window) = app.get_webview_window("main") {
-            // set parent for modal behaviour
-            #[cfg(target_os = "macos")]
-            {
-                builder = builder.parent(&main_window).map_err(|e| {
-                    RpcError::window_error(format!("Failed to set parent window: {e}"))
-                })?;
-            }
-            #[cfg(not(target_os = "macos"))]
-            {
-                // on other platforms, just use owner relationship
-                builder = builder.owner(&main_window).map_err(|e| {
-                    RpcError::window_error(format!("Failed to set owner window: {e}"))
-                })?;
-            }
+            // set parent for modal behaviour (cross-platform)
+            builder = builder
+                .parent(&main_window)
+                .map_err(|e| RpcError::window_error(format!("Failed to set parent window: {e}")))?;
         }
     }
 
