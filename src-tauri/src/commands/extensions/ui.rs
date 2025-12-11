@@ -483,6 +483,7 @@ pub async fn handle_select_directory(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

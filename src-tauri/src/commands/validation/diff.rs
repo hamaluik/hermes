@@ -637,6 +637,7 @@ fn extract_segment_fields<'a>(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

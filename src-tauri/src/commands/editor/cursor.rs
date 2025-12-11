@@ -268,6 +268,7 @@ pub fn get_range_of_previous_field(message: &str, cursor: usize) -> Option<Curso
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
