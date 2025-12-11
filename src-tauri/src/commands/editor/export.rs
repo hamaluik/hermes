@@ -151,7 +151,10 @@ fn repeat_to_value(repeat: &Repeat) -> Value {
 
     // if single component with no subcomponents, return as string
     if components.len() == 1 {
-        return components.into_iter().next().expect("can get single component");
+        return components
+            .into_iter()
+            .next()
+            .expect("can get single component");
     }
 
     // build object with only non-empty components

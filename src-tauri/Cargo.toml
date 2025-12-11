@@ -55,6 +55,7 @@ shell-words = "1.1.0"
 
 # macOS 26 Tahoe compatibility workaround
 # see https://github.com/madsmtm/objc2/issues/765
+[target.'cfg(target_os = "macos")'.dependencies]
 objc2 = { version = "0.6", features = ["relax-sign-encoding"] }
 
 # https://corrode.dev/blog/defensive-programming/

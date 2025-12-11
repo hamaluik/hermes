@@ -369,7 +369,10 @@ impl ExtensionProcess {
 
         let result = timeout(
             INITIALIZE_TIMEOUT,
-            self.send_request("initialize", serde_json::to_value(&params).expect("can serialize params")),
+            self.send_request(
+                "initialize",
+                serde_json::to_value(&params).expect("can serialize params"),
+            ),
         )
         .await;
 
@@ -500,7 +503,10 @@ impl ExtensionProcess {
         };
         let result = timeout(
             SHUTDOWN_TIMEOUT,
-            self.send_request("shutdown", serde_json::to_value(&params).expect("can serialize params")),
+            self.send_request(
+                "shutdown",
+                serde_json::to_value(&params).expect("can serialize params"),
+            ),
         )
         .await;
 
