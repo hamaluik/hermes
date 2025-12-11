@@ -39,6 +39,7 @@ mod extensions;
 mod menu;
 mod schema;
 mod spec;
+mod updater;
 
 /// Application-wide state managed by Tauri.
 ///
@@ -128,6 +129,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::syntax_highlight,
             commands::locate_cursor,
@@ -225,6 +227,9 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
+
+            // start background update checker
+            updater::start_update_checker(app.handle().clone());
 
             Ok(())
         })

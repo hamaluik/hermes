@@ -25,6 +25,7 @@
     "bundle": {
         "active": true,
         "targets": "all",
+        "createUpdaterArtifacts": true,
         "icon": [
             "icons/32x32.png",
             "icons/128x128.png",
@@ -36,6 +37,15 @@
     "plugins": {
         "fs": {
             "requireLiteralLeadingDot": false
+        },
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg1QzRGOEYzMkI2RjhDQjMKUldTempHOHI4L2pFaGR1MkwyT2pScjV5U0tLQ0ZMSGF5aHhTMmNsYmNabi9YaXludXZlVWpDekgK",
+            "endpoints": [
+                "https://github.com/hamaluik/hermes/releases/latest/download/latest.json"
+            ],
+            "windows": {
+                "installMode": "passive"
+            }
         }
     }
 }

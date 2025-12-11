@@ -69,7 +69,9 @@ platform-appropriate locations.
 Logging helps with debugging, capturing backend events that the frontend can't
 observe directly. The persisted scope plugin remembers file access permissions
 across sessions, avoiding repeated permission prompts. The opener plugin
-launches external applications and URLs when needed.
+launches external applications and URLs when needed. The updater plugin handles
+automatic version checking and installation, running background checks
+periodically without user intervention.
 
 ## Error Handling
 
@@ -87,5 +89,6 @@ for frontend display.
 - [Frontend Architecture](frontend.md) — TypeScript bridges that invoke commands
 - [Communication Patterns](communication.md) — Command-response and event
   patterns
+- [Application Updates](updater.md) — Update detection and installation flow
 - [Rust Coding Standards](../development/coding-standards/rust.md) — Error
   handling and defensive patterns

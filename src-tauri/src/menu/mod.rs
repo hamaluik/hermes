@@ -257,6 +257,10 @@ pub fn setup_menu_event_handler(app: &App) {
             "tools-insert-timestamp" => Some("menu-tools-insert-timestamp"),
             "recent-clear" => Some("menu-clear-recent"),
             "help" => Some("menu-help"),
+            "help-check-updates" => {
+                crate::updater::handle_check_updates(app_handle);
+                return;
+            }
             _ => None,
         };
 
@@ -456,6 +460,10 @@ fn build_help_menu(app: &App) -> color_eyre::Result<Submenu<Wry>> {
         .accelerator("F1")
         .build(app)?;
 
+    let check_updates_menu_item = MenuItemBuilder::new("Check for &Updates...")
+        .id("help-check-updates")
+        .build(app)?;
+
     let about_metadata = AboutMetadata {
         name: Some(env!("CARGO_PKG_NAME").into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
@@ -472,6 +480,8 @@ fn build_help_menu(app: &App) -> color_eyre::Result<Submenu<Wry>> {
 
     let menu = SubmenuBuilder::new(app, "&Help")
         .item(&help_menu_item)
+        .separator()
+        .item(&check_updates_menu_item)
         .separator()
         .item(&PredefinedMenuItem::about(
             app,

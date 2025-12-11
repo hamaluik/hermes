@@ -57,8 +57,10 @@ from embedded TOML files, building an in-memory cache that persists for the
 application's lifetime. This avoids file I/O during normal operation.
 
 After schema loading, Tauri registers plugins for clipboard access, file system
-operations, dialogs, persistent storage, and logging. These plugins provide the
-capabilities the frontend needs to implement user-facing features.
+operations, dialogs, persistent storage, logging, and automatic updates. These
+plugins provide the capabilities the frontend needs to implement user-facing
+features. The updater plugin begins checking for new versions in the background
+shortly after startup.
 
 The native menu builds next, establishing keyboard shortcuts and menu items.
 Menu item references are stored so the application can dynamically enable or
@@ -74,3 +76,4 @@ input.
 - [Frontend Architecture](frontend.md) — Component hierarchy and editing model
 - [Backend Architecture](backend.md) — Managed state and command patterns
 - [Communication](communication.md) — IPC patterns between frontend and backend
+- [Application Updates](updater.md) — Automatic update detection and installation
