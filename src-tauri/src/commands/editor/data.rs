@@ -936,6 +936,7 @@ pub fn parse_hl7_timestamp(value: &str, mode: &str) -> ParsedTimestamp {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

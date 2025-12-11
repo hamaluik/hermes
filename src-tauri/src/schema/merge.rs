@@ -359,6 +359,7 @@ pub fn merge_schema_overrides(overrides: &[SchemaOverride]) -> SchemaOverride {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

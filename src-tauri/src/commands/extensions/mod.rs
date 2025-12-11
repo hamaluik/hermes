@@ -140,6 +140,7 @@ pub async fn sync_editor_message(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

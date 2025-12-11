@@ -254,6 +254,7 @@ pub fn duplicate_segment(message: &str, segment_index: usize) -> Option<SegmentO
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

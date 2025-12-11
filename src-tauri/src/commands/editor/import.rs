@@ -258,6 +258,7 @@ pub fn import_from_toml(content: &str) -> Result<String, String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
 mod tests {
     use super::*;
     use crate::commands::editor::export::{export_to_json, export_to_toml, export_to_yaml};
