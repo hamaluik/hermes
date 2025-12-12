@@ -69,5 +69,5 @@ jobs:
           releaseName: ${{ inputs.tag || github.ref_name }}
           releaseDraft: true
           prerelease: true
+          includeUpdaterJson: true
           updaterJsonPreferNsis: true
-          generateReleaseNotes: true
