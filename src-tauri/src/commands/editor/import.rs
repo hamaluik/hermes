@@ -245,7 +245,7 @@ pub fn import_from_json(content: &str) -> Result<String, String> {
 #[tauri::command]
 pub fn import_from_yaml(content: &str) -> Result<String, String> {
     let import: MessageImport =
-        serde_yml::from_str(content).map_err(|e| format!("Failed to parse YAML: {e}"))?;
+        serde_saphyr::from_str(content).map_err(|e| format!("Failed to parse YAML: {e}"))?;
     tree_to_message(&import)
 }
 

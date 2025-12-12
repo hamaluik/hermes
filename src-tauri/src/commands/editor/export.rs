@@ -228,7 +228,7 @@ pub fn export_to_yaml(message: &str) -> Result<String, String> {
     let parsed = hl7_parser::parse_message_with_lenient_newlines(message)
         .map_err(|e| format!("Failed to parse message: {e}"))?;
     let export = message_to_export(&parsed);
-    serde_yml::to_string(&export).map_err(|e| format!("Failed to serialise to YAML: {e}"))
+    serde_saphyr::to_string(&export).map_err(|e| format!("Failed to serialise to YAML: {e}"))
 }
 
 /// Exports an HL7 message to TOML format.
