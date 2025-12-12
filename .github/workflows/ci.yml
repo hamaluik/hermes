@@ -101,4 +101,5 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm tauri build
+        shell: bash
+        run: pnpm tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
